@@ -1,37 +1,15 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -Wshadow -O2 -pedantic -Wno-sign-conversion -I /Users/kutay/CP/ac-library 
+CXXFLAGS = -std=c++20 -Wall -Wextra -Wshadow -O2 -pedantic
 DEBUGFLAGS = -fsanitize=address -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
 CXXFLAGS += $(DEBUGFLAGS)
 
-TARGET := a
-EXECUTE := ./$(TARGET)
-CLEAN_TARGETS := $(TARGET)
+SOURCES = $(wildcard src/*.cpp)
 
-CASES := $(sort $(basename $(wildcard *.in)))
-TESTS := $(sort $(basename $(wildcard *.out)))
+all: bin/stargaze
 
-all: $(TARGET)
+bin/stargaze: $(SOURCES)
+	mkdir -p bin
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
-c:
-	-rm -rf $(CLEAN_TARGETS) *.res
-
-export TIME=\n  real\t%es\n  user\t%Us\n  sys\t%Ss\n  mem\t%MKB
-
-r: $(TARGET)
-	$(EXECUTE)
-
-%.res: $(TARGET) %.in
-	$(EXECUTE) < $*.in > $*.res
-
-%.out: % # Cancel the builtin rule
-
-__test_%: %.res %.out
-	diff $*.res $*.out -bB
-
-t: $(patsubst %,__test_%,$(TESTS))
-
-.PHONY: all c r t __test_% 
-
-.PRECIOUS: %.res
-
-
+run: all
+	./bin/stargaze
