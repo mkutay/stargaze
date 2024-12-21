@@ -17,3 +17,28 @@ int Move::get_promotion_piece() {
   if (specials == 2) return 4; // rook
   return 5; // queen
 }
+
+// std::string Move::to_string() {
+//   std::string ret = "";
+//   ret += (char)('a' + get_from() % 8);
+//   ret += (char)('8' - get_from() / 8);
+//   ret += (char)('a' + get_to() % 8);
+//   ret += (char)('8' - get_to() / 8);
+//   if (is_promotion()) {
+//     ret += '=';
+//     int piece = get_promotion_piece();
+//     if (piece == 2) ret += 'N';
+//     if (piece == 3) ret += 'B';
+//     if (piece == 4) ret += 'R';
+//     if (piece == 5) ret += 'Q';
+//   }
+//   return ret;
+// }
+
+std::string Move::to_string() {
+  std::string ret = "";
+  ret += std::to_string((int) get_from()) + " ";
+  ret += std::to_string((int) get_to()) + " ";
+  ret += std::to_string((int) get_flags());
+  return ret;
+}

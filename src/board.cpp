@@ -19,8 +19,28 @@ Board::Board() {
   moves = std::vector<Move *>();
 }
 
+int Board::evaluate() {
+  int score = 0;
+  for (int i = 0; i < 64; i++) {
+    int piece = board[i];
+    int piece_colour = piece > 0 ? 1 : -1;
+    piece = abs(piece);
+    if (piece == 0) continue;
+    switch (piece) {
+      case 1: score += piece_colour * 100; break;
+      case 2: score += piece_colour * 320; break;
+      case 3: score += piece_colour * 330; break;
+      case 4: score += piece_colour * 500; break;
+      case 5: score += piece_colour * 900; break;
+      case 6: score += piece_colour * 20000; break;
+    }
+  }
+  return score * (turn ? 1 : -1);
+}
+
 // assumes move is valid
 void Board::make_move(Move *move) {
+  board_history.emplace_back(board);
   int from = move->get_from();
   int to = move->get_to();
   int flags = move->get_flags();
@@ -61,26 +81,35 @@ void Board::make_move(Move *move) {
   turn ^= true; // switch turns
 }
 
+void Board::undo_move() {
+  std::copy(board_history.back(), board_history.back() + 64, board);
+  board_history.pop_back();
+  moves.pop_back();
+  turn ^= true;
+}
+
 std::vector<Move *> Board::get_moves() {
   std::vector<Move *> ret;
   for (int i = 0; i < 64; i++) {
     int8_t piece = abs(board[i]);
     if (board[i] == 0 || (board[i] > 0 != turn)) continue;
     if (piece == 1) { // pawn
-      if ((turn && i < 16) || (!turn && i >= 48)) { // double pawn moves
-        if (turn && board[i + 8] == 0 && board[i + 16] == 0) {
-          ret.emplace_back(new Move(i, i + 16, 0b0001));
-        }
-        if (!turn && board[i - 8] == 0 && board[i - 16] == 0) {
-          ret.emplace_back(new Move(i, i - 16, 0b0001));
-        }
+      if (turn && i < 16 && board[i + 8] == 0 && board[i + 16] == 0) { // double pawn moves
+        ret.emplace_back(new Move(i, i + 16, 0b0001));
       }
-      if (turn && i / 8 <= 6 && board[i + 8] == 0) {
+      if (!turn && i >= 48 && board[i - 8] == 0 && board[i - 16] == 0) { // double pawn moves
+        ret.emplace_back(new Move(i, i - 16, 0b0001));
+      }
+
+      if (turn && i < 48 && board[i + 8] == 0) { // quiet pawn push
         ret.emplace_back(new Move(i, i + 8, 0b0000));
       }
-      if (!turn && i / 8 >= 1 && board[i - 8] == 0) {
+      if (!turn && i >= 16 && board[i - 8] == 0) { // quiet pawn push
         ret.emplace_back(new Move(i, i - 8, 0b0000));
       }
+
+      // if (turn && i >= 48 && board[i + 1] == 0) // pawn push promotion
+
       if (turn && i % 8 != 0 && i / 8 <= 6 && board[i + 7] < 0) { // capture to the left
         ret.emplace_back(new Move(i, i + 7, 0b0100));
       }

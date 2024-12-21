@@ -1,21 +1,20 @@
 #include <iostream>
 #include <random>
-#include "board.h"
+#include "search.h"
 
 typedef std::mt19937 MyRNG;
 
 int32_t main() {
   Board board;
-  std::cout << board.to_string() << std::endl;
-  // for (Move *move : moves) {
-  //   std::cout << move->get_from() << " " << move->get_to() << " " << move->get_flags() << std::endl;
-  // }
-  MyRNG rng;
-  std::uniform_int_distribution<uint32_t> rand;
-  for (int i = 0; i < 50; i++) {
-    std::vector<Move *> moves = board.get_moves();
-    Move * random_move = moves[rand(rng) % moves.size()];
-    board.make_move(random_move);
-    std::cout << board.to_string() << std::endl;
+  Search search(board);
+  std::cout << board.to_string() << '\n';
+  int val = search.alpha_beta(-INT_MAX, INT_MAX, 15);
+  std::cout << val << '\n';
+  auto pv = search.get_principle_variation();
+  reverse(pv.begin(), pv.end());
+  for (Move *move : pv) {
+    std::cout << move->to_string() << '\n';
+    board.make_move(move);
+    std::cout << board.to_string() << '\n';
   }
 }

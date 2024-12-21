@@ -1,3 +1,5 @@
+#include <string>
+
 class Move {
 private:
   unsigned short m_move; // 16 bits (6 for from and to, 4 for type)
@@ -9,4 +11,5 @@ public:
   bool is_promotion();
   bool is_capture();
   int get_promotion_piece();
+  std::string to_string();
 };

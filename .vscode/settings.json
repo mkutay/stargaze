@@ -69,5 +69,6 @@
     "valarray": "cpp",
     "variant": "cpp",
     "algorithm": "cpp"
-  }
+  },
+  "makefile.configureOnOpen": true
 }
