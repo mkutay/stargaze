@@ -47,8 +47,8 @@ void Board::make_move(Move *move) {
   if (abs(board[from]) == 6) {
     can_castle[!turn * 2] = can_castle[!turn * 2 + 1] = false;
   }
-  if ((from == 0 && turn) || (from == 56 && !turn)) can_castle[!turn * 2 + 1] = false;
-  if ((from == 7 && turn) || (from == 63 && !turn)) can_castle[!turn * 2] = false;
+  if (((from == 0 || to == 0) && turn) || ((from == 56 || to == 56) && !turn)) can_castle[!turn * 2 + 1] = false;
+  if (((from == 7 || to == 7) && turn) || ((from == 63 || to == 63) && !turn)) can_castle[!turn * 2] = false;
   if (flags == 0b0000) { // quiet move
     board[to] = board[from];
     board[from] = 0;
@@ -71,7 +71,7 @@ void Board::make_move(Move *move) {
   } else if (flags == 0b0101) { // en passant
     board[to] = board[from];
     board[from] = 0;
-    board[to + (turn ? 8 : -8)] = 0; // remove the pawn according to who's turn it is
+    board[to + (turn ? -8 : 8)] = 0; // remove the pawn according to who's turn it is
   } else {
     // promotion
     board[to] = move->get_promotion_piece();
@@ -108,66 +108,96 @@ std::vector<Move *> Board::get_moves() {
         ret.emplace_back(new Move(i, i - 8, 0b0000));
       }
 
-      // if (turn && i >= 48 && board[i + 1] == 0) // pawn push promotion
+      if (turn && i >= 48 && board[i + 8] == 0) { // pawn push promotion
+        ret.emplace_back(new Move(i, i + 8, 0b1000));
+        ret.emplace_back(new Move(i, i + 8, 0b1001));
+        ret.emplace_back(new Move(i, i + 8, 0b1010));
+        ret.emplace_back(new Move(i, i + 8, 0b1011));
+      }
+      if (!turn && i < 16 && board[i - 8] == 0) { // pawn push promotion
+        ret.emplace_back(new Move(i, i - 8, 0b1000));
+        ret.emplace_back(new Move(i, i - 8, 0b1001));
+        ret.emplace_back(new Move(i, i - 8, 0b1010));
+        ret.emplace_back(new Move(i, i - 8, 0b1011));
+      }
 
-      if (turn && i % 8 != 0 && i / 8 <= 6 && board[i + 7] < 0) { // capture to the left
-        ret.emplace_back(new Move(i, i + 7, 0b0100));
+      if (turn && i % 8 != 0 && board[i + 7] < 0) { // capture to the left
+        if (i >= 48) {
+          ret.emplace_back(new Move(i, i + 7, 0b1100));
+          ret.emplace_back(new Move(i, i + 7, 0b1101));
+          ret.emplace_back(new Move(i, i + 7, 0b1110));
+          ret.emplace_back(new Move(i, i + 7, 0b1111));
+        } else {
+          ret.emplace_back(new Move(i, i + 7, 0b0100));
+        }
       }
-      if (turn && i % 8 != 7 && i / 8 <= 6 && board[i + 9] < 0) { // capture to the right
-        ret.emplace_back(new Move(i, i + 9, 0b0100));
+      if (turn && i % 8 != 7 && board[i + 9] < 0) { // capture to the right
+        if (i >= 48) {
+          ret.emplace_back(new Move(i, i + 9, 0b1100));
+          ret.emplace_back(new Move(i, i + 9, 0b1101));
+          ret.emplace_back(new Move(i, i + 9, 0b1110));
+          ret.emplace_back(new Move(i, i + 9, 0b1111));
+        } else {
+          ret.emplace_back(new Move(i, i + 9, 0b0100));
+        }
       }
-      if (!turn && i % 8 != 0 && i / 8 >= 1 && board[i - 9] > 0) { // left
-        ret.emplace_back(new Move(i, i - 9, 0b0100));
+      if (!turn && i % 8 != 0 && board[i - 9] > 0) { // right (in the eyes of black)
+        if (i < 16) {
+          ret.emplace_back(new Move(i, i - 9, 0b1100));
+          ret.emplace_back(new Move(i, i - 9, 0b1101));
+          ret.emplace_back(new Move(i, i - 9, 0b1110));
+          ret.emplace_back(new Move(i, i - 9, 0b1111));
+        } else {
+          ret.emplace_back(new Move(i, i - 9, 0b0100));
+        }
       }
-      if (!turn && i % 8 != 7 && i / 8 >= 1 && board[i - 7] > 0) { // right
-        ret.emplace_back(new Move(i, i - 7, 0b0100));
+      if (!turn && i % 8 != 7 && board[i - 7] > 0) { // left (in the eyes of black)
+        if (i < 16) {
+          ret.emplace_back(new Move(i, i - 7, 0b1100));
+          ret.emplace_back(new Move(i, i - 7, 0b1101));
+          ret.emplace_back(new Move(i, i - 7, 0b1110));
+          ret.emplace_back(new Move(i, i - 7, 0b1111));
+        } else {
+          ret.emplace_back(new Move(i, i - 7, 0b0100));
+        }
       }
       // en passant:
       if (moves.size() == 0) continue;
       Move *last_move = moves.back();
-      if (turn) {
-        if (i % 8 != 0 && last_move->get_to() == i - 1 && last_move->get_flags() == 0b0001) {
-          ret.emplace_back(new Move(i, i + 7, 0b0101));
-        }
-        if (i % 8 != 7 && last_move->get_to() == i + 1 && last_move->get_flags() == 0b0001) {
-          ret.emplace_back(new Move(i, i + 9, 0b0101));
-        }
-      } else {
-        if (i % 8 != 0 && last_move->get_to() == i - 1 && last_move->get_flags() == 0b0001) {
-          ret.emplace_back(new Move(i, i - 9, 0b0101));
-        }
-        if (i % 8 != 7 && last_move->get_to() == i + 1 && last_move->get_flags() == 0b0001) {
-          ret.emplace_back(new Move(i, i - 7, 0b0101));
-        }
+      if (i % 8 != 0 && last_move->get_to() == i - 1 && last_move->get_flags() == 0b0001) { // left (eyes of white)
+        ret.emplace_back(new Move(i, i + 7, 0b0101));
+      }
+      if (i % 8 != 7 && last_move->get_to() == i + 1 && last_move->get_flags() == 0b0001) { // right (eyes of white)
+        ret.emplace_back(new Move(i, i + 9, 0b0101));
       }
     } else if (piece == 2) { // knight
-      if (i % 8 >= 2 && i / 8 >= 1 && (board[i - 10] == 0 || (board[i - 10] > 0 != turn))) {
+      if (i % 8 >= 2 && i >= 8 && (board[i - 10] == 0 || (board[i - 10] > 0 != turn))) {
         ret.emplace_back(new Move(i, i - 10, board[i - 10] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 <= 5 && i / 8 >= 1 && (board[i - 6] == 0 || (board[i - 6] > 0 != turn))) {
+      if (i % 8 <= 5 && i >= 8 && (board[i - 6] == 0 || (board[i - 6] > 0 != turn))) {
         ret.emplace_back(new Move(i, i - 6, board[i - 6] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 >= 1 && i / 8 >= 2 && (board[i - 17] == 0 || (board[i - 17] > 0 != turn))) {
+      if (i % 8 >= 1 && i >= 16 && (board[i - 17] == 0 || (board[i - 17] > 0 != turn))) {
         ret.emplace_back(new Move(i, i - 17, board[i - 17] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 <= 6 && i / 8 >= 2 && (board[i - 15] == 0 || (board[i - 15] > 0 != turn))) {
+      if (i % 8 <= 6 && i >= 16 && (board[i - 15] == 0 || (board[i - 15] > 0 != turn))) {
         ret.emplace_back(new Move(i, i - 15, board[i - 15] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 >= 2 && i / 8 <= 6 && (board[i + 6] == 0 || (board[i + 6] > 0 != turn))) {
+      if (i % 8 >= 2 && i < 56 && (board[i + 6] == 0 || (board[i + 6] > 0 != turn))) {
         ret.emplace_back(new Move(i, i + 6, board[i + 6] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 <= 5 && i / 8 <= 6 && (board[i + 10] == 0 || (board[i + 10] > 0 != turn))) {
+      if (i % 8 <= 5 && i < 56 && (board[i + 10] == 0 || (board[i + 10] > 0 != turn))) {
         ret.emplace_back(new Move(i, i + 10, board[i + 10] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 >= 1 && i / 8 <= 5 && (board[i + 15] == 0 || (board[i + 15] > 0 != turn))) {
+      if (i % 8 >= 1 && i < 48 && (board[i + 15] == 0 || (board[i + 15] > 0 != turn))) {
         ret.emplace_back(new Move(i, i + 15, board[i + 15] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 <= 6 && i / 8 <= 5 && (board[i + 17] == 0 || (board[i + 17] > 0 != turn))) {
+      if (i % 8 <= 6 && i < 48 && (board[i + 17] == 0 || (board[i + 17] > 0 != turn))) {
         ret.emplace_back(new Move(i, i + 17, board[i + 17] == 0 ? 0b0000 : 0b0100));
       }
     }
     if (piece == 3 || piece == 5) { // bishop or queen
-      for (int j = i + 7; j < 64 && j % 8 >= 0 && j / 8 <= 7; j += 7) {
+      if (i % 8 != 0 && i < 56) for (int j = i + 7; j % 8 != 7 && j < 64; j += 7) {
         if (board[j] == 0) {
           ret.emplace_back(new Move(i, j, 0b0000));
         } else {
@@ -176,9 +206,8 @@ std::vector<Move *> Board::get_moves() {
           }
           break;
         }
-        if (j % 8 == 0 || j / 8 == 7) break;
       }
-      for (int j = i + 9; j < 64 && j % 8 <= 7 && j / 8 <= 7; j += 9) {
+      if (i % 8 != 7 && i < 56) for (int j = i + 9; j % 8 != 0 && j < 64; j += 9) {
         if (board[j] == 0) {
           ret.emplace_back(new Move(i, j, 0b0000));
         } else {
@@ -187,9 +216,8 @@ std::vector<Move *> Board::get_moves() {
           }
           break;
         }
-        if (j % 8 == 7 || j / 8 == 7) break;
       }
-      for (int j = i - 7; j >= 0 && j % 8 <= 7 && j / 8 >= 0; j -= 7) {
+      if (i % 8 != 7 && i >= 8) for (int j = i - 7; j % 8 != 0 && j >= 0; j -= 7) {
         if (board[j] == 0) {
           ret.emplace_back(new Move(i, j, 0b0000));
         } else {
@@ -198,22 +226,8 @@ std::vector<Move *> Board::get_moves() {
           }
           break;
         }
-        if (j % 8 == 7 || j / 8 == 0) break;
       }
-      for (int j = i - 9; j >= 0 && j % 8 >= 0 && j / 8 >= 0; j -= 9) {
-        if (board[j] == 0) {
-          ret.emplace_back(new Move(i, j, 0b0000));
-        } else {
-          if (board[j] > 0 != turn) {
-            ret.emplace_back(new Move(i, j, 0b0100));
-          }
-          break;
-        }
-        if (j % 8 == 0 || j / 8 == 0) break;
-      }
-    }
-    if (piece == 4 || piece == 5) { // rook or queen
-      for (int j = i + 8; j < 64 && j / 8 <= 7; j += 8) {
+      if (i % 8 != 0 && i >= 8) for (int j = i - 9; j % 8 != 7 && j >= 0; j -= 9) {
         if (board[j] == 0) {
           ret.emplace_back(new Move(i, j, 0b0000));
         } else {
@@ -223,7 +237,9 @@ std::vector<Move *> Board::get_moves() {
           break;
         }
       }
-      for (int j = i - 8; j >= 0 && j / 8 >= 0; j -= 8) {
+    }
+    if (piece == 4 || piece == 5) { // rook or queen
+      for (int j = i + 8; j < 64; j += 8) {
         if (board[j] == 0) {
           ret.emplace_back(new Move(i, j, 0b0000));
         } else {
@@ -233,7 +249,7 @@ std::vector<Move *> Board::get_moves() {
           break;
         }
       }
-      for (int j = i + 1; j < 64 && j % 8 <= 7; j++) {
+      for (int j = i - 8; j >= 0; j -= 8) {
         if (board[j] == 0) {
           ret.emplace_back(new Move(i, j, 0b0000));
         } else {
@@ -242,9 +258,8 @@ std::vector<Move *> Board::get_moves() {
           }
           break;
         }
-        if (j % 8 == 7) break;
       }
-      for (int j = i - 1; j >= 0 && j % 8 >= 0; j--) {
+      if (i % 8 != 7) for (int j = i + 1; j % 8 != 0 && j < 64; j++) {
         if (board[j] == 0) {
           ret.emplace_back(new Move(i, j, 0b0000));
         } else {
@@ -253,7 +268,16 @@ std::vector<Move *> Board::get_moves() {
           }
           break;
         }
-        if (j % 8 == 0) break;
+      }
+      if (i % 8 != 0) for (int j = i - 1; j % 8 != 7 && j >= 0; j--) {
+        if (board[j] == 0) {
+          ret.emplace_back(new Move(i, j, 0b0000));
+        } else {
+          if (board[j] > 0 != turn) {
+            ret.emplace_back(new Move(i, j, 0b0100));
+          }
+          break;
+        }
       }
     }
     if (piece == 6) {

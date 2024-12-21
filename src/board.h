@@ -17,4 +17,5 @@ public:
   bool is_in_check();
   std::string to_string();
   int evaluate();
+  bool get_turn() { return true; }
 };
