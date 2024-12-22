@@ -8,7 +8,7 @@ unsigned short Move::get_from() { return m_move & 0x3f; }
 unsigned short Move::get_to() { return (m_move >> 6) & 0x3f; }
 unsigned short Move::get_flags() { return (m_move >> 12) & 0x0f; }
 bool Move::is_promotion() { return (m_move >> 12) & 0x01; }
-bool Move::is_capture() { return (m_move >> 13) & 0x01; }
+bool Move::is_capture() { return (m_move >> 14) & 0x01; }
 int Move::get_promotion_piece() {
   if (!is_promotion()) return 0;
   int specials = get_flags() & 0b0011;

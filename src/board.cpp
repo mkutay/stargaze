@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 #include "board.h"
 
 Board::Board() {
@@ -17,6 +18,7 @@ Board::Board() {
   board[60] = -6;
 
   moves = std::vector<Move *>();
+  board_history = std::vector<int8_t *>();
 }
 
 int Board::evaluate() {
@@ -38,21 +40,35 @@ int Board::evaluate() {
   return score * (turn ? 1 : -1);
 }
 
+bool Board::print(Move *move) {
+  std::cerr << to_string() << turn << " " << move->to_string() << std::endl;
+  return false;
+}
+
 // assumes move is valid
-void Board::make_move(Move *move) {
-  board_history.emplace_back(board);
+void Board::make_move(Move *move, bool search_flag) {
+  if (search_flag) {
+    int8_t *temp = new int8_t[64];
+    std::copy(board, board + 64, temp);
+    board_history.emplace_back(temp);
+  }
   int from = move->get_from();
   int to = move->get_to();
   int flags = move->get_flags();
   if (abs(board[from]) == 6) {
     can_castle[!turn * 2] = can_castle[!turn * 2 + 1] = false;
   }
+  assert(board[from] != 0 || print(move));
   if (((from == 0 || to == 0) && turn) || ((from == 56 || to == 56) && !turn)) can_castle[!turn * 2 + 1] = false;
   if (((from == 7 || to == 7) && turn) || ((from == 63 || to == 63) && !turn)) can_castle[!turn * 2] = false;
   if (flags == 0b0000) { // quiet move
+    assert(board[to] == 0 || print(move));
     board[to] = board[from];
     board[from] = 0;
   } else if (flags == 0b0001) { // double pawn push
+    assert(board[to] == 0);
+    assert(board[to + (turn ? -8 : 8)] == 0 || print(move));
+    assert(abs(board[from]) == 1);
     board[to] = board[from];
     board[from] = 0;
   } else if (flags == 0b0010) { // king's side castle
@@ -66,14 +82,16 @@ void Board::make_move(Move *move) {
     board[from] = 0;
     board[to - 2] = 0;
   } else if (flags == 0b0100) { // captures
+    assert(board[to] > 0 != turn);
     board[to] = board[from];
     board[from] = 0;
   } else if (flags == 0b0101) { // en passant
     board[to] = board[from];
     board[from] = 0;
     board[to + (turn ? -8 : 8)] = 0; // remove the pawn according to who's turn it is
-  } else {
-    // promotion
+  } else { // promotion
+    if (move->is_capture()) assert(board[to] > 0 != turn);
+    else assert(board[to] == 0);
     board[to] = move->get_promotion_piece();
     board[from] = 0;
   }
@@ -82,7 +100,8 @@ void Board::make_move(Move *move) {
 }
 
 void Board::undo_move() {
-  std::copy(board_history.back(), board_history.back() + 64, board);
+  int8_t *last_board = board_history.back();
+  std::copy(last_board, last_board + 64, board);
   board_history.pop_back();
   moves.pop_back();
   turn ^= true;
@@ -95,6 +114,7 @@ std::vector<Move *> Board::get_moves() {
     if (board[i] == 0 || (board[i] > 0 != turn)) continue;
     if (piece == 1) { // pawn
       if (turn && i < 16 && board[i + 8] == 0 && board[i + 16] == 0) { // double pawn moves
+        // if (i == 13) std::cerr << to_string() << std::endl;
         ret.emplace_back(new Move(i, i + 16, 0b0001));
       }
       if (!turn && i >= 48 && board[i - 8] == 0 && board[i - 16] == 0) { // double pawn moves
@@ -165,10 +185,10 @@ std::vector<Move *> Board::get_moves() {
       if (moves.size() == 0) continue;
       Move *last_move = moves.back();
       if (i % 8 != 0 && last_move->get_to() == i - 1 && last_move->get_flags() == 0b0001) { // left (eyes of white)
-        ret.emplace_back(new Move(i, i + 7, 0b0101));
+        ret.emplace_back(new Move(i, turn ? i + 7 : i - 9, 0b0101));
       }
       if (i % 8 != 7 && last_move->get_to() == i + 1 && last_move->get_flags() == 0b0001) { // right (eyes of white)
-        ret.emplace_back(new Move(i, i + 9, 0b0101));
+        ret.emplace_back(new Move(i, turn ? i + 9 : i - 7, 0b0101));
       }
     } else if (piece == 2) { // knight
       if (i % 8 >= 2 && i >= 8 && (board[i - 10] == 0 || (board[i - 10] > 0 != turn))) {
@@ -281,22 +301,22 @@ std::vector<Move *> Board::get_moves() {
       }
     }
     if (piece == 6) {
-      if (i % 8 != 0 && i / 8 <= 6 && (board[i + 7] == 0 || (board[i + 7] > 0 != turn))) {
+      if (i % 8 != 0 && i < 56 && (board[i + 7] == 0 || (board[i + 7] > 0 != turn))) {
         ret.emplace_back(new Move(i, i + 7, board[i + 7] == 0 ? 0b0000 : 0b0100));
       }
-      if (i / 8 <= 6 && (board[i + 8] == 0 || (board[i + 8] > 0 != turn))) {
+      if (i < 56 && (board[i + 8] == 0 || (board[i + 8] > 0 != turn))) {
         ret.emplace_back(new Move(i, i + 8, board[i + 8] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 != 7 && i / 8 <= 6 && (board[i + 9] == 0 || (board[i + 9] > 0 != turn))) {
+      if (i % 8 != 7 && i < 56 && (board[i + 9] == 0 || (board[i + 9] > 0 != turn))) {
         ret.emplace_back(new Move(i, i + 9, board[i + 9] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 != 0 && i / 8 >= 1 && (board[i - 9] == 0 || (board[i - 9] > 0 != turn))) {
+      if (i % 8 != 0 && i >= 8 && (board[i - 9] == 0 || (board[i - 9] > 0 != turn))) {
         ret.emplace_back(new Move(i, i - 9, board[i - 9] == 0 ? 0b0000 : 0b0100));
       }
-      if (i / 8 >= 1 && (board[i - 8] == 0 || (board[i - 8] > 0 != turn))) {
+      if (i >= 8 && (board[i - 8] == 0 || (board[i - 8] > 0 != turn))) {
         ret.emplace_back(new Move(i, i - 8, board[i - 8] == 0 ? 0b0000 : 0b0100));
       }
-      if (i % 8 != 7 && i / 8 >= 1 && (board[i - 7] == 0 || (board[i - 7] > 0 != turn))) {
+      if (i % 8 != 7 && i >= 8 && (board[i - 7] == 0 || (board[i - 7] > 0 != turn))) {
         ret.emplace_back(new Move(i, i - 7, board[i - 7] == 0 ? 0b0000 : 0b0100));
       }
       if (i % 8 != 0 && (board[i - 1] == 0 || (board[i - 1] > 0 != turn))) {
@@ -318,13 +338,14 @@ std::vector<Move *> Board::get_moves() {
   return ret;
 }
 
-std::string Board::to_string() {
+std::string Board::to_string(int8_t *temp_board) {
+  if (temp_board == nullptr) temp_board = board;
   std::vector<std::string> result;
   std::string temp = "";
   for (int i = 0; i < 64; i++) {
     if (i != 0 && i % 8 == 0) result.emplace_back(temp), temp = "";
     std::string c;
-    switch (board[i]) {
+    switch (temp_board[i]) {
       case 0: c = "."; break;
       case 1: c = "P"; break;
       case 2: c = "N"; break;

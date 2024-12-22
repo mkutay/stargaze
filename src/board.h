@@ -11,11 +11,11 @@ private:
   std::vector<Move *> moves;
 public:
   Board();
-  void make_move(Move *move);
+  void make_move(Move *move, bool search_flag = false);
   void undo_move();
   std::vector<Move *> get_moves();
-  bool is_in_check();
-  std::string to_string();
+  std::string to_string(int8_t *temp_board = nullptr);
   int evaluate();
-  bool get_turn() { return true; }
+  bool get_turn() { return turn; }
+  bool print(Move *move);
 };
