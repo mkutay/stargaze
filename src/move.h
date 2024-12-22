@@ -1,4 +1,5 @@
 #include <string>
+#include "enums.h"
 
 class Move {
 private:
@@ -10,6 +11,6 @@ public:
   unsigned short get_flags();
   bool is_promotion();
   bool is_capture();
-  int get_promotion_piece();
+  Piece get_promotion_piece();
   std::string to_string();
 };
