@@ -1,4 +1,4 @@
-#include "search.h"
+#include "search.hpp"
 #include <iostream>
 
 Search::Search(Board *board) { this->board = board; }

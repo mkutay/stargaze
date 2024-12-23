@@ -1,4 +1,4 @@
-#include "board.h"
+#include "board.hpp"
 
 Board::Board() {;
   for (int i = 0; i < 16; i++) pieceBB[nWhite] |= 1ull << i;
@@ -12,25 +12,7 @@ Board::Board() {;
 
   moves = std::vector<Move *>();
   board_history = std::vector<u_int64_t *>();
-}
-
-int Board::evaluate() {
-  int score = 0;
-  for (int i = 0; i < 64; i++) {
-    Piece p = get_piece(i);
-    int colour_mul = get_colour(i) == WHITE ? 1 : -1;
-    switch (p) {
-      case EMPTY: break;
-      case W_PAWN: score += 100; break;
-      case B_PAWN: score += -100; break;
-      case KNIGHT: score += colour_mul * 320; break;
-      case BISHOP: score += colour_mul * 330; break;
-      case ROOK: score += colour_mul * 500; break;
-      case QUEEN: score += colour_mul * 900; break;
-      case KING: score += colour_mul * 20000; break;
-    }
-  }
-  return score * (turn == WHITE ? 1 : -1);
+  init_eval_table();
 }
 
 bool Board::debug_print(Move *move) {

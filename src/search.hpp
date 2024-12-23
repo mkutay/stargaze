@@ -1,5 +1,5 @@
 #include <vector>
-#include "board.h"
+#include "board.hpp"
 
 typedef struct PVLine {
   std::vector<Move *> moves;

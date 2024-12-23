@@ -1,5 +1,5 @@
 #include <string>
-#include "enums.h"
+#include "enums.hpp"
 
 class Move {
 private:

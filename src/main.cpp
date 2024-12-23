@@ -1,9 +1,9 @@
 #include <iostream>
 #include <random>
-#include "search.h"
+#include "search.hpp"
 
 typedef std::mt19937 MyRNG;
-int MAX_DEPTH = 7;
+int MAX_DEPTH = 6;
 
 
 int32_t main() {

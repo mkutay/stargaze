@@ -1,5 +1,5 @@
 #include <cassert>
-#include "move.h"
+#include "move.hpp"
 
 Move::Move(int from, int to, int flags) {
   m_move = from | (to << 6) | (flags << 12);

@@ -2,7 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <cassert>
-#include "move.h"
+#include "move.hpp"
 
 /**
  * bit board representation (dense):
@@ -33,6 +33,11 @@ class Board {
   bool can_castle[4] = { true }; // 0: white king's side, 1: white queen's side, 2: black king's side, 3: black queen's side
   std::vector<Move *> moves;
   std::vector<u_int64_t *> board_history;
+  static int mg_table[12][64], eg_table[12][64], gamephase_inc[12], mg_value[6], eg_value[6],
+    *mg_pesto_table[6], *eg_pesto_table[6],
+    mg_pawn_table[64], eg_pawn_table[64], mg_knight_table[64], eg_knight_table[64],
+    mg_bishop_table[64], eg_bishop_table[64], mg_rook_table[64], eg_rook_table[64],
+    mg_queen_table[64], eg_queen_table[64], mg_king_table[64], eg_king_table[64];
 
   bool debug_print(Move *move);
   int piece_code(Piece p) {
@@ -48,6 +53,7 @@ class Board {
     }
   }
   int colour_code(Piece p) { return p >= 6 ? 1 : 0; }
+  void init_eval_table();
 public:
   Board();
   void make_move(Move *move);
