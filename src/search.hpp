@@ -1,8 +1,9 @@
+#pragma once
 #include <vector>
 #include "board.hpp"
 
 typedef struct PVLine {
-  std::vector<Move *> moves;
+  std::vector<u_int16_t> moves;
   PVLine(int max_depth) : moves(max_depth) {}
 } PVLine;
 

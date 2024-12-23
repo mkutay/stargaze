@@ -10,6 +10,11 @@ enum Piece {
 };
 
 enum Colour {
-  WHITE = 1,
-  BLACK = 0,
+  WHITE,
+  BLACK,
 };
+
+constexpr Colour operator!(const Colour &a) {
+  if (a == WHITE) return BLACK;
+  return WHITE;
+}
