@@ -2,16 +2,22 @@
 #include "evaluate.hpp"
 #include <iostream>
 
-Search::Search(Board *board) { this->board = board; }
-
 int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
+  // u_int64_t hash = board->get_hash();
+  // if (tt.is_hash_present(hash)) {
+  //   Entry entry = tt.get_entry(hash);
+  //   if (entry.depth >= depth_left) {
+  //     if (entry.score >= beta) return beta;
+  //     if (entry.score > alpha) alpha = entry.score;
+  //   }
+  // }
   if (depth_left == 0) return quiescence(alpha, beta);
   PVLine line(depth_left - 1);
 
   std::vector<u_int16_t> moves = board->get_moves();
   for (u_int16_t move : moves) {
     board->make_move(move);
-    int score = -alpha_beta(-beta, -alpha, depth_left - 1, &line);
+    int score = board->is_king_missing() ? -INT_MAX : -alpha_beta(-beta, -alpha, depth_left - 1, &line);
     board->undo_move();
 
     if (score > alpha) {
@@ -21,6 +27,8 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     }
     if (score >= beta) break; // fail soft beta-cutoff
   }
+  // Entry entry = { hash, depth_left, alpha };
+  // tt.set_entry(hash, entry);
   return alpha;
 }
 

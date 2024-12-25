@@ -57,6 +57,8 @@ public:
   Colour get_turn() { return turn; }
   std::vector<u_int16_t> get_moves();
   std::string to_string();
+  bool is_king_missing() { return __builtin_popcountll(pieceBB[nKing]) != 2; }
+  int get_hash();
 
   Colour get_colour(int i) { return pieceBB[nWhite] & (1ull << i) ? WHITE : BLACK; }
   Piece get_piece(int i) {

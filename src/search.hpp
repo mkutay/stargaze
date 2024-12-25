@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "board.hpp"
+#include "tt.hpp"
 
 typedef struct PVLine {
   std::vector<u_int16_t> moves;
@@ -10,8 +11,9 @@ typedef struct PVLine {
 class Search {
 private:
   Board *board;
+  TT tt;
   int quiescence(int alpha, int beta);
 public:
-  Search(Board *board);
+  Search(Board *board) { this->board = board; }
   int alpha_beta(int alpha, int beta, int depth_left, PVLine *pline);
 };

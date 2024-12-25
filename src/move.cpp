@@ -7,6 +7,7 @@ u_int16_t get_move_to(u_int16_t move) { return (move >> 6) & 0x3f; }
 u_int16_t get_move_flags(u_int16_t move) { return (move >> 12) & 0x0f; }
 bool is_move_promotion(u_int16_t move) { return (move >> 15) & 0x01; }
 bool is_move_capture(u_int16_t move) { return (move >> 14) & 0x01; }
+bool is_move_en_passant(u_int16_t move) { return get_move_flags(move) == 0b0101; }
 Piece get_move_promotion_piece(u_int16_t move) {
 #ifdef DEBUG
   assert(is_move_promotion(move));
