@@ -37,7 +37,7 @@ class Board {
 
   bool debug_print(u_int16_t move);
   bool debug_print();
-  int piece_code(Piece p) {
+  int piece_code(Piece p) { // get enum bb piece code from piece
     switch (p) {
       case W_PAWN: return 2;
       case B_PAWN: return 2;
@@ -49,7 +49,6 @@ class Board {
       case EMPTY: assert(false || debug_print()); return -1;
     }
   }
-  int colour_code(Piece p) { return p >= 6 ? 1 : 0; }
 public:
   Board();
   void make_move(u_int16_t move);
@@ -57,8 +56,8 @@ public:
   Colour get_turn() { return turn; }
   std::vector<u_int16_t> get_moves();
   std::string to_string();
-  bool is_king_missing() { return __builtin_popcountll(pieceBB[nKing]) != 2; }
   int get_hash();
+  bool is_in_check(int i = -1);
 
   Colour get_colour(int i) { return pieceBB[nWhite] & (1ull << i) ? WHITE : BLACK; }
   Piece get_piece(int i) {
@@ -71,14 +70,14 @@ public:
     return EMPTY;
   }
   void make_move_bb(int from, int to, bool is_capture) {
-    Piece p = get_piece(from), cp = get_piece(to);
-    Colour c = get_colour(from), cc = get_colour(to);
+    Piece from_piece = get_piece(from), to_piece = get_piece(to);
+    Colour from_colour = get_colour(from), to_colour = get_colour(to);
     u_int64_t fromBB = 1ull << from;
     u_int64_t toBB = 1ull << to;
     u_int64_t bb = fromBB | toBB;
-    pieceBB[piece_code(p)] ^= bb;
-    pieceBB[c] ^= bb;
-    if (is_capture && cp != EMPTY) pieceBB[piece_code(cp)] ^= toBB, pieceBB[cc] ^= toBB;
+    pieceBB[piece_code(from_piece)] ^= bb;
+    pieceBB[from_colour] ^= bb;
+    if (is_capture && to_piece != EMPTY) pieceBB[piece_code(to_piece)] ^= toBB, pieceBB[to_colour] ^= toBB;
   }
   void clear(int i) { for (int j = 0; j < 8; j++) pieceBB[j] &= ~(1ull << i); }
   bool is_empty(int i) { return !((pieceBB[nWhite] | pieceBB[nBlack]) & (1ull << i)); }

@@ -1,4 +1,5 @@
 #include "evaluate.hpp"
+#include "move_gen.hpp"
 
 int mg_pawn_table[64] = {
     0,   0,   0,   0,   0,   0,  0,   0,
@@ -170,37 +171,31 @@ void init_eval_table() {
 }
 
 int evaluate(Board &board) {
-  auto convert = [&](Piece p, Colour c) {
-    int pc = -1;
-    switch (p) {
-      case W_PAWN: pc = 0; break;
-      case B_PAWN: pc = 0; break;
-      case KNIGHT: pc = 1; break;
-      case BISHOP: pc = 2; break;
-      case ROOK: pc = 3; break;
-      case QUEEN: pc = 4; break;
-      case KING: pc = 5; break;
-      case EMPTY: break;
-    }
-    if (c == WHITE) return pc * 2;
-    return pc * 2 + 1;
-  };
-
   int mg[2] = { 0 }, eg[2] = { 0 };
   int game_phase = 0;
 
-  for (int i = 0; i < 64; i++) {
-    int pc = convert(board.get_piece(i), board.get_colour(i));
-    if (!board.is_empty(i)) {
-      mg[pc & 1] += mg_table[pc][i];
-      eg[pc & 1] += eg_table[pc][i];
-      game_phase += gamephase_inc[pc];
-    }
+  u_int64_t occupied = board.get_white_pieces() | board.get_black_pieces();
+  while (occupied) {
+    u_int64_t ls1b = occupied & -occupied;
+    int i = bit_scan_forward(ls1b);
+
+    Piece p = board.get_piece(i);
+#ifdef DEBUG
+    assert(p != EMPTY);
+#endif
+    if (p == W_PAWN || p == B_PAWN) p = B_PAWN;
+    int pc = (int(p) - 2) * 2 + int(board.get_colour(i));
+    mg[pc & 1] += mg_table[pc][i];
+    eg[pc & 1] += eg_table[pc][i];
+    game_phase += gamephase_inc[pc];
+    
+    occupied ^= ls1b;
   }
+
   Colour turn = board.get_turn();
 
-  int mg_score = mg[turn == WHITE ? 0 : 1] - mg[turn == WHITE ? 1 : 0];
-  int eg_score = eg[turn == WHITE ? 0 : 1] - eg[turn == WHITE ? 1 : 0];
+  int mg_score = mg[turn] - mg[!turn];
+  int eg_score = eg[turn] - eg[!turn];
   int mg_phase = game_phase;
   if (mg_phase > 24) mg_phase = 24; /* in case of early promotion */
   int eg_phase = 24 - mg_phase;

@@ -1,4 +1,8 @@
+#include <functional>
+
 #include "board.hpp"
+#include "evaluate.hpp"
+#include "move_gen.hpp"
 
 const int knight_moves_d[8] = { -10, -6, -17, -15, 6, 10, 15, 17 };
 const int diagonal_moves_d[4] = { 7, 9, -7, -9 };
@@ -218,16 +222,98 @@ std::vector<u_int16_t> Board::get_moves() {
       assert(temp_king_cardinal == (temp_king_cardinal & -temp_king_cardinal));
 #endif
       int i = bit_scan_forward(temp_king_cardinal);
-      ret.emplace_back(create_move(i - cc, i, bool(temp_king_cardinal & temp_king_diagonal_captures) << 2));
+      ret.emplace_back(create_move(i - cc, i, bool(temp_king_cardinal & temp_king_cardinal_captures) << 2));
     }
     if (temp_king_diagonal) {
 #ifdef DEBUG
       assert(temp_king_diagonal == (temp_king_diagonal & -temp_king_diagonal));
 #endif
       int i = bit_scan_forward(temp_king_diagonal);
-      ret.emplace_back(create_move(i - dd, i, bool(temp_king_diagonal & temp_king_cardinal_captures) << 2));
+      ret.emplace_back(create_move(i - dd, i, bool(temp_king_diagonal & temp_king_diagonal_captures) << 2));
     }
   }
 
-  return ret;
+  std::vector<u_int16_t> non_pseudo_moves;
+  for (u_int16_t move : ret) {
+    make_move(move);
+    if (!is_in_check()) non_pseudo_moves.emplace_back(move);
+    undo_move();
+  }
+
+  // castling
+  if (turn == WHITE) {
+    if (can_castle[0]) { // white king's side
+      if (!(occupied & 0x60) && !is_in_check(4) && !is_in_check(5) && !is_in_check(6)) {
+        non_pseudo_moves.emplace_back(create_move(4, 6, 0b0010));
+      }
+    }
+    if (can_castle[1]) { // white queen's side
+      if (!(occupied & 0x0e) && !is_in_check(4) && !is_in_check(3) && !is_in_check(2)) {
+        non_pseudo_moves.emplace_back(create_move(4, 2, 0b0011));
+      }
+    }
+  } else {
+    if (can_castle[2]) { // black king's side
+      if (!(occupied & (0x60ll << 56)) && !is_in_check(60) && !is_in_check(61) && !is_in_check(62)) {
+        non_pseudo_moves.emplace_back(create_move(60, 62, 0b0010));
+      }
+    }
+    if (can_castle[3]) { // black queen's side
+      if (!(occupied & (0x0ell << 56)) && !is_in_check(60) && !is_in_check(59) && !is_in_check(58)) {
+        non_pseudo_moves.emplace_back(create_move(60, 58, 0b0011));
+      }
+    }
+  }
+
+  std::sort(non_pseudo_moves.begin(), non_pseudo_moves.end(), [&](u_int16_t a, u_int16_t b) {
+    if (is_move_capture(a) && !is_move_capture(b)) return true;
+    if (!is_move_capture(a) && is_move_capture(b)) return false;
+    if (is_move_promotion(a) && !is_move_promotion(b)) return true;
+    if (!is_move_promotion(a) && is_move_promotion(b)) return false;
+    make_move(a);
+    int score_a = evaluate(*this);
+    undo_move();
+    make_move(b);
+    int score_b = evaluate(*this);
+    undo_move();
+    return score_a > score_b;
+  });
+
+  return non_pseudo_moves;
+}
+
+bool Board::is_in_check(int i) {
+  u_int64_t king = i == -1 ? (turn == WHITE ? get_white_king() : get_black_king()) : (1ll << i);
+  u_int64_t other_pieces = turn == WHITE ? get_black_pieces() : get_white_pieces();
+  u_int64_t other_queens = turn == WHITE ? get_black_queens() : get_white_queens();
+  u_int64_t other_rooks = turn == WHITE ? get_black_rooks() : get_white_rooks();
+  u_int64_t other_bishops = turn == WHITE ? get_black_bishops() : get_white_bishops();
+  u_int64_t other_knights = turn == WHITE ? get_black_knights() : get_white_knights();
+  u_int64_t empty = ~get_white_pieces() & ~get_black_pieces();
+
+  for (int d = 0; d < 8; d++) {
+    u_int64_t temp = other_knights;
+    if (d < 4) temp >>= -knight_moves_d[d];
+    else temp <<= knight_moves_d[d];
+    temp &= knight_masks[d];
+    if (temp & king) return true;
+  }
+  for (int d = 0; d < 4; d++) {
+    int cc = cardinal_moves_d[d], dd = diagonal_moves_d[d];
+    u_int64_t temp_king_cardinal = king;
+    u_int64_t temp_king_diagonal = king;
+    while (temp_king_cardinal || temp_king_diagonal) {
+      if (d < 2) temp_king_cardinal <<= cc, temp_king_diagonal <<= dd;
+      else temp_king_cardinal >>= -cc, temp_king_diagonal >>= -dd;
+      temp_king_cardinal &= cardinal_masks[d];
+      temp_king_diagonal &= diagonal_masks[d];
+      u_int64_t temp_king_cardinal_captures = temp_king_cardinal & other_pieces;
+      u_int64_t temp_king_diagonal_captures = temp_king_diagonal & other_pieces;
+      temp_king_cardinal = (temp_king_cardinal & empty) | temp_king_cardinal_captures;
+      temp_king_diagonal = (temp_king_diagonal & empty) | temp_king_diagonal_captures;
+      if (temp_king_cardinal & (other_rooks | other_queens)) return true;
+      if (temp_king_diagonal & (other_bishops | other_queens)) return true;
+    }
+  }
+  return false;
 }
