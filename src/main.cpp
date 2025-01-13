@@ -1,12 +1,13 @@
 #include <iostream>
 #include <random>
+#include <stack>
 #include "search.hpp"
 #include "board.hpp"
 #include "evaluate.hpp"
 #include "move.hpp"
 #include "get_hash.hpp"
 
-int MAX_DEPTH = 3;
+int MAX_DEPTH = 4;
 
 int32_t main() {
   init_eval_table();

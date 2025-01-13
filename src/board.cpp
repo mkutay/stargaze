@@ -36,17 +36,9 @@ void Board::make_move(u_int16_t move) {
   if (((from == 0 || to == 0) && turn) || ((from == 56 || to == 56) && !turn)) can_castle[!turn * 2 + 1] = false;
   if (((from == 7 || to == 7) && turn) || ((from == 63 || to == 63) && !turn)) can_castle[!turn * 2] = false;
 
-  if (flags == 0b0000) { // quiet move 
-#ifdef DEBUG
-    assert(is_empty(to));
-#endif
+  if (flags == 0b0000) { // quiet move
     make_move_bb(from, to, false);
   } else if (flags == 0b0001) { // double pawn push
-#ifdef DEBUG
-    assert(is_empty(to));
-    // assert(board[to + (turn ? -8 : 8)] == 0 || debug_print(move));
-    // assert(abs(board[from]) == 1);
-#endif
     make_move_bb(from, to, false);
   } else if (flags == 0b0010) { // king's side castle
     make_move_bb(from, to, false);
@@ -55,24 +47,16 @@ void Board::make_move(u_int16_t move) {
     make_move_bb(from, to, false);
     make_move_bb(to - 2, to + 1, false);
   } else if (flags == 0b0100) { // captures
-#ifdef DEBUG
-    assert(get_colour(to) != turn);
-#endif
     make_move_bb(from, to, true);
   } else if (flags == 0b0101) { // en passant
     make_move_bb(from, to, true);
     clear(to + (turn ? -8 : 8)); // remove the pawn according to who's turn it is
   } else { // promotion
-#ifdef DEBUG
-    if (is_move_capture(move)) assert(get_colour(to) != turn);
-    else assert(is_empty(to));
-    assert(is_move_promotion(move));
-#endif
     set_piece(to, get_move_promotion_piece(move), turn);
     clear(from);
   }
-  moves.emplace_back(move); // backlog
-  turn = !turn; // switch turns
+  moves.emplace_back(move);
+  turn = !turn;
 }
 
 void Board::undo_move() {

@@ -17,7 +17,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
   std::vector<u_int16_t> moves = board->get_moves();
   for (u_int16_t move : moves) {
     board->make_move(move);
-    // std::cout << board->to_string() << std::endl;
+    std::cout << board->to_string() << std::endl;
     int score = -alpha_beta(-beta, -alpha, depth_left - 1, &line);
     board->undo_move();
 

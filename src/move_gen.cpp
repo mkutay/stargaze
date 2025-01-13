@@ -169,6 +169,8 @@ std::vector<u_int16_t> Board::get_moves() {
         ret.emplace_back(create_move(i - (m + 1) * diagonal_moves_d[d], i, bool(temp_queens_captures & ls1b) << 2));
         temp ^= ls1b;
       }
+      temp_bishops &= empty;
+      temp_queens &= empty;
     }
   }
 
@@ -200,6 +202,8 @@ std::vector<u_int16_t> Board::get_moves() {
         ret.emplace_back(create_move(i - (m + 1) * cc, i, bool(temp_queens_captures & ls1b) << 2));
         temp ^= ls1b;
       }
+      temp_rooks &= empty;
+      temp_queens &= empty;
     }
   }
 
@@ -284,7 +288,6 @@ std::vector<u_int16_t> Board::get_moves() {
 
 bool Board::is_in_check(int i) {
   u_int64_t king = i == -1 ? (turn == WHITE ? get_white_king() : get_black_king()) : (1ll << i);
-  u_int64_t other_pieces = turn == WHITE ? get_black_pieces() : get_white_pieces();
   u_int64_t other_queens = turn == WHITE ? get_black_queens() : get_white_queens();
   u_int64_t other_rooks = turn == WHITE ? get_black_rooks() : get_white_rooks();
   u_int64_t other_bishops = turn == WHITE ? get_black_bishops() : get_white_bishops();
@@ -307,12 +310,10 @@ bool Board::is_in_check(int i) {
       else temp_king_cardinal >>= -cc, temp_king_diagonal >>= -dd;
       temp_king_cardinal &= cardinal_masks[d];
       temp_king_diagonal &= diagonal_masks[d];
-      u_int64_t temp_king_cardinal_captures = temp_king_cardinal & other_pieces;
-      u_int64_t temp_king_diagonal_captures = temp_king_diagonal & other_pieces;
-      temp_king_cardinal = (temp_king_cardinal & empty) | temp_king_cardinal_captures;
-      temp_king_diagonal = (temp_king_diagonal & empty) | temp_king_diagonal_captures;
       if (temp_king_cardinal & (other_rooks | other_queens)) return true;
       if (temp_king_diagonal & (other_bishops | other_queens)) return true;
+      temp_king_cardinal &= empty;
+      temp_king_diagonal &= empty;
     }
   }
   return false;
