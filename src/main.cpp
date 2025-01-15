@@ -7,7 +7,7 @@
 #include "move.hpp"
 #include "get_hash.hpp"
 
-int MAX_DEPTH = 4;
+int MAX_DEPTH = 6;
 
 int32_t main() {
   init_eval_table();

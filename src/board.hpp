@@ -38,16 +38,8 @@ class Board {
   bool debug_print(u_int16_t move);
   bool debug_print();
   int piece_code(Piece p) { // get enum bb piece code from piece
-    switch (p) {
-      case W_PAWN: return 2;
-      case B_PAWN: return 2;
-      case KNIGHT: return 3;
-      case BISHOP: return 4;
-      case ROOK: return 5;
-      case QUEEN: return 6;
-      case KING: return 7;
-      case EMPTY: assert(false || debug_print()); return -1;
-    }
+    if (p == W_PAWN || p == B_PAWN) p = B_PAWN;
+    return int(p);
   }
 public:
   Board();

@@ -27,14 +27,14 @@ void Board::make_move(u_int16_t move) {
   int to = get_move_to(move);
   int flags = get_move_flags(move);
 
-  if (get_piece(from) == KING) can_castle[!turn * 2] = can_castle[!turn * 2 + 1] = false;
+  if (get_piece(from) == KING) can_castle[turn * 2] = can_castle[turn * 2 + 1] = false;
 
 #ifdef DEBUG
   assert(get_piece(from) != EMPTY);
 #endif
 
-  if (((from == 0 || to == 0) && turn) || ((from == 56 || to == 56) && !turn)) can_castle[!turn * 2 + 1] = false;
-  if (((from == 7 || to == 7) && turn) || ((from == 63 || to == 63) && !turn)) can_castle[!turn * 2] = false;
+  if (((from == 0 || to == 0) && !turn) || ((from == 56 || to == 56) && turn)) can_castle[turn * 2 + 1] = false;
+  if (((from == 7 || to == 7) && !turn) || ((from == 63 || to == 63) && turn)) can_castle[turn * 2] = false;
 
   if (flags == 0b0000) { // quiet move
     make_move_bb(from, to, false);

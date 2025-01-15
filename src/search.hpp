@@ -12,7 +12,7 @@ class Search {
 private:
   Board *board;
   TT tt;
-  int quiescence(int alpha, int beta);
+  int quiescence(int alpha, int beta, int depth);
 public:
   Search(Board *board) { this->board = board; }
   int alpha_beta(int alpha, int beta, int depth_left, PVLine *pline);

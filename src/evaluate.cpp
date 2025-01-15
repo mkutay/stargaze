@@ -178,7 +178,6 @@ int evaluate(Board &board) {
   while (occupied) {
     u_int64_t ls1b = occupied & -occupied;
     int i = bit_scan_forward(ls1b);
-
     Piece p = board.get_piece(i);
 #ifdef DEBUG
     assert(p != EMPTY);
