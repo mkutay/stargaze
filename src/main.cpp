@@ -7,8 +7,8 @@
 #include "move.hpp"
 #include "get_hash.hpp"
 
-const int MAX_DEPTH = 8;
-const long long TIME_LIMIT_MS = 10000;
+const int MAX_DEPTH = 12;
+const long long TIME_LIMIT_MS = 5000;
 
 int32_t main() {
     init_eval_table();

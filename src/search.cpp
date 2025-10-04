@@ -4,6 +4,13 @@
 #include <algorithm>
 #include <chrono>
 
+#ifdef DEBUG
+  #include "debug.hpp"
+#else
+  #define debug(...) void(38)
+#endif
+
+
 const int MAX_QUIESCENCE_DEPTH = 2;
 const int ALPHA_START = -50000;
 const int BETA_START = 50000;
@@ -51,21 +58,8 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit) {
         search_info.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - start_time).count();
         search_info.pv = pv_line;
-        
-        std::cout << "info depth " << depth 
-                  << " score cp " << score
-                  << " nodes " << nodes_searched
-                  << " time " << search_info.time_ms
-                  << " pv ";
-        
-        for (int i = 0; i < depth && i < static_cast<int>(pv_line.moves.size()); i++) {
-            if (pv_line.moves[i].from() != pv_line.moves[i].to()) { // Valid move check
-                std::cout << pv_line.moves[i].to_string() << " ";
-            } else {
-                break;
-            }
-        }
-        std::cout << std::endl;
+
+        debug(depth, score, nodes_searched, search_info.time_ms, pv_line.moves);
     }
     
     search_info.stopped = time_up;
