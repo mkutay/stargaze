@@ -2,14 +2,33 @@
 #include <string>
 #include "enums.hpp"
 
-// unsigned short m_move; // 16 bits (6 for from and to, 4 for type)
-
-u_int16_t create_move(int from, int to, int flags);
-u_int16_t get_move_from(u_int16_t move);
-u_int16_t get_move_to(u_int16_t move);
-u_int16_t get_move_flags(u_int16_t move);
-bool is_move_promotion(u_int16_t move);
-bool is_move_capture(u_int16_t move);
-bool is_move_en_passant(u_int16_t move);
-Piece get_move_promotion_piece(u_int16_t move);
-std::string move_to_string(u_int16_t move);
+class Move {
+public:
+    u_int16_t m_move; // 16 bits (6 for from and to, 4 for type)
+    Move() : m_move(0) {}
+    Move(u_int16_t move) : m_move(move) {}
+    Move(int from, int to, int flags) : m_move(from | (to << 6) | (flags << 12)) {}
+    int from() const { return m_move & 0x3f; }
+    int to() const { return (m_move >> 6) & 0x3f; }
+    int flags() const { return (m_move >> 12) & 0x0f; }
+    bool is_promotion() const { return (m_move >> 15) & 0x01; }
+    bool is_capture() const { return (m_move >> 14) & 0x01; }
+    bool is_en_passant() const { return flags() == 0b0101; }
+    Piece promotion_piece() const {
+#ifdef DEBUG
+        assert(is_promotion());
+#endif
+        int specials = flags() & 0b0011;
+        if (specials == 0) return KNIGHT; // knight
+        if (specials == 1) return BISHOP; // bishop
+        if (specials == 2) return ROOK; // rook
+        return QUEEN; // queen
+    }
+    std::string to_string() const {
+        std::string ret = "";
+        ret += std::to_string((int) from()) + " ";
+        ret += std::to_string((int) to()) + " ";
+        ret += std::to_string((int) flags());
+        return ret;
+    }
+};
