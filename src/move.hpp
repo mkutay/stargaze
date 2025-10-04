@@ -31,4 +31,7 @@ public:
         ret += std::to_string((int) flags());
         return ret;
     }
+    bool operator==(const Move& other) const {
+        return m_move == other.m_move;
+    }
 };

@@ -50,7 +50,10 @@ int bit_scan_forward(u_int64_t bb) {
 }
 
 std::vector<Move> Board::get_moves() {
-    std::vector<Move> ret;
+    /**
+     * Pseudolegal move generation, which include moves that leave the king in check
+     */
+    std::vector<Move> pseudo;
 
     int mul = turn == WHITE ? 1 : -1;
 
@@ -84,43 +87,43 @@ std::vector<Move> Board::get_moves() {
     if (!moves.empty() && moves.back().flags() == 0b0001) {
         int to = moves.back().to();
         if (pawns & (1ull << (to + 1)) & 0xfefefefefefefefe) {
-            ret.emplace_back(Move(to + 1, to + 8 * mul, 0b0101));
+            pseudo.emplace_back(Move(to + 1, to + 8 * mul, 0b0101));
         }
         if (pawns & (1ull << (to - 1)) & 0x7f7f7f7f7f7f7f7f) {
-            ret.emplace_back(Move(to - 1, to + 8 * mul, 0b0101));
+            pseudo.emplace_back(Move(to - 1, to + 8 * mul, 0b0101));
         }
     }
     for (int i = 0; i < 64; i++) {
         u_int64_t bit = 1ull << i;
         if (pawn_push_one_promotion & bit) {
-            ret.emplace_back(Move(i - 8 * mul, i, 0b1000));
-            ret.emplace_back(Move(i - 8 * mul, i, 0b1001));
-            ret.emplace_back(Move(i - 8 * mul, i, 0b1010));
-            ret.emplace_back(Move(i - 8 * mul, i, 0b1011));
+            pseudo.emplace_back(Move(i - 8 * mul, i, 0b1000));
+            pseudo.emplace_back(Move(i - 8 * mul, i, 0b1001));
+            pseudo.emplace_back(Move(i - 8 * mul, i, 0b1010));
+            pseudo.emplace_back(Move(i - 8 * mul, i, 0b1011));
         } else if (pawn_push_one & bit) {
-            ret.emplace_back(Move(i - 8 * mul, i, 0b0000));
+            pseudo.emplace_back(Move(i - 8 * mul, i, 0b0000));
         }
 
         if (pawn_push_two & bit) {
-            ret.emplace_back(Move(i - 16 * mul, i, 0b0001));
+            pseudo.emplace_back(Move(i - 16 * mul, i, 0b0001));
         }
 
         if (pawn_capture_left_promotion & bit) {
-            ret.emplace_back(Move(i - 7 * mul, i, 0b1100));
-            ret.emplace_back(Move(i - 7 * mul, i, 0b1101));
-            ret.emplace_back(Move(i - 7 * mul, i, 0b1110));
-            ret.emplace_back(Move(i - 7 * mul, i, 0b1111));
+            pseudo.emplace_back(Move(i - 7 * mul, i, 0b1100));
+            pseudo.emplace_back(Move(i - 7 * mul, i, 0b1101));
+            pseudo.emplace_back(Move(i - 7 * mul, i, 0b1110));
+            pseudo.emplace_back(Move(i - 7 * mul, i, 0b1111));
         } else if (pawn_capture_left & bit) {
-            ret.emplace_back(Move(i - 7 * mul, i, 0b0100));
+            pseudo.emplace_back(Move(i - 7 * mul, i, 0b0100));
         }
 
         if (pawn_capture_right_promotion & bit) {
-            ret.emplace_back(Move(i - 9 * mul, i, 0b1100));
-            ret.emplace_back(Move(i - 9 * mul, i, 0b1101));
-            ret.emplace_back(Move(i - 9 * mul, i, 0b1110));
-            ret.emplace_back(Move(i - 9 * mul, i, 0b1111));
+            pseudo.emplace_back(Move(i - 9 * mul, i, 0b1100));
+            pseudo.emplace_back(Move(i - 9 * mul, i, 0b1101));
+            pseudo.emplace_back(Move(i - 9 * mul, i, 0b1110));
+            pseudo.emplace_back(Move(i - 9 * mul, i, 0b1111));
         } else if (pawn_capture_right & bit) {
-            ret.emplace_back(Move(i - 9 * mul, i, 0b0100));
+            pseudo.emplace_back(Move(i - 9 * mul, i, 0b0100));
         }
     }
 
@@ -135,7 +138,7 @@ std::vector<Move> Board::get_moves() {
         while (temp) {
             u_int64_t ls1b = temp & -temp;
             int i = bit_scan_forward(ls1b);
-            ret.emplace_back(Move(i - knight_moves_d[d], i, bool(temp_captures & ls1b) << 2));
+            pseudo.emplace_back(Move(i - knight_moves_d[d], i, bool(temp_captures & ls1b) << 2));
             temp ^= ls1b;
         }
     }
@@ -158,14 +161,14 @@ std::vector<Move> Board::get_moves() {
             while (temp) {
                 u_int64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
-                ret.emplace_back(Move(i - (m + 1) * diagonal_moves_d[d], i, bool(temp_bishops_captures & ls1b) << 2));
+                pseudo.emplace_back(Move(i - (m + 1) * diagonal_moves_d[d], i, bool(temp_bishops_captures & ls1b) << 2));
                 temp ^= ls1b;
             }
             temp = temp_queens;
             while (temp) {
                 u_int64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
-                ret.emplace_back(Move(i - (m + 1) * diagonal_moves_d[d], i, bool(temp_queens_captures & ls1b) << 2));
+                pseudo.emplace_back(Move(i - (m + 1) * diagonal_moves_d[d], i, bool(temp_queens_captures & ls1b) << 2));
                 temp ^= ls1b;
             }
             temp_bishops &= empty;
@@ -191,14 +194,14 @@ std::vector<Move> Board::get_moves() {
             while (temp) {
                 u_int64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
-                ret.emplace_back(Move(i - (m + 1) * cc, i, bool(temp_rooks_captures & ls1b) << 2));
+                pseudo.emplace_back(Move(i - (m + 1) * cc, i, bool(temp_rooks_captures & ls1b) << 2));
                 temp ^= ls1b;
             }
             temp = temp_queens;
             while (temp) {
                 u_int64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
-                ret.emplace_back(Move(i - (m + 1) * cc, i, bool(temp_queens_captures & ls1b) << 2));
+                pseudo.emplace_back(Move(i - (m + 1) * cc, i, bool(temp_queens_captures & ls1b) << 2));
                 temp ^= ls1b;
             }
             temp_rooks &= empty;
@@ -225,19 +228,19 @@ std::vector<Move> Board::get_moves() {
             assert(temp_king_cardinal == (temp_king_cardinal & -temp_king_cardinal));
 #endif
             int i = bit_scan_forward(temp_king_cardinal);
-            ret.emplace_back(Move(i - cc, i, bool(temp_king_cardinal & temp_king_cardinal_captures) << 2));
+            pseudo.emplace_back(Move(i - cc, i, bool(temp_king_cardinal & temp_king_cardinal_captures) << 2));
         }
         if (temp_king_diagonal) {
 #ifdef DEBUG
             assert(temp_king_diagonal == (temp_king_diagonal & -temp_king_diagonal));
 #endif
             int i = bit_scan_forward(temp_king_diagonal);
-            ret.emplace_back(Move(i - dd, i, bool(temp_king_diagonal & temp_king_diagonal_captures) << 2));
+            pseudo.emplace_back(Move(i - dd, i, bool(temp_king_diagonal & temp_king_diagonal_captures) << 2));
         }
     }
 
     std::vector<Move> non_pseudo_moves;
-    for (Move move : ret) {
+    for (Move move : pseudo) {
         make_move(move);
         if (!is_in_check()) non_pseudo_moves.emplace_back(move);
         undo_move();
@@ -267,20 +270,6 @@ std::vector<Move> Board::get_moves() {
             }
         }
     }
-
-    std::sort(non_pseudo_moves.begin(), non_pseudo_moves.end(), [&](const Move a, const Move b) {
-        if (a.is_capture() && !b.is_capture()) return true;
-        if (!a.is_capture() && b.is_capture()) return false;
-        if (a.is_promotion() && !b.is_promotion()) return true;
-        if (!a.is_promotion() && b.is_promotion()) return false;
-        make_move(a);
-        int score_a = evaluate(*this);
-        undo_move();
-        make_move(b);
-        int score_b = evaluate(*this);
-        undo_move();
-        return score_a > score_b;
-    });
 
     return non_pseudo_moves;
 }
