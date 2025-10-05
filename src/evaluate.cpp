@@ -1,5 +1,8 @@
 // inspired by https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 
+#include <array>
+#include <numeric>
+#include <algorithm>
 #include "evaluate.hpp"
 #include "move_gen.hpp"
 
@@ -140,8 +143,6 @@ const std::array<int, 64> eg_king_table = {
     -27, -11,   4,  13,  14,   4,  -5, -17,
     -53, -34, -21, -11, -28, -14, -24, -43
 };
-
-const std::array<int, 12> gamephase_inc = { 0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0 };
 const std::array<int, 6> mg_value = { 82, 337, 365, 477, 1025, 0 }; // piece values
 const std::array<int, 6> eg_value = { 94, 281, 297, 512, 936, 0 };
 
@@ -187,9 +188,11 @@ constexpr std::array<std::array<int, 64>, 12> calculate_eg_table() {
 
 const std::array<std::array<int, 64>, 12> mg_table = calculate_mg_table();
 const std::array<std::array<int, 64>, 12> eg_table = calculate_eg_table();
+const std::array<int, 12> gamephase_inc = { 0, 0, 155, 155, 305, 305, 405, 405, 1050, 1050, 0, 0 };
+const int gamephase_sum = std::accumulate(gamephase_inc.begin(), gamephase_inc.end(), 0);
 
 int evaluate(Board &board) {
-    std::array<int, 2> mg = { 0, 0 }, eg = { 0, 0 };
+    std::array<int, 2> mg = { 0, 0 }, eg = { 0, 0 }; // middle game, end game
     int game_phase = 0;
 
     std::array<u_int64_t, 8> pieces = board.get_all_pieces();
@@ -214,7 +217,7 @@ int evaluate(Board &board) {
     int mg_score = mg[turn] - mg[!turn];
     int eg_score = eg[turn] - eg[!turn];
     int mg_phase = game_phase;
-    if (mg_phase > 24) mg_phase = 24; // in case of early promotion
-    int eg_phase = 24 - mg_phase;
-    return (mg_score * mg_phase + eg_score * eg_phase) / 24;
+    if (mg_phase > gamephase_sum) mg_phase = gamephase_sum; // in case of early promotion
+    int eg_phase = gamephase_sum - mg_phase;
+    return (mg_score * mg_phase + eg_score * eg_phase) / gamephase_sum;
 }
