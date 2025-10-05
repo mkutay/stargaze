@@ -253,18 +253,18 @@ std::vector<Move> Board::get_moves() {
     }
 
     // castling
-    if (turn == WHITE) {
-        if (can_castle[0] && !(occupied & 0x60) && !is_in_check(4) && !is_in_check(5) && !is_in_check(6)) { // white king's side
+    if (turn == WHITE && get_piece(4) == KING && get_colour(4) == WHITE) {
+        if (can_castle[0] && !(occupied & 0x60) && get_piece(7) == ROOK && !is_in_check(4) && !is_in_check(5) && !is_in_check(6)) { // white king's side
             non_pseudo_moves.emplace_back(Move(4, 6, 0b0010));
         }
-        if (can_castle[1] && !(occupied & 0x0e) && !is_in_check(4) && !is_in_check(3) && !is_in_check(2)) { // white queen's side
+        if (can_castle[1] && !(occupied & 0x0e) && get_piece(0) == ROOK && is_in_check(4) && !is_in_check(3) && !is_in_check(2)) { // white queen's side
             non_pseudo_moves.emplace_back(Move(4, 2, 0b0011));
         }
-    } else {
-        if (can_castle[2] && !(occupied & (0x60ll << 56)) && !is_in_check(60) && !is_in_check(61) && !is_in_check(62)) { // black king's side
+    } else if (turn == BLACK && get_piece(60) == KING && get_colour(4) == BLACK) {
+        if (can_castle[2] && !(occupied & (0x60ll << 56)) && get_piece(63) == ROOK && get_colour(63) == BLACK && !is_in_check(60) && !is_in_check(61) && !is_in_check(62)) { // black king's side
             non_pseudo_moves.emplace_back(Move(60, 62, 0b0010));
         }
-        if (can_castle[3] && !(occupied & (0x0ell << 56)) && !is_in_check(60) && !is_in_check(59) && !is_in_check(58)) { // black queen's side
+        if (can_castle[3] && !(occupied & (0x0ell << 56)) && get_piece(56) == ROOK && get_colour(56) == BLACK && !is_in_check(60) && !is_in_check(59) && !is_in_check(58)) { // black queen's side
             non_pseudo_moves.emplace_back(Move(60, 58, 0b0011));
         }
     }

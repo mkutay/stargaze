@@ -1,5 +1,11 @@
 #include "board.hpp"
 
+#ifdef DEBUG
+  #include "debug.hpp"
+#else
+  #define debug(...) void(38)
+#endif
+
 Board::Board() {
     for (int i = 0; i < 16; i++) pieces[n_white] |= 1ull << i;
     for (int i = 48; i < 64; i++) pieces[n_black] |= 1ull << i;
@@ -27,14 +33,16 @@ void Board::make_move(Move move) {
     int to = move.to();
     int flags = move.flags();
 
-    if (get_piece(from) == KING) can_castle[turn * 2] = can_castle[turn * 2 + 1] = false;
+    if (get_piece(from) == KING || get_piece(to) == KING) can_castle[turn * 2] = can_castle[turn * 2 + 1] = false;
 
 #ifdef DEBUG
+    if (get_piece(from) == EMPTY) debug(move, to_string());
     assert(get_piece(from) != EMPTY);
 #endif
 
-    if (((from == 0 || to == 0) && !turn) || ((from == 56 || to == 56) && turn)) can_castle[turn * 2 + 1] = false;
-    if (((from == 7 || to == 7) && !turn) || ((from == 63 || to == 63) && turn)) can_castle[turn * 2] = false;
+    // rook move or capture
+    if (((from == 0 || to == 0) && turn == WHITE) || ((from == 56 || to == 56) && turn == BLACK)) can_castle[turn * 2 + 1] = false;
+    if (((from == 7 || to == 7) && turn == WHITE) || ((from == 63 || to == 63) && turn == BLACK)) can_castle[turn * 2] = false;
 
     if (flags == 0b0000) { // quiet move
         make_move_bb(from, to, false);
