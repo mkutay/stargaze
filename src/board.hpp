@@ -25,7 +25,6 @@ class Board {
     std::vector<Move> moves;
     std::vector<std::array<u_int64_t, 8>> board_history;
 
-    void debug_print(Move move);
     void debug_print();
     int piece_code(Piece p);
 public:

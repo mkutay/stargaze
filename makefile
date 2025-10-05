@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++20 -Wall -Wextra -Wshadow -O2 -pedantic
+CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -O2 -pedantic
 DEBUGFLAGS = -fsanitize=address -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
 CXXFLAGS += $(DEBUGFLAGS)
 

@@ -5,40 +5,25 @@
 #include <bitset>
 #include <queue>
 #include <tuple>
+#include "move.hpp"
+#include "search.hpp"
 
 using std::to_string;
 
+// Forward declarations for template functions
 template<typename A, typename B> std::string to_string(const std::pair<A, B>& p);
 template<typename A, typename B, typename C> std::string to_string(const std::tuple<A, B, C>& t);
 template<typename A, typename B, typename C, typename D> std::string to_string(const std::tuple<A, B, C, D>& t);
 
-std::string to_string(const std::string& s) {
-    return '"' + s + '"';
-}
-
-std::string to_string(const char& c) {
-    return std::string("'") + c + "'";
-}
-
-std::string to_string(const char *c) {
-    return std::string(c);
-}
-
-std::string to_string(const bool& b) {
-return (b ? "true" : "false");
-}
-
-std::string to_string(const std::vector<bool>& v) {
-    std::string res = "{";
-    for (int i = 0; i < (int) v.size(); ++i) {
-        if (i > 0) {
-        res += ", ";
-        }
-        res += std::to_string(v[i]);
-    }
-    res += "}";
-    return res;
-}
+// Function declarations (definitions are in debug.cpp)
+std::string to_string(const std::string& s);
+std::string to_string(const char& c);
+std::string to_string(const char *c);
+std::string to_string(const bool& b);
+std::string to_string(const std::vector<bool>& v);
+std::string to_string(Move move);
+std::string to_string(SearchInfo result);
+void debug_out(int size, bool first, std::string name);
 
 template<size_t T> std::string to_string(const std::bitset<T>& bs) {
     return bs.to_string();
@@ -73,10 +58,7 @@ template<typename T, class C> std::string to_string(std::priority_queue<T, std::
     return res;
 }
 
-std::string to_string(Move move) {
-    return move.to_string();
-}
-
+// Template functions (must stay in header)
 template<typename T>
 std::enable_if_t<!std::is_arithmetic<T>::value, std::string>
 to_string(const T& v) {
@@ -99,12 +81,6 @@ template<typename A, typename B, typename C> std::string to_string(const std::tu
 }
 template<typename A, typename B, typename C, typename D> std::string to_string(const std::tuple<A, B, C, D>& t) {
     return '(' + to_string(get<0>(t)) + ", " + to_string(get<1>(t)) + ", " + to_string(get<2>(t)) + ", " + to_string(get<3>(t)) + ')';
-}
-
-void debug_out(int size, bool first, std::string name) {
-    std::vector<std::string> tmp = {name};
-    std::vector<int> tmp2 = {size, first};
-    std::cerr << std::endl;
 }
 
 constexpr int buffer_size = 255;

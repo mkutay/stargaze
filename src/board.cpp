@@ -14,10 +14,6 @@ Board::Board() {
     board_history = std::vector<std::array<u_int64_t, 8>>();
 }
 
-void Board::debug_print(Move move) {
-    std::cerr << to_string() << turn << " " << move.to_string() << std::endl;
-}
-
 void Board::debug_print() {
     std::cerr << to_string() << turn << std::endl;
 }

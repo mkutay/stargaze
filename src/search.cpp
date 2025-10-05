@@ -10,7 +10,6 @@
   #define debug(...) void(38)
 #endif
 
-
 const int MAX_QUIESCENCE_DEPTH = 2;
 const int ALPHA_START = -50000;
 const int BETA_START = 50000;
@@ -55,8 +54,7 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit) {
         search_info.depth = depth;
         search_info.score = score;
         search_info.nodes = nodes_searched;
-        search_info.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::high_resolution_clock::now() - start_time).count();
+        search_info.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
         search_info.pv = pv_line;
 
         debug(depth, score, nodes_searched, search_info.time_ms, pv_line.moves);

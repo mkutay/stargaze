@@ -7,6 +7,12 @@
 #include "move.hpp"
 #include "get_hash.hpp"
 
+#ifdef DEBUG
+  #include "debug.hpp"
+#else
+  #define debug(...) void(38)
+#endif
+
 const int MAX_DEPTH = 12;
 const long long TIME_LIMIT_MS = 5000;
 
@@ -19,22 +25,20 @@ int32_t main() {
     
     for (int i = 0; i < 100; i++) {
         std::cout << "\n=== Move " << (i + 1) << " ===\n";
-        std::cout << "Current board position:\n" << board.to_string() << std::endl;
+        std::cout << "board:\n" << board.to_string() << std::endl;
 
         // Perform iterative deepening search
         SearchInfo result = search.iterative_deepening(MAX_DEPTH, TIME_LIMIT_MS);
-        
-        std::cout << "\nSearch completed:" << std::endl;
-        std::cout << "Final depth: " << result.depth << std::endl;
-        std::cout << "Best score: " << result.score << std::endl;
-        std::cout << "Nodes searched: " << result.nodes << std::endl;
-        std::cout << "Time taken: " << result.time_ms << "ms" << std::endl;
+
+        std::cout << "search completed!" << std::endl;
+
+        debug(result);
+
         std::cout << "NPS: " << (result.time_ms > 0 ? (result.nodes * 1000ll) / result.time_ms : 0) << std::endl;
         
-        if (!result.pv.moves.empty() && 
-            result.pv.moves[0].from() != result.pv.moves[0].to()) { // Valid move check
+        if (!result.pv.moves.empty()) {
             Move best_move = result.pv.moves[0];
-            std::cout << "Best move: " << best_move.to_string() << std::endl;
+            debug(best_move);
             
             // Make the best move
             board.make_move(best_move);

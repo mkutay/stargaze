@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <cassert>
 #include "enums.hpp"
 
 class Move {
@@ -23,13 +24,6 @@ public:
         if (specials == 1) return BISHOP; // bishop
         if (specials == 2) return ROOK; // rook
         return QUEEN; // queen
-    }
-    std::string to_string() const {
-        std::string ret = "";
-        ret += std::to_string((int) from()) + " ";
-        ret += std::to_string((int) to()) + " ";
-        ret += std::to_string((int) flags());
-        return ret;
     }
     bool operator==(const Move& other) const {
         return m_move == other.m_move;
