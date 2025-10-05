@@ -10,8 +10,8 @@ enum Piece {
 };
 
 enum Colour {
-    WHITE,
-    BLACK,
+    WHITE = 0,
+    BLACK = 1,
 };
 
 constexpr Colour operator!(const Colour &a) {

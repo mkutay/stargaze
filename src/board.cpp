@@ -164,3 +164,10 @@ u_int64_t Board::get_white_queens() { return pieces[n_queen] & pieces[n_white]; 
 u_int64_t Board::get_black_queens() { return pieces[n_queen] & pieces[n_black]; }
 u_int64_t Board::get_white_king() { return pieces[n_king] & pieces[n_white]; }
 u_int64_t Board::get_black_king() { return pieces[n_king] & pieces[n_black]; }
+u_int64_t Board::get_knights() { return pieces[n_knight]; }
+u_int64_t Board::get_bishops() { return pieces[n_bishop]; }
+u_int64_t Board::get_rooks() { return pieces[n_rook]; }
+u_int64_t Board::get_queens() { return pieces[n_queen]; }
+u_int64_t Board::get_kings() { return pieces[n_king]; }
+u_int64_t Board::get_pawns() { return pieces[n_pawn]; }
+std::array<u_int64_t, 8> Board::get_all_pieces() const { return pieces; }

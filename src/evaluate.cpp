@@ -1,5 +1,13 @@
+// inspired by https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
+
 #include "evaluate.hpp"
 #include "move_gen.hpp"
+
+#ifdef DEBUG
+  #include "debug.hpp"
+#else
+  #define debug(...) void(38)
+#endif
 
 const std::array<int, 64> mg_pawn_table = {
         0,   0,   0,   0,   0,   0,  0,   0,
@@ -181,24 +189,24 @@ const std::array<std::array<int, 64>, 12> mg_table = calculate_mg_table();
 const std::array<std::array<int, 64>, 12> eg_table = calculate_eg_table();
 
 int evaluate(Board &board) {
-    int mg[2] = { 0 }, eg[2] = { 0 };
+    std::array<int, 2> mg = { 0, 0 }, eg = { 0, 0 };
     int game_phase = 0;
 
-    u_int64_t occupied = board.get_white_pieces() | board.get_black_pieces();
-    while (occupied) {
-        u_int64_t ls1b = occupied & -occupied;
-        int i = bit_scan_forward(ls1b);
-        Piece p = board.get_piece(i);
-#ifdef DEBUG
-        assert(p != EMPTY);
-#endif
-        if (p == W_PAWN || p == B_PAWN) p = B_PAWN;
-        int pc = (int(p) - 2) * 2 + int(board.get_colour(i));
-        mg[pc & 1] += mg_table[pc][i];
-        eg[pc & 1] += eg_table[pc][i];
-        game_phase += gamephase_inc[pc];
-        
-        occupied ^= ls1b;
+    std::array<u_int64_t, 8> pieces = board.get_all_pieces();
+
+    for (int c = 0; c < 2; c++) {
+        for (int p = 2; p < 8; p++) {
+            u_int64_t piece_bb = pieces[p] & pieces[c];
+            while (piece_bb) {
+                u_int64_t ls1b = piece_bb & -piece_bb;
+                int i = bit_scan_forward(ls1b);
+                int pc = (p - 2) * 2 + c;
+                mg[c] += mg_table[pc][i];
+                eg[c] += eg_table[pc][i];
+                game_phase += gamephase_inc[pc];
+                piece_bb ^= ls1b;
+            }
+        }
     }
 
     Colour turn = board.get_turn();
@@ -206,7 +214,7 @@ int evaluate(Board &board) {
     int mg_score = mg[turn] - mg[!turn];
     int eg_score = eg[turn] - eg[!turn];
     int mg_phase = game_phase;
-    if (mg_phase > 24) mg_phase = 24; /* in case of early promotion */
+    if (mg_phase > 24) mg_phase = 24; // in case of early promotion
     int eg_phase = 24 - mg_phase;
     return (mg_score * mg_phase + eg_score * eg_phase) / 24;
 }

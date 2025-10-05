@@ -58,4 +58,11 @@ public:
     u_int64_t get_black_queens();
     u_int64_t get_white_king();
     u_int64_t get_black_king();
+    u_int64_t get_knights();
+    u_int64_t get_bishops();
+    u_int64_t get_rooks();
+    u_int64_t get_queens();
+    u_int64_t get_kings();
+    u_int64_t get_pawns();
+    std::array<u_int64_t, 8> get_all_pieces() const;
 };
