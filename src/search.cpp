@@ -68,7 +68,7 @@ inline bool Search::should_stop() {
     if (time_up) return true;
     
     // check time every ~1000 nodes
-    if (nodes_searched & 0x3ff) {
+    if (nodes_searched & 0x7ff) {
         auto current_time = std::chrono::high_resolution_clock::now();
         long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( current_time - start_time).count();
         
@@ -89,8 +89,16 @@ void Search::order_moves(std::vector<Move>& moves, const PVLine* pv_line) {
             if (a == pv_move) return true;
             if (b == pv_move) return false;
         }
+
+        // promotions
+        if (a.is_promotion() && !b.is_promotion()) return true;
+        if (!a.is_promotion() && b.is_promotion()) return false;
+
+        // castling
+        if (a.is_castle() && !b.is_castle()) return true;
+        if (!a.is_castle() && b.is_castle()) return false;
         
-        // captures get priority over non-captures
+        // captures
         if (a.is_capture() && !b.is_capture()) return true;
         if (!a.is_capture() && b.is_capture()) return false;
         

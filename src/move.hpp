@@ -15,6 +15,7 @@ public:
     bool is_promotion() const { return (m_move >> 15) & 0x01; }
     bool is_capture() const { return (m_move >> 14) & 0x01; }
     bool is_en_passant() const { return flags() == 0b0101; }
+    bool is_castle() const { return flags() == 0b0010 || flags() == 0b0011; }
     Piece promotion_piece() const {
 #ifdef DEBUG
         assert(is_promotion());

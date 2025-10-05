@@ -186,10 +186,27 @@ constexpr std::array<std::array<int, 64>, 12> calculate_eg_table() {
     return table;
 }
 
+constexpr int calculate_gamephase_sum(const std::array<int, 12> &inc) {
+    int sum = 0;
+    sum += inc[0] * 8; // pawn
+    sum += inc[1] * 8;
+    sum += inc[2] * 2; // knight
+    sum += inc[3] * 2;
+    sum += inc[4] * 2; // bishop
+    sum += inc[5] * 2;
+    sum += inc[6] * 2; // rook
+    sum += inc[7] * 2;
+    sum += inc[8] * 1; // queen
+    sum += inc[9] * 1;
+    sum += inc[10] * 1; // king
+    sum += inc[11] * 1;
+    return sum;
+}
+
 const std::array<std::array<int, 64>, 12> mg_table = calculate_mg_table();
 const std::array<std::array<int, 64>, 12> eg_table = calculate_eg_table();
 const std::array<int, 12> gamephase_inc = { 0, 0, 155, 155, 305, 305, 405, 405, 1050, 1050, 0, 0 };
-const int gamephase_sum = std::accumulate(gamephase_inc.begin(), gamephase_inc.end(), 0);
+const int gamephase_sum = calculate_gamephase_sum(gamephase_inc);
 
 int evaluate(Board &board) {
     std::array<int, 2> mg = { 0, 0 }, eg = { 0, 0 }; // middle game, end game
