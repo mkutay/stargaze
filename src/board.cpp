@@ -21,6 +21,7 @@ void Board::debug_print() {
 // assumes move is valid
 void Board::make_move(Move move) {
     board_history.emplace_back(pieces);
+    castle_history.emplace_back(can_castle);
 
     int from = move.from();
     int to = move.to();
@@ -62,6 +63,8 @@ void Board::undo_move() {
     pieces = board_history.back();
     board_history.pop_back();
     moves.pop_back();
+    can_castle = castle_history.back();
+    castle_history.pop_back();
     turn = !turn;
 }
 

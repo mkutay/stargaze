@@ -4,6 +4,12 @@
 #include "evaluate.hpp"
 #include "move_gen.hpp"
 
+#ifdef DEBUG
+  #include "debug.hpp"
+#else
+  #define debug(...) void(38)
+#endif
+
 const int knight_moves_d[8] = { -10, -6, -17, -15, 6, 10, 15, 17 };
 const int diagonal_moves_d[4] = { 7, 9, -7, -9 };
 const int cardinal_moves_d[4] = { 8, 1, -8, -1 };
@@ -248,26 +254,18 @@ std::vector<Move> Board::get_moves() {
 
     // castling
     if (turn == WHITE) {
-        if (can_castle[0]) { // white king's side
-            if (!(occupied & 0x60) && !is_in_check(4) && !is_in_check(5) && !is_in_check(6)) {
-                non_pseudo_moves.emplace_back(Move(4, 6, 0b0010));
-            }
+        if (can_castle[0] && !(occupied & 0x60) && !is_in_check(4) && !is_in_check(5) && !is_in_check(6)) { // white king's side
+            non_pseudo_moves.emplace_back(Move(4, 6, 0b0010));
         }
-        if (can_castle[1]) { // white queen's side
-            if (!(occupied & 0x0e) && !is_in_check(4) && !is_in_check(3) && !is_in_check(2)) {
-                non_pseudo_moves.emplace_back(Move(4, 2, 0b0011));
-            }
+        if (can_castle[1] && !(occupied & 0x0e) && !is_in_check(4) && !is_in_check(3) && !is_in_check(2)) { // white queen's side
+            non_pseudo_moves.emplace_back(Move(4, 2, 0b0011));
         }
     } else {
-        if (can_castle[2]) { // black king's side
-            if (!(occupied & (0x60ll << 56)) && !is_in_check(60) && !is_in_check(61) && !is_in_check(62)) {
-                non_pseudo_moves.emplace_back(Move(60, 62, 0b0010));
-            }
+        if (can_castle[2] && !(occupied & (0x60ll << 56)) && !is_in_check(60) && !is_in_check(61) && !is_in_check(62)) { // black king's side
+            non_pseudo_moves.emplace_back(Move(60, 62, 0b0010));
         }
-        if (can_castle[3]) { // black queen's side
-            if (!(occupied & (0x0ell << 56)) && !is_in_check(60) && !is_in_check(59) && !is_in_check(58)) {
-                non_pseudo_moves.emplace_back(Move(60, 58, 0b0011));
-            }
+        if (can_castle[3] && !(occupied & (0x0ell << 56)) && !is_in_check(60) && !is_in_check(59) && !is_in_check(58)) { // black queen's side
+            non_pseudo_moves.emplace_back(Move(60, 58, 0b0011));
         }
     }
 
@@ -280,7 +278,7 @@ bool Board::is_in_check(int i) {
     u_int64_t other_rooks = turn == WHITE ? get_black_rooks() : get_white_rooks();
     u_int64_t other_bishops = turn == WHITE ? get_black_bishops() : get_white_bishops();
     u_int64_t other_knights = turn == WHITE ? get_black_knights() : get_white_knights();
-    u_int64_t empty = ~get_white_pieces() & ~get_black_pieces();
+    u_int64_t empty = ~(get_white_pieces() | get_black_pieces());
 
     for (int d = 0; d < 8; d++) {
         u_int64_t temp = other_knights;
