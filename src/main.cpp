@@ -17,7 +17,6 @@ const int MAX_DEPTH = 12;
 const long long TIME_LIMIT_MS = 5000;
 
 int32_t main() {
-    init_eval_table();
     init_hash_table();
     Board board;
     
