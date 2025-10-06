@@ -1,13 +1,39 @@
 #include <random>
 #include "board.hpp"
-#include "get_hash.hpp"
 
-typedef std::mt19937 MyRNG;
+std::mt19937 rng;
+std::uniform_int_distribution<u_int64_t> my_rand;
 
-u_int64_t hash[12][64];
-u_int64_t black_move;
-u_int64_t castling[4];
-u_int64_t en_passant_file[8];
+constexpr std::array<std::array<u_int64_t, 64>, 12> create_hash() {
+    std::array<std::array<u_int64_t, 64>, 12> h;
+    for (int p = 0; p < 12; p++) {
+        for (int i = 0; i < 64; i++) {
+            h[p][i] = my_rand(rng);
+        }
+    }
+    return h;
+}
+
+constexpr std::array<u_int64_t, 8> create_en_passant_file() {
+    std::array<u_int64_t, 8> ep;
+    for (int i = 0; i < 8; i++) {
+        ep[i] = my_rand(rng);
+    }
+    return ep;
+}
+
+constexpr std::array<u_int64_t, 4> create_castling() {
+    std::array<u_int64_t, 4> c;
+    for (int i = 0; i < 4; i++) {
+        c[i] = my_rand(rng);
+    }
+    return c;
+}
+
+const std::array<std::array<u_int64_t, 64>, 12> hash = create_hash(); // [piece][square]
+const std::array<u_int64_t, 8> en_passant_file = create_en_passant_file();
+const std::array<u_int64_t, 4> castling = create_castling();
+const u_int64_t black_move = my_rand(rng);
 
 int convert(Piece p, Colour c) {
     int pc = -1;
@@ -23,23 +49,6 @@ int convert(Piece p, Colour c) {
     }
     if (c == WHITE) return pc * 2;
     return pc * 2 + 1;
-}
-
-void init_hash_table() {
-    MyRNG rng;
-    std::uniform_int_distribution<u_int64_t> rand; // rand(rng)
-    for (int p = 0; p < 12; p++) {
-        for (int i = 0; i < 64; i++) {
-            hash[p][i] = rand(rng);
-        }
-    }
-    black_move = rand(rng);
-    for (int i = 0; i < 4; i++) {
-        castling[i] = rand(rng);
-    }
-    for (int i = 0; i < 8; i++) {
-        en_passant_file[i] = rand(rng);
-    }
 }
 
 int Board::get_hash() {

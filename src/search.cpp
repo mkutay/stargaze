@@ -21,6 +21,8 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit) {
     nodes_searched = 0;
     time_up = false;
     
+    tt.new_search();
+    
     int alpha = ALPHA_START;
     int beta = BETA_START;
     const int ASPIRATION_WINDOW = 50;
@@ -81,9 +83,13 @@ inline bool Search::should_stop() {
     return false;
 }
 
-void Search::order_moves(std::vector<Move>& moves, const PVLine* pv_line) {
+void Search::order_moves(std::vector<Move>& moves, const PVLine* pv_line, Move tt_move) {
     std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {
-        // PV move gets highest priority
+        if (tt_move.m_move != 0) {
+            if (a == tt_move) return true;
+            if (b == tt_move) return false;
+        }
+        
         if (pv_line && !pv_line->moves.empty()) {
             Move pv_move = pv_line->moves[0];
             if (a == pv_move) return true;
@@ -111,23 +117,41 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     
     if (should_stop()) return alpha;
     
-    // u_int64_t hash = board->get_hash();
-    // if (tt.is_hash_present(hash)) {
-    //   Entry entry = tt.get_entry(hash);
-    //   if (entry.depth >= depth_left) {
-    //     if (entry.score >= beta) return beta;
-    //     if (entry.score > alpha) alpha = entry.score;
-    //   }
-    // }
+    int original_alpha = alpha;
+    bool is_pv_node = (beta - alpha) > 1;
+    Move tt_move;
+    
+    // Probe transposition table
+    u_int64_t hash = board->get_hash();
+    TTEntry* tt_entry = nullptr;
+    bool tt_hit = tt.probe(hash, tt_entry);
+    
+    if (tt_hit) {
+        tt_move = tt_entry->best_move;
+        
+        // Use TT score if depth is sufficient and not a PV node
+        if (tt_entry->depth >= depth_left && !is_pv_node) {
+            int tt_score = tt_entry->score;
+            
+            if (tt_entry->bound == BOUND_EXACT) {
+                return tt_score;
+            } else if (tt_entry->bound == BOUND_LOWER) {
+                if (tt_score >= beta) return tt_score;
+            } else if (tt_entry->bound == BOUND_UPPER) {
+                if (tt_score <= alpha) return tt_score;
+            }
+        }
+    }
     
     if (depth_left == 0) return quiescence(alpha, beta, MAX_QUIESCENCE_DEPTH);
     
     PVLine line(depth_left - 1);
     std::vector<Move> moves = board->get_moves();
     
-    order_moves(moves, pline);
+    order_moves(moves, pline, tt_move);
     
     bool found_pv = false;
+    Move best_move;
     
     for (size_t i = 0; i < moves.size(); i++) {
         Move move = moves[i];
@@ -154,6 +178,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
 
         if (score > alpha) {
             alpha = score;
+            best_move = move;
             found_pv = true;
             
             pline->moves[0] = move;
@@ -165,8 +190,23 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
         }
     }
     
-    // Entry entry = { hash, depth_left, alpha };
-    // tt.set_entry(hash, entry);
+    // Store in transposition table
+    Bound bound;
+    if (alpha >= beta) {
+        bound = BOUND_LOWER; // Beta cutoff (failed high)
+    } else if (alpha > original_alpha) {
+        bound = BOUND_EXACT; // Exact score (PV node)
+    } else {
+        bound = BOUND_UPPER; // Failed low (all moves failed to raise alpha)
+    }
+    
+    // Store best move (or first legal move if no improvement)
+    if (best_move.m_move == 0 && !moves.empty()) {
+        best_move = moves[0];
+    }
+    
+    tt.store(hash, best_move, alpha, depth_left, bound);
+    
     return alpha;
 }
 

@@ -5,7 +5,6 @@
 #include "board.hpp"
 #include "evaluate.hpp"
 #include "move.hpp"
-#include "get_hash.hpp"
 
 #ifdef DEBUG
   #include "debug.hpp"
@@ -14,10 +13,9 @@
 #endif
 
 const int MAX_DEPTH = 12;
-const long long TIME_LIMIT_MS = 12000;
+const long long TIME_LIMIT_MS = 5000;
 
 int32_t main() {
-    init_hash_table();
     Board board;
     
     Search search(&board);

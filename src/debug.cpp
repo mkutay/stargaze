@@ -30,9 +30,9 @@ std::string to_string(const std::vector<bool>& v) {
 
 std::string to_string(Move move) {
     std::string ret = "[";
-    ret += "f" + std::to_string((int) move.from()) + " ";
-    ret += "t" + std::to_string((int) move.to()) + " ";
-    ret += "-f" + std::to_string((int) move.flags());
+    ret += std::to_string((int) move.from()) + " ";
+    ret += std::to_string((int) move.to()) + " ";
+    ret += std::to_string((int) move.flags());
     ret += "]";
     return ret;
 }
