@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 #include <cassert>
+#include <variant>
 
 #include "move.hpp"
 
@@ -36,7 +37,8 @@ public:
     std::vector<Move> get_moves();
     std::string to_string();
     int get_hash();
-    bool is_in_check(int i = -1);
+    bool is_in_check(Colour by_colour);
+    bool is_attacked(Colour by_colour, std::variant<unsigned int, u_int64_t> square);
 
     Colour get_colour(int i);
     Piece get_piece(int i);

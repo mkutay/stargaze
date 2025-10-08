@@ -13,6 +13,7 @@
 const int MAX_QUIESCENCE_DEPTH = 2;
 const int ALPHA_START = -100000;
 const int BETA_START = 100000;
+const int CHECKMATE_SCORE = -200000;
 const int ASPIRATION_WINDOW = 23; // ~0.25 pawn
 
 // NOTE use calculated alpha/beta values from previous "move" in iterative deepening to set alpha/beta with a narrow window
@@ -75,7 +76,7 @@ inline bool Search::should_stop() {
     if (time_up) return true;
     
     // check time every ~2000 nodes
-    if (nodes_searched & 0x7ff) {
+    if (nodes_searched) {
         auto current_time = std::chrono::high_resolution_clock::now();
         long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
         
@@ -88,9 +89,10 @@ inline bool Search::should_stop() {
     return false;
 }
 
-void Search::order_moves(std::vector<Move>& moves, const PVLine* pv_line, Move tt_move) {
+void Search::order_moves(std::vector<Move>& moves, const PVLine *pv_line, const PVLine *tt_line) {
     std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {
-        if (tt_move.m_move != 0) {
+        if (tt_line && !tt_line->moves.empty()) {
+            Move tt_move = tt_line->moves[0];
             if (a == tt_move) return true;
             if (b == tt_move) return false;
         }
@@ -119,31 +121,32 @@ void Search::order_moves(std::vector<Move>& moves, const PVLine* pv_line, Move t
 
 int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     nodes_searched++;
-    
     if (should_stop()) return alpha;
     
     int original_alpha = alpha;
     bool is_pv_node = (beta - alpha) > 1;
-    Move tt_move;
+    PVLine *tt_line = nullptr;
     
-    // Probe transposition table
     u_int64_t hash = board->get_hash();
     auto result = tt.probe(hash);
     
     if (result != std::nullopt) {
         auto tt_entry = result.value();
-        tt_move = tt_entry->best_move;
+        tt_line = &tt_entry->line;
         
         // use TT score if depth is sufficient and not a PV node
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
             
             if (tt_entry->bound == BOUND_EXACT) {
+                std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
                 return tt_score;
-            } else if (tt_entry->bound == BOUND_LOWER) {
-                if (tt_score >= beta) return tt_score;
-            } else if (tt_entry->bound == BOUND_UPPER) {
-                if (tt_score <= alpha) return tt_score;
+            } else if (tt_entry->bound == BOUND_LOWER && tt_score >= beta) {
+                std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
+                return tt_score;
+            } else if (tt_entry->bound == BOUND_UPPER && tt_score <= alpha) {
+                std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
+                return tt_score;
             }
         }
     }
@@ -153,7 +156,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     PVLine line(depth_left - 1);
     std::vector<Move> moves = board->get_moves();
     
-    order_moves(moves, pline, tt_move);
+    order_moves(moves, pline, tt_line);
     
     bool found_pv = false;
     Move best_move;
@@ -196,7 +199,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
         }
     }
     
-    Bound bound;
+    Bound bound = BOUND_NONE;
     if (alpha >= beta) {
         bound = BOUND_LOWER; // beta cutoff (failed high)
         // denotes that the score is at least as high as beta
@@ -209,16 +212,22 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     }
     
     // store best move (or first legal move if no improvement)
-    if (best_move.m_move == 0) {
-#ifdef DEBUG
-        assert(!moves.empty());
-        assert(moves[0].m_move != 0);
-#endif
+    if (best_move.m_move == 0 && !moves.empty()) {
         best_move = moves[0];
     }
-    
-    tt.store(hash, best_move, alpha, depth_left, bound);
-    
+
+    if (best_move.m_move != 0) {
+        tt.store(hash, line, alpha, depth_left, bound);
+        return alpha;
+    }
+
+    // no legal moves (checkmate or stalemate)
+    if (board->is_in_check(board->get_turn())) {
+        alpha = CHECKMATE_SCORE + depth_left;
+    } else {
+        alpha = 0;
+    }
+
     return alpha;
 }
 

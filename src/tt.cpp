@@ -17,12 +17,11 @@ std::optional<TTEntry *> TT::probe(u_int64_t hash) {
     return &table[hash];
 }
 
-void TT::store(u_int64_t hash, Move best_move, int score, int depth, Bound bound) {
+void TT::store(u_int64_t hash, PVLine line, int score, int depth, Bound bound) {
     if (table.count(hash) == 0) {
-        TTEntry *entry = new TTEntry(
-            best_move, static_cast<int16_t>(score), static_cast<int8_t>(depth), static_cast<uint8_t>(bound), current_age
+        table[hash] = TTEntry(
+            line, static_cast<int16_t>(score), static_cast<int8_t>(depth), bound, current_age
         );
-        table[hash] = *entry;
         return;
     }
 
@@ -34,10 +33,10 @@ void TT::store(u_int64_t hash, Move best_move, int score, int depth, Bound bound
         (current_age - entry->age) > 2; // old search
     
     if (should_replace) {
-        entry->best_move = best_move;
+        entry->line = line;
         entry->score = static_cast<int16_t>(score);
         entry->depth = static_cast<int8_t>(depth);
-        entry->bound = static_cast<uint8_t>(bound);
+        entry->bound = bound;
         entry->age = current_age;
     }
 }

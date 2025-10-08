@@ -1,14 +1,10 @@
 #pragma once
 #include <vector>
 #include <chrono>
+#include <algorithm>
 #include "board.hpp"
 #include "tt.hpp"
 #include "move.hpp"
-
-struct PVLine {
-    std::vector<Move> moves;
-    PVLine(int max_depth) : moves(max_depth) {}
-};
 
 struct SearchInfo {
     int depth;
@@ -31,7 +27,7 @@ private:
     
     int quiescence(int alpha, int beta, int depth);
     bool should_stop();
-    void order_moves(std::vector<Move>& moves, const PVLine* pv_line = nullptr, Move tt_move = Move());
+    void order_moves(std::vector<Move>& moves, const PVLine *pv_line, const PVLine *tt_line);
 public:
     Search(Board *board) : board(board), time_limit_ms(5000), nodes_searched(0), time_up(false) {}
     
