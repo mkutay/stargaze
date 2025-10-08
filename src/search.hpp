@@ -33,11 +33,10 @@ private:
     bool should_stop();
     void order_moves(std::vector<Move>& moves, const PVLine* pv_line = nullptr, Move tt_move = Move());
 public:
-    Search(Board *board) : board(board), time_limit_ms(5000), nodes_searched(0), time_up(false) {
-        tt.resize(64); // Initialize with 64MB transposition table
-    }
+    Search(Board *board) : board(board), time_limit_ms(5000), nodes_searched(0), time_up(false) {}
     
     int alpha_beta(int alpha, int beta, int depth_left, PVLine *pline);
-    SearchInfo iterative_deepening(int max_depth, long long time_limit = 5000);
+    SearchInfo iterative_deepening(int max_depth, long long time_limit = 5000, SearchInfo *last_info = nullptr);
     void set_time_limit(long long ms) { time_limit_ms = ms; }
+    const TT *get_tt() { return &tt; }
 };

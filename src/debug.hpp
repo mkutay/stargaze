@@ -21,8 +21,9 @@ std::string to_string(const char& c);
 std::string to_string(const char *c);
 std::string to_string(const bool& b);
 std::string to_string(const std::vector<bool>& v);
-std::string to_string(Move move);
-std::string to_string(SearchInfo result);
+std::string to_string(const Move move);
+std::string to_string(const SearchInfo result);
+std::string to_string(const Bound bound);
 void debug_out(int size, bool first, std::string name);
 
 template<size_t T> std::string to_string(const std::bitset<T>& bs) {

@@ -28,7 +28,14 @@ std::string to_string(const std::vector<bool>& v) {
     return res;
 }
 
-std::string to_string(Move move) {
+std::string to_string(const Bound bound) {
+    if (bound == BOUND_NONE) return "NONE";
+    if (bound == BOUND_EXACT) return "EXACT";
+    if (bound == BOUND_LOWER) return "LOWER";
+    return "UPPER";
+}
+
+std::string to_string(const Move move) {
     std::string ret = "[";
     ret += std::to_string((int) move.from()) + " ";
     ret += std::to_string((int) move.to()) + " ";
@@ -37,7 +44,7 @@ std::string to_string(Move move) {
     return ret;
 }
 
-std::string to_string(SearchInfo result) {
+std::string to_string(const SearchInfo result) {
     std::string ret = "{depth: " + std::to_string(result.depth);
     ret += ", score: " + to_string(result.score);
     ret += ", nodes: " + to_string(result.nodes);

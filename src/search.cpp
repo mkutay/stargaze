@@ -11,10 +11,14 @@
 #endif
 
 const int MAX_QUIESCENCE_DEPTH = 2;
-const int ALPHA_START = -50000;
-const int BETA_START = 50000;
+const int ALPHA_START = -100000;
+const int BETA_START = 100000;
+const int ASPIRATION_WINDOW = 23; // ~0.25 pawn
 
-SearchInfo Search::iterative_deepening(int max_depth, long long time_limit) {
+// NOTE use calculated alpha/beta values from previous "move" in iterative deepening to set alpha/beta with a narrow window
+// basically, get pvline of previous move here
+
+SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, SearchInfo *last_info) {
     SearchInfo search_info(max_depth);
     time_limit_ms = time_limit;
     start_time = std::chrono::high_resolution_clock::now();
@@ -23,34 +27,35 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit) {
     
     tt.new_search();
     
-    int alpha = ALPHA_START;
-    int beta = BETA_START;
-    const int ASPIRATION_WINDOW = 50;
+    // since last info is from the opponent's perspective, we negate the score
+    int alpha = last_info ? -last_info->score - ASPIRATION_WINDOW : ALPHA_START;
+    int beta = last_info ? -last_info->score + ASPIRATION_WINDOW : BETA_START;
+    const int aspiration = ASPIRATION_WINDOW;
     
-    for (int depth = 1; depth <= max_depth; depth++) {
-        if (should_stop()) break;
-        
+    for (int depth = 1; depth <= max_depth && !should_stop(); depth++) {
         PVLine pv_line(depth);
         int score;
-        
-        // use aspiration windows
-        if (depth > 2) {
-            alpha = search_info.score - ASPIRATION_WINDOW;
-            beta = search_info.score + ASPIRATION_WINDOW;
+
+        if (depth == 1) {
+            score = alpha_beta(alpha, beta, depth, &pv_line);
+        } else {
+            alpha = search_info.score - aspiration;
+            beta = search_info.score + aspiration;
             
             // try narrow window first
             score = alpha_beta(alpha, beta, depth, &pv_line);
             
-            // re-search with wider window if needed
-            if (score <= alpha || score >= beta) {
-                alpha = ALPHA_START;
-                beta = BETA_START;
+            if (score >= beta) { // failed high
+                alpha = search_info.score - aspiration;
+                beta = search_info.score + aspiration * 4;
+                score = alpha_beta(alpha, beta, depth, &pv_line);
+            } else if (score <= alpha) { // failed low
+                alpha = search_info.score - aspiration * 4;
+                beta = search_info.score + aspiration;
                 score = alpha_beta(alpha, beta, depth, &pv_line);
             }
-        } else {
-            score = alpha_beta(alpha, beta, depth, &pv_line);
         }
-        
+
         if (should_stop()) break;
         
         search_info.depth = depth;
@@ -59,7 +64,7 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit) {
         search_info.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
         search_info.pv = pv_line;
 
-        debug(depth, score, nodes_searched, search_info.time_ms, pv_line.moves);
+        debug(depth, alpha, score, beta, nodes_searched, pv_line.moves);
     }
     
     search_info.stopped = time_up;
@@ -69,10 +74,10 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit) {
 inline bool Search::should_stop() {
     if (time_up) return true;
     
-    // check time every ~1000 nodes
+    // check time every ~2000 nodes
     if (nodes_searched & 0x7ff) {
         auto current_time = std::chrono::high_resolution_clock::now();
-        long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( current_time - start_time).count();
+        long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
         
         if (elapsed >= time_limit_ms) {
             time_up = true;
@@ -123,13 +128,13 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     
     // Probe transposition table
     u_int64_t hash = board->get_hash();
-    TTEntry* tt_entry = nullptr;
-    bool tt_hit = tt.probe(hash, tt_entry);
+    auto result = tt.probe(hash);
     
-    if (tt_hit) {
+    if (result != std::nullopt) {
+        auto tt_entry = result.value();
         tt_move = tt_entry->best_move;
         
-        // Use TT score if depth is sufficient and not a PV node
+        // use TT score if depth is sufficient and not a PV node
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
             
@@ -153,10 +158,11 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     bool found_pv = false;
     Move best_move;
     
-    for (size_t i = 0; i < moves.size(); i++) {
+    for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
         Move move = moves[i];
-        
-        if (should_stop()) break;
+#ifdef DEBUG
+        assert(move.m_move != 0);
+#endif
         
         board->make_move(move);
         int score;
@@ -166,7 +172,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
             score = -alpha_beta(-beta, -alpha, depth_left - 1, &line);
         } else {
             // null window search for remaining moves
-            score = -alpha_beta(-alpha - 100, -alpha, depth_left - 1, &line);
+            score = -alpha_beta(-alpha - ASPIRATION_WINDOW, -alpha, depth_left - 1, &line);
             
             // re-search with full window if null window failed high
             if (score > alpha && score < beta) {
@@ -190,18 +196,24 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
         }
     }
     
-    // Store in transposition table
     Bound bound;
     if (alpha >= beta) {
-        bound = BOUND_LOWER; // Beta cutoff (failed high)
+        bound = BOUND_LOWER; // beta cutoff (failed high)
+        // denotes that the score is at least as high as beta
     } else if (alpha > original_alpha) {
-        bound = BOUND_EXACT; // Exact score (PV node)
+        bound = BOUND_EXACT; // exact score (PV node)
+        // this is an exact score, and shouldn't change if you change alpha or beta
     } else {
-        bound = BOUND_UPPER; // Failed low (all moves failed to raise alpha)
+        bound = BOUND_UPPER; // failed low (all moves failed to raise alpha)
+        // the score cannot be greater than alpha
     }
     
-    // Store best move (or first legal move if no improvement)
-    if (best_move.m_move == 0 && !moves.empty()) {
+    // store best move (or first legal move if no improvement)
+    if (best_move.m_move == 0) {
+#ifdef DEBUG
+        assert(!moves.empty());
+        assert(moves[0].m_move != 0);
+#endif
         best_move = moves[0];
     }
     
