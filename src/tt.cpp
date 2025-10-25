@@ -28,7 +28,7 @@ void TT::store(u_int64_t hash, PVLine line, int score, int depth, Bound bound) {
     TTEntry* entry = &table[hash];
     
     bool should_replace = 
-        entry->bound == BOUND_NONE ||
+        entry->bound == Bound::NONE ||
         depth >= entry->depth ||
         (current_age - entry->age) > 2; // old search
     

@@ -29,9 +29,9 @@ std::string to_string(const std::vector<bool>& v) {
 }
 
 std::string to_string(const Bound bound) {
-    if (bound == BOUND_NONE) return "NONE";
-    if (bound == BOUND_EXACT) return "EXACT";
-    if (bound == BOUND_LOWER) return "LOWER";
+    if (bound == Bound::NONE) return "NONE";
+    if (bound == Bound::EXACT) return "EXACT";
+    if (bound == Bound::LOWER) return "LOWER";
     return "UPPER";
 }
 

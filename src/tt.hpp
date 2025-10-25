@@ -11,23 +11,23 @@ struct PVLine {
     PVLine() {}
 };
 
-enum Bound {
-    BOUND_NONE = 0,
-    BOUND_EXACT = 1, // PV-node (exact score)
-    BOUND_LOWER = 2, // all-node (failed high, beta cutoff)
-    BOUND_UPPER = 3  // cut-node (failed low, no move improved alpha)
+enum class Bound {
+    NONE = 0,
+    EXACT = 1, // PV-node (exact score)
+    LOWER = 2, // all-node (failed high, beta cutoff)
+    UPPER = 3  // cut-node (failed low, no move improved alpha)
 };
 
 struct TTEntry {
-    int16_t score;  // score (evaluation)
-    int8_t depth;   // search depth
+    int16_t score; // score (evaluation)
+    int8_t depth; // search depth
     Bound bound; // bound type (BOUND_EXACT, BOUND_LOWER, BOUND_UPPER)
-    u_int8_t age;   // age counter for replacement strategy
+    u_int8_t age; // age counter for replacement strategy
     PVLine line;
     
-    TTEntry() : score(0), depth(0), bound(BOUND_NONE), age(0), line() {}
-    TTEntry(PVLine line, int16_t score, int8_t depth, Bound bound, u_int8_t age)
-        : score(score), depth(depth), bound(bound), age(age), line(line) {}
+    TTEntry() : score(0), depth(0), bound(Bound::NONE), age(0), line() {}
+    TTEntry(PVLine line_, int16_t score_, int8_t depth_, Bound bound_, u_int8_t age_)
+        : score(score_), depth(depth_), bound(bound_), age(age_), line(line_) {}
 };
 
 class TT {

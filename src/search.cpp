@@ -28,18 +28,22 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, Sear
     
     tt.new_search();
     
-    // since last info is from the opponent's perspective, we negate the score
-    int alpha = last_info ? -last_info->score - ASPIRATION_WINDOW : ALPHA_START;
-    int beta = last_info ? -last_info->score + ASPIRATION_WINDOW : BETA_START;
     const int aspiration = ASPIRATION_WINDOW;
+    int alpha_start = last_info ? -last_info->score - aspiration * 4 : ALPHA_START;
+    int beta_start = last_info ? -last_info->score + aspiration * 4 : BETA_START;
     
     for (int depth = 1; depth <= max_depth && !should_stop(); depth++) {
         PVLine pv_line(depth);
         int score;
+        int alpha, beta;
 
         if (depth == 1) {
+            // full window
+            alpha = alpha_start;
+            beta = beta_start;
             score = alpha_beta(alpha, beta, depth, &pv_line);
         } else {
+            // use aspiration window based on previous depth's score
             alpha = search_info.score - aspiration;
             beta = search_info.score + aspiration;
             
@@ -47,12 +51,12 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, Sear
             score = alpha_beta(alpha, beta, depth, &pv_line);
             
             if (score >= beta) { // failed high
-                alpha = search_info.score - aspiration;
-                beta = search_info.score + aspiration * 4;
+                // re-search with wider window, keeping lower bound
+                beta = BETA_START;
                 score = alpha_beta(alpha, beta, depth, &pv_line);
             } else if (score <= alpha) { // failed low
-                alpha = search_info.score - aspiration * 4;
-                beta = search_info.score + aspiration;
+                // re-search with wider window, keeping upper bound
+                alpha = ALPHA_START;
                 score = alpha_beta(alpha, beta, depth, &pv_line);
             }
         }
@@ -74,9 +78,7 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, Sear
 
 inline bool Search::should_stop() {
     if (time_up) return true;
-    
-    // check time every ~2000 nodes
-    if (nodes_searched) {
+    if ((nodes_searched & 0x3FFF) == 0) { // check every 16384 nodes
         auto current_time = std::chrono::high_resolution_clock::now();
         long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
         
@@ -91,13 +93,13 @@ inline bool Search::should_stop() {
 
 void Search::order_moves(std::vector<Move>& moves, const PVLine *pv_line, const PVLine *tt_line) {
     std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {
-        if (tt_line && !tt_line->moves.empty()) {
+        if (tt_line && !tt_line->moves.empty() && tt_line->moves[0].m_move != 0) {
             Move tt_move = tt_line->moves[0];
             if (a == tt_move) return true;
             if (b == tt_move) return false;
         }
         
-        if (pv_line && !pv_line->moves.empty()) {
+        if (pv_line && !pv_line->moves.empty() && pv_line->moves[0].m_move != 0) {
             Move pv_move = pv_line->moves[0];
             if (a == pv_move) return true;
             if (b == pv_move) return false;
@@ -138,13 +140,13 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
             
-            if (tt_entry->bound == BOUND_EXACT) {
+            if (tt_entry->bound == Bound::EXACT) {
                 std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
                 return tt_score;
-            } else if (tt_entry->bound == BOUND_LOWER && tt_score >= beta) {
+            } else if (tt_entry->bound == Bound::LOWER && tt_score >= beta) {
                 std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
                 return tt_score;
-            } else if (tt_entry->bound == BOUND_UPPER && tt_score <= alpha) {
+            } else if (tt_entry->bound == Bound::UPPER && tt_score <= alpha) {
                 std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
                 return tt_score;
             }
@@ -199,15 +201,15 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
         }
     }
     
-    Bound bound = BOUND_NONE;
+    Bound bound = Bound::NONE;
     if (alpha >= beta) {
-        bound = BOUND_LOWER; // beta cutoff (failed high)
+        bound = Bound::LOWER; // beta cutoff (failed high)
         // denotes that the score is at least as high as beta
     } else if (alpha > original_alpha) {
-        bound = BOUND_EXACT; // exact score (PV node)
+        bound = Bound::EXACT; // exact score (PV node)
         // this is an exact score, and shouldn't change if you change alpha or beta
     } else {
-        bound = BOUND_UPPER; // failed low (all moves failed to raise alpha)
+        bound = Bound::UPPER; // failed low (all moves failed to raise alpha)
         // the score cannot be greater than alpha
     }
     
@@ -217,7 +219,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     }
 
     if (best_move.m_move != 0) {
-        tt.store(hash, line, alpha, depth_left, bound);
+        tt.store(hash, *pline, alpha, depth_left, bound);
         return alpha;
     }
 
@@ -234,8 +236,6 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
 int Search::quiescence(int alpha, int beta, int depth) {
     nodes_searched++;
     
-    if (should_stop()) return alpha;
-    
     int stand_pat = evaluate(*board);
     if (depth == 0) return stand_pat;
     if (stand_pat >= beta) return stand_pat;
@@ -245,8 +245,6 @@ int Search::quiescence(int alpha, int beta, int depth) {
     
     for (Move move : moves) {
         if (!move.is_capture()) continue;
-        
-        if (should_stop()) break;
         
         board->make_move(move);
         int score = -quiescence(-beta, -alpha, depth - 1);

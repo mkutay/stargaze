@@ -11,9 +11,9 @@ struct SearchInfo {
     int score;
     int nodes;
     long long time_ms;
-    PVLine pv;
     bool stopped;
-    SearchInfo(int max_depth) : depth(0), score(0), nodes(0), time_ms(0), pv(max_depth), stopped(false) {}
+    PVLine pv;
+    SearchInfo(int max_depth) : depth(0), score(0), nodes(0), time_ms(0), stopped(false), pv(max_depth) {}
 };
 
 class Search {
@@ -34,5 +34,5 @@ public:
     int alpha_beta(int alpha, int beta, int depth_left, PVLine *pline);
     SearchInfo iterative_deepening(int max_depth, long long time_limit = 5000, SearchInfo *last_info = nullptr);
     void set_time_limit(long long ms) { time_limit_ms = ms; }
-    const TT *get_tt() { return &tt; }
+    const TT *get_tt() const { return &tt; }
 };
