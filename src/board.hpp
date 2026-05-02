@@ -1,9 +1,8 @@
 #pragma once
-#include <string>
-#include <vector>
-#include <iostream>
 #include <cassert>
+#include <string>
 #include <variant>
+#include <vector>
 
 #include "move.hpp"
 
@@ -22,14 +21,17 @@ enum BBPiece {
 class Board {
     std::array<u_int64_t, 8> pieces = {0}; // unsigned long long
     Colour turn = WHITE;
-    std::array<bool, 4> can_castle = { true, true, true, true }; // 0: white king's side, 1: white queen's side, 2: black king's side, 3: black queen's side
+    std::array<bool, 4> can_castle = {
+        true, true, true, true}; // 0: white king's side, 1: white queen's side,
+                                 // 2: black king's side, 3: black queen's side
     std::vector<Move> moves;
     std::vector<std::array<u_int64_t, 8>> board_history;
     std::vector<std::array<bool, 4>> castle_history;
 
     void debug_print();
     int piece_code(Piece p);
-public:
+
+  public:
     Board();
     void make_move(Move move);
     void undo_move();
@@ -38,7 +40,8 @@ public:
     std::string to_string();
     int get_hash();
     bool is_in_check(Colour by_colour);
-    bool is_attacked(Colour by_colour, std::variant<unsigned int, u_int64_t> square);
+    bool is_attacked(Colour by_colour,
+                     std::variant<unsigned int, u_int64_t> square);
 
     Colour get_colour(int i);
     Piece get_piece(int i);

@@ -1,10 +1,10 @@
 #pragma once
-#include <vector>
-#include <chrono>
-#include <algorithm>
 #include "board.hpp"
-#include "tt.hpp"
 #include "move.hpp"
+#include "tt.hpp"
+#include <chrono>
+#include <optional>
+#include <vector>
 
 struct SearchInfo {
     int depth;
@@ -13,12 +13,14 @@ struct SearchInfo {
     long long time_ms;
     bool stopped;
     PVLine pv;
-    SearchInfo(int max_depth) : depth(0), score(0), nodes(0), time_ms(0), stopped(false), pv(max_depth) {}
+    SearchInfo(int max_depth)
+        : depth(0), score(0), nodes(0), time_ms(0), stopped(false),
+          pv(max_depth) {}
 };
 
 class Search {
-private:
-    Board *board;
+  private:
+    Board* board;
     TT tt;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     long long time_limit_ms;
@@ -27,12 +29,18 @@ private:
 
     int quiescence(int alpha, int beta, int depth);
     bool should_stop();
-    void order_moves(std::vector<Move>& moves, const PVLine *pv_line, const PVLine *tt_line);
-public:
-    Search(Board *board) : board(board), time_limit_ms(5000), nodes_searched(0), time_up(false) {}
+    void order_moves(std::vector<Move>& moves, const PVLine* pv_line,
+                     const PVLine* tt_line);
 
-    int alpha_beta(int alpha, int beta, int depth_left, PVLine *pline);
-    SearchInfo iterative_deepening(int max_depth, long long time_limit = 5000, std::optional<SearchInfo> last_info = std::nullopt);
+  public:
+    Search(Board* board)
+        : board(board), time_limit_ms(5000), nodes_searched(0), time_up(false) {
+    }
+
+    int alpha_beta(int alpha, int beta, int depth_left, PVLine* pline);
+    SearchInfo
+    iterative_deepening(int max_depth, long long time_limit = 5000,
+                        std::optional<SearchInfo> last_info = std::nullopt);
     void set_time_limit(long long ms) { time_limit_ms = ms; }
-    const TT *get_tt() const { return &tt; }
+    const TT* get_tt() const { return &tt; }
 };

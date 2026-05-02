@@ -1,15 +1,62 @@
+# Compiler and base flags
 CXX = g++
-CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -pedantic
-DEBUGFLAGS = -g -fsanitize=address -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
-CXXFLAGS += $(DEBUGFLAGS)
+CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -pedantic -Isrc
 
+# Dependency tracking flags
+DEPFLAGS = -MMD -MP
+
+# Build directories
+BUILD_DIR = build
+BIN_DIR = bin
+
+# Target executable name
+TARGET = $(BIN_DIR)/stargaze
+
+# Source and object files
 SOURCES = $(wildcard src/*.cpp)
+OBJECTS = $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
+DEPS = $(OBJECTS:.o=.d)
 
-all: bin/stargaze
+# Profile flags
+RELEASE_FLAGS = -O3 -flto -march=native -DNDEBUG
+DEBUG_FLAGS = -g -fsanitize=address -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
 
-bin/stargaze: $(SOURCES)
-	mkdir -p bin
-	$(CXX) $(CXXFLAGS) $^ -o $@
+# Default profile is release
+all: release
 
-run: all
-	./bin/stargaze
+# Release target
+release: CXXFLAGS += $(RELEASE_FLAGS)
+release: LDFLAGS += -flto
+release: $(TARGET)
+
+# Debug target
+debug: CXXFLAGS += $(DEBUG_FLAGS)
+debug: $(TARGET)
+
+# Link the executable
+$(TARGET): $(OBJECTS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
+
+# Compile object files
+$(BUILD_DIR)/%.o: src/%.cpp
+	@mkdir -p $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
+
+# Run the executable (defaults to building release first)
+run: release
+	./$(TARGET)
+
+# Run the debug executable
+run-debug: debug
+	./$(TARGET)
+
+# Clean build artifacts
+clean:
+	rm -rf $(BUILD_DIR) $(BIN_DIR)
+
+# Include dependency files if they exist
+-include $(DEPS)
+
+# Phony targets
+.PHONY: all release debug run run-debug clean

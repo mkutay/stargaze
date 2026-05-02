@@ -1,0 +1,12 @@
+[
+    {
+        "label": "build release",
+        "command": "make release",
+        "reveal": "always",
+    },
+    {
+        "label": "build debug",
+        "command": "make debug",
+        "reveal": "always",
+    },
+]

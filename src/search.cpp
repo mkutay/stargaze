@@ -1,13 +1,12 @@
 #include "search.hpp"
 #include "evaluate.hpp"
-#include <iostream>
 #include <algorithm>
 #include <chrono>
 
 #ifdef DEBUG
-  #include "debug.hpp"
+#include "debug.hpp"
 #else
-  #define debug(...) void(38)
+#define debug(...) void(38)
 #endif
 
 const int MAX_QUIESCENCE_DEPTH = 2;
@@ -16,22 +15,28 @@ const int BETA_START = 100000;
 const int CHECKMATE_SCORE = -200000;
 const int ASPIRATION_WINDOW = 23; // ~0.25 pawn
 
-// NOTE use calculated alpha/beta values from previous "move" in iterative deepening to set alpha/beta with a narrow window
-// basically, get pvline of previous move here
+// NOTE use calculated alpha/beta values from previous "move" in iterative
+// deepening to set alpha/beta with a narrow window basically, get pvline of
+// previous move here
 
-SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, std::optional<SearchInfo> last_info) {
+SearchInfo Search::iterative_deepening(int max_depth, long long time_limit,
+                                       std::optional<SearchInfo> last_info) {
     SearchInfo search_info(max_depth);
     time_limit_ms = time_limit;
     start_time = std::chrono::high_resolution_clock::now();
     nodes_searched = 0;
     time_up = false;
-    
+
     tt.new_search();
-    
+
     const int aspiration = ASPIRATION_WINDOW;
-    int alpha_start = last_info != std::nullopt ? -last_info->score - aspiration * 4 : ALPHA_START;
-    int beta_start = last_info != std::nullopt ? -last_info->score + aspiration * 4 : BETA_START;
-    
+    int alpha_start = last_info != std::nullopt
+                          ? -last_info->score - aspiration * 4
+                          : ALPHA_START;
+    int beta_start = last_info != std::nullopt
+                         ? -last_info->score + aspiration * 4
+                         : BETA_START;
+
     for (int depth = 1; depth <= max_depth && !should_stop(); depth++) {
         PVLine pv_line(depth);
         int score;
@@ -46,10 +51,10 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, std:
             // use aspiration window based on previous depth's score
             alpha = search_info.score - aspiration;
             beta = search_info.score + aspiration;
-            
+
             // try narrow window first
             score = alpha_beta(alpha, beta, depth, &pv_line);
-            
+
             if (score >= beta) { // failed high
                 // re-search with wider window, keeping lower bound
                 beta = BETA_START;
@@ -61,163 +66,193 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, std:
             }
         }
 
-        if (should_stop()) break;
-        
+        if (should_stop())
+            break;
+
         search_info.depth = depth;
         search_info.score = score;
         search_info.nodes = nodes_searched;
-        search_info.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
+        search_info.time_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::high_resolution_clock::now() - start_time)
+                .count();
         search_info.pv = pv_line;
 
-        if (search_info.pv.moves[0].from() == 4 && search_info.pv.moves[0].to() == 12) {
+        if (search_info.pv.moves[0].from() == 4 &&
+            search_info.pv.moves[0].to() == 12) {
             debug("");
         }
-        
-        debug(depth, alpha, score, beta, nodes_searched, pv_line.moves, board->get_castle_rights());
+
+        debug(depth, alpha, score, beta, nodes_searched, pv_line.moves,
+              board->get_castle_rights());
     }
 
-    
     search_info.stopped = time_up;
     return search_info;
 }
 
 inline bool Search::should_stop() {
-    if (time_up) return true;
+    if (time_up)
+        return true;
     if ((nodes_searched & 0x3FFF) == 0) { // check every 16384 nodes
         auto current_time = std::chrono::high_resolution_clock::now();
-        long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
-        
+        long long elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(current_time -
+                                                                  start_time)
+                .count();
+
         if (elapsed >= time_limit_ms) {
             time_up = true;
             return true;
         }
     }
-    
+
     return false;
 }
 
-void Search::order_moves(std::vector<Move>& moves, const PVLine *pv_line, const PVLine *tt_line) {
+void Search::order_moves(std::vector<Move>& moves, const PVLine* pv_line,
+                         const PVLine* tt_line) {
     std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {
-        if (tt_line && !tt_line->moves.empty() && tt_line->moves.size() >= 2 && tt_line->moves[0].m_move != 0) {
+        if (tt_line && !tt_line->moves.empty() && tt_line->moves.size() >= 2 &&
+            tt_line->moves[0].m_move != 0) {
             Move tt_move = tt_line->moves[0];
-            if (a == tt_move) return true;
-            if (b == tt_move) return false;
+            if (a == tt_move)
+                return true;
+            if (b == tt_move)
+                return false;
         }
-        
-        if (pv_line && !pv_line->moves.empty() && pv_line->moves.size() >= 2 && pv_line->moves[0].m_move != 0) {
+
+        if (pv_line && !pv_line->moves.empty() && pv_line->moves.size() >= 2 &&
+            pv_line->moves[0].m_move != 0) {
             Move pv_move = pv_line->moves[0];
-            if (a == pv_move) return true;
-            if (b == pv_move) return false;
+            if (a == pv_move)
+                return true;
+            if (b == pv_move)
+                return false;
         }
 
         // promotions
-        if (a.is_promotion() && !b.is_promotion()) return true;
-        if (!a.is_promotion() && b.is_promotion()) return false;
+        if (a.is_promotion() && !b.is_promotion())
+            return true;
+        if (!a.is_promotion() && b.is_promotion())
+            return false;
 
         // castling
-        if (a.is_castle() && !b.is_castle()) return true;
-        if (!a.is_castle() && b.is_castle()) return false;
-        
+        if (a.is_castle() && !b.is_castle())
+            return true;
+        if (!a.is_castle() && b.is_castle())
+            return false;
+
         // captures
-        if (a.is_capture() && !b.is_capture()) return true;
-        if (!a.is_capture() && b.is_capture()) return false;
-        
+        if (a.is_capture() && !b.is_capture())
+            return true;
+        if (!a.is_capture() && b.is_capture())
+            return false;
+
         return false; // keep original order for moves of same type
     });
 }
 
-int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
+int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine* pline) {
     nodes_searched++;
-    if (should_stop()) return alpha;
-    
+    if (should_stop())
+        return alpha;
+
     int original_alpha = alpha;
     bool is_pv_node = (beta - alpha) > 1;
-    PVLine *tt_line = nullptr;
-    
-    u_int64_t hash = board->get_hash();
+    PVLine* tt_line = nullptr;
+
+    uint64_t hash = board->get_hash();
     auto result = tt.probe(hash);
-    
+
     if (result != std::nullopt) {
         auto tt_entry = result.value();
         tt_line = &tt_entry->line;
-        
+
         // use TT score if depth is sufficient and not a PV node
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
-            
+
             if (tt_entry->bound == Bound::EXACT) {
-                std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
+                std::copy(tt_line->moves.begin(), tt_line->moves.end(),
+                          pline->moves.begin() + 1);
                 return tt_score;
             } else if (tt_entry->bound == Bound::LOWER && tt_score >= beta) {
-                std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
+                std::copy(tt_line->moves.begin(), tt_line->moves.end(),
+                          pline->moves.begin() + 1);
                 return tt_score;
             } else if (tt_entry->bound == Bound::UPPER && tt_score <= alpha) {
-                std::copy(tt_line->moves.begin(), tt_line->moves.end(), pline->moves.begin() + 1);
+                std::copy(tt_line->moves.begin(), tt_line->moves.end(),
+                          pline->moves.begin() + 1);
                 return tt_score;
             }
         }
     }
-    
-    if (depth_left == 0) return quiescence(alpha, beta, MAX_QUIESCENCE_DEPTH);
-    
+
+    if (depth_left == 0)
+        return quiescence(alpha, beta, MAX_QUIESCENCE_DEPTH);
+
     PVLine line(depth_left - 1);
     std::vector<Move> moves = board->get_moves();
-    
+
     order_moves(moves, pline, tt_line);
-    
+
     bool found_pv = false;
     Move best_move;
-    
+
     for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
         Move move = moves[i];
 #ifdef DEBUG
         assert(move.m_move != 0);
 #endif
-        
+
         board->make_move(move);
         int score;
-        
+
         if (!found_pv) {
             // full window search for first move
             score = -alpha_beta(-beta, -alpha, depth_left - 1, &line);
         } else {
             // null window search for remaining moves
-            score = -alpha_beta(-alpha - ASPIRATION_WINDOW, -alpha, depth_left - 1, &line);
-            
+            score = -alpha_beta(-alpha - ASPIRATION_WINDOW, -alpha,
+                                depth_left - 1, &line);
+
             // re-search with full window if null window failed high
             if (score > alpha && score < beta) {
                 score = -alpha_beta(-beta, -alpha, depth_left - 1, &line);
             }
         }
-        
+
         board->undo_move();
 
         if (score > alpha) {
             alpha = score;
             best_move = move;
             found_pv = true;
-            
+
             pline->moves[0] = move;
-            std::copy(line.moves.begin(), line.moves.end(), pline->moves.begin() + 1);
+            std::copy(line.moves.begin(), line.moves.end(),
+                      pline->moves.begin() + 1);
         }
-        
+
         if (score >= beta) {
             break;
         }
     }
-    
+
     Bound bound = Bound::NONE;
     if (alpha >= beta) {
         bound = Bound::LOWER; // beta cutoff (failed high)
         // denotes that the score is at least as high as beta
     } else if (alpha > original_alpha) {
         bound = Bound::EXACT; // exact score (PV node)
-        // this is an exact score, and shouldn't change if you change alpha or beta
+        // this is an exact score, and shouldn't change if you change alpha or
+        // beta
     } else {
         bound = Bound::UPPER; // failed low (all moves failed to raise alpha)
         // the score cannot be greater than alpha
     }
-    
+
     // store best move (or first legal move if no improvement)
     if (best_move.m_move == 0 && !moves.empty()) {
         best_move = moves[0];
@@ -240,24 +275,29 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
 
 int Search::quiescence(int alpha, int beta, int depth) {
     nodes_searched++;
-    
+
     int stand_pat = evaluate(*board);
-    if (depth == 0) return stand_pat;
-    if (stand_pat >= beta) return stand_pat;
+    if (depth == 0)
+        return stand_pat;
+    if (stand_pat >= beta)
+        return stand_pat;
     alpha = std::max(alpha, stand_pat);
-    
+
     std::vector<Move> moves = board->get_moves();
-    
+
     for (Move move : moves) {
-        if (!move.is_capture()) continue;
-        
+        if (!move.is_capture())
+            continue;
+
         board->make_move(move);
         int score = -quiescence(-beta, -alpha, depth - 1);
         board->undo_move();
-        
-        if (score >= beta) return score;
-        if (score > alpha) alpha = score;
+
+        if (score >= beta)
+            return score;
+        if (score > alpha)
+            alpha = score;
     }
-    
+
     return alpha;
 }

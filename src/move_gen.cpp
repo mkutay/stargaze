@@ -1,54 +1,41 @@
-#include <functional>
-
-#include "board.hpp"
-#include "evaluate.hpp"
 #include "move_gen.hpp"
+#include "board.hpp"
 
 #ifdef DEBUG
-  #include "debug.hpp"
+#include "debug.hpp"
 #else
-  #define debug(...) void(38)
+#define debug(...) void(38)
 #endif
 
-const int knight_moves_d[8] = { -10, -6, -17, -15, 6, 10, 15, 17 };
-const int diagonal_moves_d[4] = { 7, 9, -7, -9 };
-const int cardinal_moves_d[4] = { 8, 1, -8, -1 };
-const u_int64_t knight_masks[8] = {
-    0xfcfcfcfcfcfcfc00,
-    0x3f3f3f3f3f3f3f00,
-    0xfefefefefefe0000,
-    0x7f7f7f7f7f7f0000,
-    0x00fcfcfcfcfcfcfc,
-    0x003f3f3f3f3f3f3f,
-    0x0000fefefefefefe,
-    0x00007f7f7f7f7f7f,
+const int knight_moves_d[8] = {-10, -6, -17, -15, 6, 10, 15, 17};
+const int diagonal_moves_d[4] = {7, 9, -7, -9};
+const int cardinal_moves_d[4] = {8, 1, -8, -1};
+const uint64_t knight_masks[8] = {
+    0xfcfcfcfcfcfcfc00, 0x3f3f3f3f3f3f3f00, 0xfefefefefefe0000,
+    0x7f7f7f7f7f7f0000, 0x00fcfcfcfcfcfcfc, 0x003f3f3f3f3f3f3f,
+    0x0000fefefefefefe, 0x00007f7f7f7f7f7f,
 };
-const u_int64_t diagonal_masks[4] = {
+const uint64_t diagonal_masks[4] = {
     0x7f7f7f7f7f7f7f00,
     0xfefefefefefefe00,
     0x00fefefefefefefe,
     0x007f7f7f7f7f7f7f,
 };
-const u_int64_t cardinal_masks[4] = {
+const uint64_t cardinal_masks[4] = {
     0xffffffffffffff00,
     0xfefefefefefefefe,
     0x00ffffffffffffff,
     0x7f7f7f7f7f7f7f7f,
 };
 
-const u_int8_t bit_scan_index64[64] = {
-    0, 47,  1, 56, 48, 27,  2, 60,
-    57, 49, 41, 37, 28, 16,  3, 61,
-    54, 58, 35, 52, 50, 42, 21, 44,
-    38, 32, 29, 23, 17, 11,  4, 62,
-    46, 55, 26, 59, 40, 36, 15, 53,
-    34, 51, 20, 43, 31, 22, 10, 45,
-    25, 39, 14, 33, 19, 30,  9, 24,
-    13, 18,  8, 12,  7,  6,  5, 63
-};
-const u_int64_t debruijn64 = 0x03f79d71b4cb0a89;
+const uint8_t bit_scan_index64[64] = {
+    0,  47, 1,  56, 48, 27, 2,  60, 57, 49, 41, 37, 28, 16, 3,  61,
+    54, 58, 35, 52, 50, 42, 21, 44, 38, 32, 29, 23, 17, 11, 4,  62,
+    46, 55, 26, 59, 40, 36, 15, 53, 34, 51, 20, 43, 31, 22, 10, 45,
+    25, 39, 14, 33, 19, 30, 9,  24, 13, 18, 8,  12, 7,  6,  5,  63};
+const uint64_t debruijn64 = 0x03f79d71b4cb0a89;
 
-int bit_scan_forward(u_int64_t bb) {
+int bit_scan_forward(uint64_t bb) {
 #ifdef DEBUG
     assert(bb != 0);
 #endif
@@ -57,19 +44,22 @@ int bit_scan_forward(u_int64_t bb) {
 
 std::vector<Move> Board::get_moves() {
     /**
-     * Pseudolegal move generation, which include moves that leave the king in check
+     * Pseudolegal move generation, which include moves that leave the king in
+     * check
      */
     std::vector<Move> pseudo;
 
     int mul = turn == WHITE ? 1 : -1;
 
-    u_int64_t white_pieces = get_white_pieces();
-    u_int64_t black_pieces = get_black_pieces();
-    u_int64_t occupied = white_pieces | black_pieces;
-    u_int64_t empty = ~occupied;
-    u_int64_t other_pieces = turn == WHITE ? black_pieces : white_pieces;
+    uint64_t white_pieces = get_white_pieces();
+    uint64_t black_pieces = get_black_pieces();
+    uint64_t occupied = white_pieces | black_pieces;
+    uint64_t empty = ~occupied;
+    uint64_t other_pieces = turn == WHITE ? black_pieces : white_pieces;
 
-    u_int64_t pawns, pawn_push_one, pawn_push_two, pawn_capture_left, pawn_capture_right, pawn_push_one_promotion, pawn_capture_left_promotion, pawn_capture_right_promotion;
+    uint64_t pawns, pawn_push_one, pawn_push_two, pawn_capture_left,
+        pawn_capture_right, pawn_push_one_promotion,
+        pawn_capture_left_promotion, pawn_capture_right_promotion;
     // pawns
     if (turn == WHITE) {
         pawns = get_white_pawns();
@@ -100,7 +90,7 @@ std::vector<Move> Board::get_moves() {
         }
     }
     for (int i = 0; i < 64; i++) {
-        u_int64_t bit = 1ull << i;
+        uint64_t bit = 1ull << i;
         if (pawn_push_one_promotion & bit) {
             pseudo.emplace_back(Move(i - 8 * mul, i, 0b1000));
             pseudo.emplace_back(Move(i - 8 * mul, i, 0b1001));
@@ -134,47 +124,61 @@ std::vector<Move> Board::get_moves() {
     }
 
     // knight
-    u_int64_t knights = turn == WHITE ? get_white_knights() : get_black_knights();
+    uint64_t knights =
+        turn == WHITE ? get_white_knights() : get_black_knights();
     for (int d = 0; d < 8; d++) {
-        u_int64_t temp = knights & knight_masks[d];
-        if (d < 4) temp >>= -knight_moves_d[d];
-        else temp <<= knight_moves_d[d];
-        u_int64_t temp_captures = temp & other_pieces;
+        uint64_t temp = knights & knight_masks[d];
+        if (d < 4)
+            temp >>= -knight_moves_d[d];
+        else
+            temp <<= knight_moves_d[d];
+        uint64_t temp_captures = temp & other_pieces;
         temp = (temp & empty) | temp_captures;
         while (temp) {
-            u_int64_t ls1b = temp & -temp;
+            uint64_t ls1b = temp & -temp;
             int i = bit_scan_forward(ls1b);
-            pseudo.emplace_back(Move(i - knight_moves_d[d], i, bool(temp_captures & ls1b) << 2));
+            pseudo.emplace_back(Move(i - knight_moves_d[d], i,
+                                     bool(temp_captures & ls1b) << 2));
             temp ^= ls1b;
         }
     }
 
     // bishop and queen
-    u_int64_t bishops = turn == WHITE ? get_white_bishops() : get_black_bishops();
-    u_int64_t queens = turn == WHITE ? get_white_queens() : get_black_queens();
+    uint64_t bishops =
+        turn == WHITE ? get_white_bishops() : get_black_bishops();
+    uint64_t queens = turn == WHITE ? get_white_queens() : get_black_queens();
     for (int d = 0; d < 4; d++) {
-        u_int64_t temp_bishops = bishops;
-        u_int64_t temp_queens = queens;
+        uint64_t temp_bishops = bishops;
+        uint64_t temp_queens = queens;
         for (int m = 0; temp_bishops || temp_queens; m++) {
-            if (d < 2) temp_bishops <<= diagonal_moves_d[d], temp_queens <<= diagonal_moves_d[d];
-            else temp_bishops >>= -diagonal_moves_d[d], temp_queens >>= -diagonal_moves_d[d];
-            temp_bishops &= diagonal_masks[d]; temp_queens &= diagonal_masks[d];
-            u_int64_t temp_bishops_captures = temp_bishops & other_pieces;
-            u_int64_t temp_queens_captures = temp_queens & other_pieces;
+            if (d < 2)
+                temp_bishops <<= diagonal_moves_d[d],
+                    temp_queens <<= diagonal_moves_d[d];
+            else
+                temp_bishops >>= -diagonal_moves_d[d],
+                    temp_queens >>= -diagonal_moves_d[d];
+            temp_bishops &= diagonal_masks[d];
+            temp_queens &= diagonal_masks[d];
+            uint64_t temp_bishops_captures = temp_bishops & other_pieces;
+            uint64_t temp_queens_captures = temp_queens & other_pieces;
             temp_bishops = (temp_bishops & empty) | temp_bishops_captures;
             temp_queens = (temp_queens & empty) | temp_queens_captures;
-            u_int64_t temp = temp_bishops;
+            uint64_t temp = temp_bishops;
             while (temp) {
-                u_int64_t ls1b = temp & -temp;
+                uint64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
-                pseudo.emplace_back(Move(i - (m + 1) * diagonal_moves_d[d], i, bool(temp_bishops_captures & ls1b) << 2));
+                pseudo.emplace_back(
+                    Move(i - (m + 1) * diagonal_moves_d[d], i,
+                         bool(temp_bishops_captures & ls1b) << 2));
                 temp ^= ls1b;
             }
             temp = temp_queens;
             while (temp) {
                 u_int64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
-                pseudo.emplace_back(Move(i - (m + 1) * diagonal_moves_d[d], i, bool(temp_queens_captures & ls1b) << 2));
+                pseudo.emplace_back(
+                    Move(i - (m + 1) * diagonal_moves_d[d], i,
+                         bool(temp_queens_captures & ls1b) << 2));
                 temp ^= ls1b;
             }
             temp_bishops &= empty;
@@ -183,31 +187,38 @@ std::vector<Move> Board::get_moves() {
     }
 
     // rook and queen
-    u_int64_t rooks = turn == WHITE ? get_white_rooks() : get_black_rooks();
+    uint64_t rooks = turn == WHITE ? get_white_rooks() : get_black_rooks();
     for (int d = 0; d < 4; d++) {
         int cc = cardinal_moves_d[d];
-        u_int64_t temp_rooks = rooks;
-        u_int64_t temp_queens = queens;
+        uint64_t temp_rooks = rooks;
+        uint64_t temp_queens = queens;
         for (int m = 0; temp_rooks || temp_queens; m++) {
-            if (d < 2) temp_rooks <<= cc, temp_queens <<= cc;
-            else temp_rooks >>= -cc, temp_queens >>= -cc;
-            temp_rooks &= cardinal_masks[d]; temp_queens &= cardinal_masks[d];
-            u_int64_t temp_rooks_captures = temp_rooks & other_pieces;
-            u_int64_t temp_queens_captures = temp_queens & other_pieces;
+            if (d < 2)
+                temp_rooks <<= cc, temp_queens <<= cc;
+            else
+                temp_rooks >>= -cc, temp_queens >>= -cc;
+            temp_rooks &= cardinal_masks[d];
+            temp_queens &= cardinal_masks[d];
+            uint64_t temp_rooks_captures = temp_rooks & other_pieces;
+            uint64_t temp_queens_captures = temp_queens & other_pieces;
             temp_rooks = (temp_rooks & empty) | temp_rooks_captures;
             temp_queens = (temp_queens & empty) | temp_queens_captures;
-            u_int64_t temp = temp_rooks;
+            uint64_t temp = temp_rooks;
             while (temp) {
-                u_int64_t ls1b = temp & -temp;
+                uint64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
-                pseudo.emplace_back(Move(i - (m + 1) * cc, i, bool(temp_rooks_captures & ls1b) << 2));
+                pseudo.emplace_back(
+                    Move(i - (m + 1) * cc, i,
+                         bool(temp_rooks_captures & ls1b) << 2));
                 temp ^= ls1b;
             }
             temp = temp_queens;
             while (temp) {
                 u_int64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
-                pseudo.emplace_back(Move(i - (m + 1) * cc, i, bool(temp_queens_captures & ls1b) << 2));
+                pseudo.emplace_back(
+                    Move(i - (m + 1) * cc, i,
+                         bool(temp_queens_captures & ls1b) << 2));
                 temp ^= ls1b;
             }
             temp_rooks &= empty;
@@ -216,32 +227,44 @@ std::vector<Move> Board::get_moves() {
     }
 
     // king
-    u_int64_t king = turn == WHITE ? get_white_king() : get_black_king();
+    uint64_t king = turn == WHITE ? get_white_king() : get_black_king();
     for (int d = 0; d < 4; d++) {
         int cc = cardinal_moves_d[d], dd = diagonal_moves_d[d];
-        u_int64_t temp_king_cardinal = king;
-        u_int64_t temp_king_diagonal = king;
-        if (d < 2) temp_king_cardinal <<= cc, temp_king_diagonal <<= dd;
-        else temp_king_cardinal >>= -cc, temp_king_diagonal >>= -dd;
+        uint64_t temp_king_cardinal = king;
+        uint64_t temp_king_diagonal = king;
+        if (d < 2)
+            temp_king_cardinal <<= cc, temp_king_diagonal <<= dd;
+        else
+            temp_king_cardinal >>= -cc, temp_king_diagonal >>= -dd;
         temp_king_cardinal &= cardinal_masks[d];
         temp_king_diagonal &= diagonal_masks[d];
-        u_int64_t temp_king_cardinal_captures = temp_king_cardinal & other_pieces;
-        u_int64_t temp_king_diagonal_captures = temp_king_diagonal & other_pieces;
-        temp_king_cardinal = (temp_king_cardinal & empty) | temp_king_cardinal_captures;
-        temp_king_diagonal = (temp_king_diagonal & empty) | temp_king_diagonal_captures;
+        uint64_t temp_king_cardinal_captures =
+            temp_king_cardinal & other_pieces;
+        uint64_t temp_king_diagonal_captures =
+            temp_king_diagonal & other_pieces;
+        temp_king_cardinal =
+            (temp_king_cardinal & empty) | temp_king_cardinal_captures;
+        temp_king_diagonal =
+            (temp_king_diagonal & empty) | temp_king_diagonal_captures;
         if (temp_king_cardinal) {
 #ifdef DEBUG
-            assert(temp_king_cardinal == (temp_king_cardinal & -temp_king_cardinal));
+            assert(temp_king_cardinal ==
+                   (temp_king_cardinal & -temp_king_cardinal));
 #endif
             int i = bit_scan_forward(temp_king_cardinal);
-            pseudo.emplace_back(Move(i - cc, i, bool(temp_king_cardinal & temp_king_cardinal_captures) << 2));
+            pseudo.emplace_back(Move(
+                i - cc, i,
+                bool(temp_king_cardinal & temp_king_cardinal_captures) << 2));
         }
         if (temp_king_diagonal) {
 #ifdef DEBUG
-            assert(temp_king_diagonal == (temp_king_diagonal & -temp_king_diagonal));
+            assert(temp_king_diagonal ==
+                   (temp_king_diagonal & -temp_king_diagonal));
 #endif
             int i = bit_scan_forward(temp_king_diagonal);
-            pseudo.emplace_back(Move(i - dd, i, bool(temp_king_diagonal & temp_king_diagonal_captures) << 2));
+            pseudo.emplace_back(Move(
+                i - dd, i,
+                bool(temp_king_diagonal & temp_king_diagonal_captures) << 2));
         }
     }
 
@@ -249,7 +272,8 @@ std::vector<Move> Board::get_moves() {
     for (Move move : pseudo) {
         Colour current_turn = turn;
         make_move(move);
-        if (!is_in_check(current_turn)) non_pseudo_moves.emplace_back(move);
+        if (!is_in_check(current_turn))
+            non_pseudo_moves.emplace_back(move);
         undo_move();
     }
 
@@ -259,17 +283,28 @@ std::vector<Move> Board::get_moves() {
 
     // castling
     if (turn == WHITE && get_piece(4) == KING && get_colour(4) == WHITE) {
-        if (can_castle[0] && !(occupied & 0x60) && get_piece(7) == ROOK && !is_attacked(WHITE, 4u) && !is_attacked(WHITE, 5u) && !is_attacked(WHITE, 6u)) { // white king's side
+        if (can_castle[0] && !(occupied & 0x60) && get_piece(7) == ROOK &&
+            !is_attacked(WHITE, 4u) && !is_attacked(WHITE, 5u) &&
+            !is_attacked(WHITE, 6u)) { // white king's side
             non_pseudo_moves.emplace_back(Move(4, 6, 0b0010));
         }
-        if (can_castle[1] && !(occupied & 0x0e) && get_piece(0) == ROOK && !is_attacked(WHITE, 4u) && !is_attacked(WHITE, 3u) && !is_attacked(WHITE, 2u)) { // white queen's side
+        if (can_castle[1] && !(occupied & 0x0e) && get_piece(0) == ROOK &&
+            !is_attacked(WHITE, 4u) && !is_attacked(WHITE, 3u) &&
+            !is_attacked(WHITE, 2u)) { // white queen's side
             non_pseudo_moves.emplace_back(Move(4, 2, 0b0011));
         }
-    } else if (turn == BLACK && get_piece(60) == KING && get_colour(60) == BLACK) {
-        if (can_castle[2] && !(occupied & (0x60ll << 56)) && get_piece(63) == ROOK && get_colour(63) == BLACK && !is_attacked(BLACK, 60u) && !is_attacked(BLACK, 61u) && !is_attacked(BLACK, 62u)) { // black king's side
+    } else if (turn == BLACK && get_piece(60) == KING &&
+               get_colour(60) == BLACK) {
+        if (can_castle[2] && !(occupied & (0x60ll << 56)) &&
+            get_piece(63) == ROOK && get_colour(63) == BLACK &&
+            !is_attacked(BLACK, 60u) && !is_attacked(BLACK, 61u) &&
+            !is_attacked(BLACK, 62u)) { // black king's side
             non_pseudo_moves.emplace_back(Move(60, 62, 0b0010));
         }
-        if (can_castle[3] && !(occupied & (0x0ell << 56)) && get_piece(56) == ROOK && get_colour(56) == BLACK && !is_attacked(BLACK, 60u) && !is_attacked(BLACK, 59u) && !is_attacked(BLACK, 58u)) { // black queen's side
+        if (can_castle[3] && !(occupied & (0x0ell << 56)) &&
+            get_piece(56) == ROOK && get_colour(56) == BLACK &&
+            !is_attacked(BLACK, 60u) && !is_attacked(BLACK, 59u) &&
+            !is_attacked(BLACK, 58u)) { // black queen's side
             non_pseudo_moves.emplace_back(Move(60, 58, 0b0011));
         }
     }
@@ -278,42 +313,54 @@ std::vector<Move> Board::get_moves() {
 }
 
 bool Board::is_in_check(Colour by_colour) {
-    u_int64_t king_bb = by_colour == WHITE ? get_white_king() : get_black_king();
+    uint64_t king_bb = by_colour == WHITE ? get_white_king() : get_black_king();
     return is_attacked(by_colour, king_bb);
 }
 
-bool Board::is_attacked(Colour by_colour, std::variant<unsigned int, u_int64_t> square) {
-    u_int64_t square_bb;
+bool Board::is_attacked(Colour by_colour,
+                        std::variant<unsigned int, uint64_t> square) {
+    uint64_t square_bb;
     if (std::holds_alternative<unsigned int>(square)) {
         square_bb = 1ull << std::get<unsigned int>(square);
     } else {
-        square_bb = std::get<u_int64_t>(square);
+        square_bb = std::get<uint64_t>(square);
     }
 
-    u_int64_t other_queens = by_colour == WHITE ? get_black_queens() : get_white_queens();
-    u_int64_t other_rooks = by_colour == WHITE ? get_black_rooks() : get_white_rooks();
-    u_int64_t other_bishops = by_colour == WHITE ? get_black_bishops() : get_white_bishops();
-    u_int64_t other_knights = by_colour == WHITE ? get_black_knights() : get_white_knights();
-    u_int64_t empty = ~(get_white_pieces() | get_black_pieces());
+    uint64_t other_queens =
+        by_colour == WHITE ? get_black_queens() : get_white_queens();
+    uint64_t other_rooks =
+        by_colour == WHITE ? get_black_rooks() : get_white_rooks();
+    uint64_t other_bishops =
+        by_colour == WHITE ? get_black_bishops() : get_white_bishops();
+    uint64_t other_knights =
+        by_colour == WHITE ? get_black_knights() : get_white_knights();
+    uint64_t empty = ~(get_white_pieces() | get_black_pieces());
 
     for (int d = 0; d < 8; d++) {
-        u_int64_t temp = other_knights;
-        if (d < 4) temp >>= -knight_moves_d[d];
-        else temp <<= knight_moves_d[d];
+        uint64_t temp = other_knights;
+        if (d < 4)
+            temp >>= -knight_moves_d[d];
+        else
+            temp <<= knight_moves_d[d];
         temp &= knight_masks[d];
-        if (temp & square_bb) return true;
+        if (temp & square_bb)
+            return true;
     }
     for (int d = 0; d < 4; d++) {
         int cc = cardinal_moves_d[d], dd = diagonal_moves_d[d];
-        u_int64_t temp_king_cardinal = square_bb;
-        u_int64_t temp_king_diagonal = square_bb;
+        uint64_t temp_king_cardinal = square_bb;
+        uint64_t temp_king_diagonal = square_bb;
         while (temp_king_cardinal || temp_king_diagonal) {
-            if (d < 2) temp_king_cardinal <<= cc, temp_king_diagonal <<= dd;
-            else temp_king_cardinal >>= -cc, temp_king_diagonal >>= -dd;
+            if (d < 2)
+                temp_king_cardinal <<= cc, temp_king_diagonal <<= dd;
+            else
+                temp_king_cardinal >>= -cc, temp_king_diagonal >>= -dd;
             temp_king_cardinal &= cardinal_masks[d];
             temp_king_diagonal &= diagonal_masks[d];
-            if (temp_king_cardinal & (other_rooks | other_queens)) return true;
-            if (temp_king_diagonal & (other_bishops | other_queens)) return true;
+            if (temp_king_cardinal & (other_rooks | other_queens))
+                return true;
+            if (temp_king_diagonal & (other_bishops | other_queens))
+                return true;
             temp_king_cardinal &= empty;
             temp_king_diagonal &= empty;
         }

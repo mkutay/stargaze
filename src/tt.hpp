@@ -1,9 +1,10 @@
 #pragma once
-#include <vector>
-#include <cstring>
-#include <unordered_map>
-#include <optional>
 #include "move.hpp"
+#include <cstdint>
+#include <cstring>
+#include <optional>
+#include <unordered_map>
+#include <vector>
 
 struct PVLine {
     std::vector<Move> moves;
@@ -20,24 +21,26 @@ enum class Bound {
 
 struct TTEntry {
     int16_t score; // score (evaluation)
-    int8_t depth; // search depth
-    Bound bound; // bound type (BOUND_EXACT, BOUND_LOWER, BOUND_UPPER)
-    u_int8_t age; // age counter for replacement strategy
+    int8_t depth;  // search depth
+    Bound bound;   // bound type (BOUND_EXACT, BOUND_LOWER, BOUND_UPPER)
+    uint8_t age;   // age counter for replacement strategy
     PVLine line;
-    
+
     TTEntry() : score(0), depth(0), bound(Bound::NONE), age(0), line() {}
-    TTEntry(PVLine line_, int16_t score_, int8_t depth_, Bound bound_, u_int8_t age_)
+    TTEntry(PVLine line_, int16_t score_, int8_t depth_, Bound bound_,
+            uint8_t age_)
         : score(score_), depth(depth_), bound(bound_), age(age_), line(line_) {}
 };
 
 class TT {
-    std::unordered_map<u_int64_t, TTEntry> table;
-    u_int32_t current_age;
-public:
+    std::unordered_map<uint64_t, TTEntry> table;
+    uint32_t current_age;
+
+  public:
     TT() : current_age(0) {}
     void clear();
     void new_search();
-    std::optional<TTEntry *> probe(u_int64_t hash);
-    void store(u_int64_t hash, PVLine line, int score, int depth, Bound bound);
+    std::optional<TTEntry*> probe(uint64_t hash);
+    void store(uint64_t hash, PVLine line, int score, int depth, Bound bound);
     size_t get_num_entries() const;
 };

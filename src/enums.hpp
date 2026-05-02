@@ -14,7 +14,8 @@ enum Colour {
     BLACK = 1,
 };
 
-constexpr Colour operator!(const Colour &a) {
-    if (a == WHITE) return BLACK;
+constexpr Colour operator!(const Colour& a) {
+    if (a == WHITE)
+        return BLACK;
     return WHITE;
 }
