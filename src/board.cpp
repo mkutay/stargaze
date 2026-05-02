@@ -40,9 +40,13 @@ void Board::make_move(Move move) {
     assert(get_piece(from) != EMPTY);
 #endif
 
-    // rook move or capture
-    if (((from == 0 || to == 0) && turn == WHITE) || ((from == 56 || to == 56) && turn == BLACK)) can_castle[turn * 2 + 1] = false;
-    if (((from == 7 || to == 7) && turn == WHITE) || ((from == 63 || to == 63) && turn == BLACK)) can_castle[turn * 2] = false;
+    // rook move or capture - clear castling rights for the side that had the rook on the original square
+    // white queen-side rook is on square 0 (a1), white king-side rook on 7 (h1)
+    // black queen-side rook is on 56 (a8), black king-side rook on 63 (h8)
+    if (from == 0 || to == 0) can_castle[1] = false; // white queen-side
+    if (from == 7 || to == 7) can_castle[0] = false; // white king-side
+    if (from == 56 || to == 56) can_castle[3] = false; // black queen-side
+    if (from == 63 || to == 63) can_castle[2] = false; // black king-side
 
     if (flags == 0b0000) { // quiet move
         make_move_bb(from, to, false);
@@ -182,3 +186,4 @@ u_int64_t Board::get_queens() { return pieces[n_queen]; }
 u_int64_t Board::get_kings() { return pieces[n_king]; }
 u_int64_t Board::get_pawns() { return pieces[n_pawn]; }
 std::array<u_int64_t, 8> Board::get_all_pieces() const { return pieces; }
+std::array<bool, 4> Board::get_castle_rights() const { return can_castle; }

@@ -19,7 +19,7 @@ const int ASPIRATION_WINDOW = 23; // ~0.25 pawn
 // NOTE use calculated alpha/beta values from previous "move" in iterative deepening to set alpha/beta with a narrow window
 // basically, get pvline of previous move here
 
-SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, SearchInfo *last_info) {
+SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, std::optional<SearchInfo> last_info) {
     SearchInfo search_info(max_depth);
     time_limit_ms = time_limit;
     start_time = std::chrono::high_resolution_clock::now();
@@ -29,8 +29,8 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, Sear
     tt.new_search();
     
     const int aspiration = ASPIRATION_WINDOW;
-    int alpha_start = last_info ? -last_info->score - aspiration * 4 : ALPHA_START;
-    int beta_start = last_info ? -last_info->score + aspiration * 4 : BETA_START;
+    int alpha_start = last_info != std::nullopt ? -last_info->score - aspiration * 4 : ALPHA_START;
+    int beta_start = last_info != std::nullopt ? -last_info->score + aspiration * 4 : BETA_START;
     
     for (int depth = 1; depth <= max_depth && !should_stop(); depth++) {
         PVLine pv_line(depth);
@@ -69,8 +69,13 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit, Sear
         search_info.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
         search_info.pv = pv_line;
 
-        debug(depth, alpha, score, beta, nodes_searched, pv_line.moves);
+        if (search_info.pv.moves[0].from() == 4 && search_info.pv.moves[0].to() == 12) {
+            debug("");
+        }
+        
+        debug(depth, alpha, score, beta, nodes_searched, pv_line.moves, board->get_castle_rights());
     }
+
     
     search_info.stopped = time_up;
     return search_info;
@@ -93,13 +98,13 @@ inline bool Search::should_stop() {
 
 void Search::order_moves(std::vector<Move>& moves, const PVLine *pv_line, const PVLine *tt_line) {
     std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {
-        if (tt_line && !tt_line->moves.empty() && tt_line->moves[0].m_move != 0) {
+        if (tt_line && !tt_line->moves.empty() && tt_line->moves.size() >= 2 && tt_line->moves[0].m_move != 0) {
             Move tt_move = tt_line->moves[0];
             if (a == tt_move) return true;
             if (b == tt_move) return false;
         }
         
-        if (pv_line && !pv_line->moves.empty() && pv_line->moves[0].m_move != 0) {
+        if (pv_line && !pv_line->moves.empty() && pv_line->moves.size() >= 2 && pv_line->moves[0].m_move != 0) {
             Move pv_move = pv_line->moves[0];
             if (a == pv_move) return true;
             if (b == pv_move) return false;

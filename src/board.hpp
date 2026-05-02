@@ -68,4 +68,5 @@ public:
     u_int64_t get_kings();
     u_int64_t get_pawns();
     std::array<u_int64_t, 8> get_all_pieces() const;
+    std::array<bool, 4> get_castle_rights() const;
 };

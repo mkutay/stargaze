@@ -262,10 +262,10 @@ std::vector<Move> Board::get_moves() {
         if (can_castle[0] && !(occupied & 0x60) && get_piece(7) == ROOK && !is_attacked(WHITE, 4u) && !is_attacked(WHITE, 5u) && !is_attacked(WHITE, 6u)) { // white king's side
             non_pseudo_moves.emplace_back(Move(4, 6, 0b0010));
         }
-        if (can_castle[1] && !(occupied & 0x0e) && get_piece(0) == ROOK && is_attacked(WHITE, 4u) && !is_attacked(WHITE, 3u) && !is_attacked(WHITE, 2u)) { // white queen's side
+        if (can_castle[1] && !(occupied & 0x0e) && get_piece(0) == ROOK && !is_attacked(WHITE, 4u) && !is_attacked(WHITE, 3u) && !is_attacked(WHITE, 2u)) { // white queen's side
             non_pseudo_moves.emplace_back(Move(4, 2, 0b0011));
         }
-    } else if (turn == BLACK && get_piece(60) == KING && get_colour(4) == BLACK) {
+    } else if (turn == BLACK && get_piece(60) == KING && get_colour(60) == BLACK) {
         if (can_castle[2] && !(occupied & (0x60ll << 56)) && get_piece(63) == ROOK && get_colour(63) == BLACK && !is_attacked(BLACK, 60u) && !is_attacked(BLACK, 61u) && !is_attacked(BLACK, 62u)) { // black king's side
             non_pseudo_moves.emplace_back(Move(60, 62, 0b0010));
         }

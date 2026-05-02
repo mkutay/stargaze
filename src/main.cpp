@@ -13,14 +13,14 @@
 #endif
 
 const int MAX_DEPTH = 12;
-const long long TIME_LIMIT_MS = 15000;
+const long long TIME_LIMIT_MS = 5000;
 
 int32_t main() {
     Board board;
     
     Search search(&board);
 
-    SearchInfo *info = nullptr;
+    std::optional<SearchInfo> info = std::nullopt;
     
     for (int i = 0; i < 100; i++) {
         std::cout << "\n=== Move " << (i + 1) << " ===\n";
@@ -33,7 +33,7 @@ int32_t main() {
         
         if (!result.pv.moves.empty()) {
             Move best_move = result.pv.moves[0];
-            info = &result;
+            info = result;
             debug(search.get_tt()->get_num_entries());
             
             // Make the best move

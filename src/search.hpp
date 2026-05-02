@@ -24,15 +24,15 @@ private:
     long long time_limit_ms;
     int nodes_searched;
     bool time_up;
-    
+
     int quiescence(int alpha, int beta, int depth);
     bool should_stop();
     void order_moves(std::vector<Move>& moves, const PVLine *pv_line, const PVLine *tt_line);
 public:
     Search(Board *board) : board(board), time_limit_ms(5000), nodes_searched(0), time_up(false) {}
-    
+
     int alpha_beta(int alpha, int beta, int depth_left, PVLine *pline);
-    SearchInfo iterative_deepening(int max_depth, long long time_limit = 5000, SearchInfo *last_info = nullptr);
+    SearchInfo iterative_deepening(int max_depth, long long time_limit = 5000, std::optional<SearchInfo> last_info = std::nullopt);
     void set_time_limit(long long ms) { time_limit_ms = ms; }
     const TT *get_tt() const { return &tt; }
 };
