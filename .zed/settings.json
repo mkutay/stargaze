@@ -6,11 +6,4 @@
         },
     },
     "tab_size": 4,
-    "lsp": {
-        "clangd": {
-            "binary": {
-                "path": "/opt/homebrew/opt/llvm/bin/clangd",
-            },
-        },
-    },
 }
