@@ -5,7 +5,7 @@
 std::mt19937 rng;
 std::uniform_int_distribution<uint64_t> my_rand;
 
-constexpr std::array<std::array<uint64_t, 64>, 12> create_hash() {
+std::array<std::array<uint64_t, 64>, 12> create_hash() {
     std::array<std::array<uint64_t, 64>, 12> h;
     for (int p = 0; p < 12; p++) {
         for (int i = 0; i < 64; i++) {
@@ -15,7 +15,7 @@ constexpr std::array<std::array<uint64_t, 64>, 12> create_hash() {
     return h;
 }
 
-constexpr std::array<uint64_t, 8> create_en_passant_file() {
+std::array<uint64_t, 8> create_en_passant_file() {
     std::array<uint64_t, 8> ep;
     for (int i = 0; i < 8; i++) {
         ep[i] = my_rand(rng);
@@ -23,7 +23,7 @@ constexpr std::array<uint64_t, 8> create_en_passant_file() {
     return ep;
 }
 
-constexpr std::array<uint64_t, 4> create_castling() {
+std::array<uint64_t, 4> create_castling() {
     std::array<uint64_t, 4> c;
     for (int i = 0; i < 4; i++) {
         c[i] = my_rand(rng);
