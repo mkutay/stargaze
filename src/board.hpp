@@ -8,7 +8,8 @@
 #include "move.hpp"
 
 class Board {
-    std::array<uint64_t, 8> pieces = {0}; // unsigned long long
+    std::array<uint64_t, 8> pieces = {0, 0, 0, 0,
+                                      0, 0, 0, 0}; // unsigned long long
     Colour turn = Colour::WHITE;
     std::array<bool, 4> can_castle = {
         true, true, true, true}; // 0: white king's side, 1: white queen's side,

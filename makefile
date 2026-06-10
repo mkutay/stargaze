@@ -1,5 +1,5 @@
 # Compiler and base flags
-CXX = g++
+CXX = clang++
 CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -pedantic -Isrc
 
 # Dependency tracking flags

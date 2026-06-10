@@ -273,9 +273,11 @@ std::vector<Move> Board::get_moves() {
         undo_move();
     }
 
+#ifdef DEBUG
     for (Move move : non_pseudo_moves) {
         assert(move.m_move != 0);
     }
+#endif
 
     // castling
     if (turn == Colour::WHITE && get_piece(4) == Piece::KING &&
