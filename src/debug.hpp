@@ -10,29 +10,23 @@
 
 using std::to_string;
 
-// Forward declarations for template functions
-template <typename A, typename B>
-std::string to_string(const std::pair<A, B>& p);
-template <typename A, typename B, typename C>
-std::string to_string(const std::tuple<A, B, C>& t);
-template <typename A, typename B, typename C, typename D>
-std::string to_string(const std::tuple<A, B, C, D>& t);
-
-// Function declarations (definitions are in debug.cpp)
 std::string to_string(const std::string& s);
 std::string to_string(const char& c);
 std::string to_string(const char* c);
 std::string to_string(const bool& b);
 std::string to_string(const std::vector<bool>& v);
+std::string to_string(const Bound bound);
 std::string to_string(const Move move);
 std::string to_string(const SearchInfo result);
-std::string to_string(const Bound bound);
-void debug_out(int size, bool first, std::string name);
+void debug_out([[maybe_unused]] int size, [[maybe_unused]] bool first,
+               [[maybe_unused]] std::string name);
 
+/**
+ * to_string for containers (except vector<bool> which is a special case).
+ */
 template <size_t T> std::string to_string(const std::bitset<T>& bs) {
     return bs.to_string();
 }
-
 template <typename T> std::string to_string(std::queue<T> q) {
     std::string res = "{";
     size_t sz = q.size();
@@ -47,7 +41,6 @@ template <typename T> std::string to_string(std::queue<T> q) {
     res += "}";
     return res;
 }
-
 template <typename T, class C>
 std::string to_string(std::priority_queue<T, std::vector<T>, C> pq) {
     std::string res = "{";
@@ -62,14 +55,13 @@ std::string to_string(std::priority_queue<T, std::vector<T>, C> pq) {
     res += "}";
     return res;
 }
-
-// Template functions (must stay in header)
 template <typename T>
-std::enable_if_t<!std::is_arithmetic<T>::value, std::string>
-to_string(const T& v) {
+    requires std::ranges::input_range<const T> &&
+             (!std::is_arithmetic_v<std::remove_cvref_t<T>>)
+std::string to_string(const T& v) {
     std::string res = "{";
     bool first = true;
-    for (auto const& el : v) {
+    for (const auto& el : v) {
         if (!first)
             res += ", ";
         first = false;
@@ -79,25 +71,34 @@ to_string(const T& v) {
     return res;
 }
 
+/**
+ * to_string for pairs and tuples (up to 4 elements).
+ */
 template <typename A, typename B>
 std::string to_string(const std::pair<A, B>& p) {
-    return '(' + to_string(p.first) + ", " + to_string(p.second) + ')';
+    const std::string first = to_string(p.first), second = to_string(p.second);
+    return std::format("({}, {})", first, second);
 }
 template <typename A, typename B, typename C>
 std::string to_string(const std::tuple<A, B, C>& t) {
-    return '(' + to_string(get<0>(t)) + ", " + to_string(get<1>(t)) + ", " +
-           to_string(get<2>(t)) + ')';
+    const std::string first = to_string(get<0>(t)),
+                      second = to_string(get<1>(t)),
+                      third = to_string(get<2>(t));
+    return std::format("({}, {}, {})", first, second, third);
 }
 template <typename A, typename B, typename C, typename D>
 std::string to_string(const std::tuple<A, B, C, D>& t) {
-    return '(' + to_string(get<0>(t)) + ", " + to_string(get<1>(t)) + ", " +
-           to_string(get<2>(t)) + ", " + to_string(get<3>(t)) + ')';
+    const std::string first = to_string(get<0>(t)),
+                      second = to_string(get<1>(t)),
+                      third = to_string(get<2>(t)),
+                      fourth = to_string(get<3>(t));
+    return std::format("({}, {}, {}, {})", first, second, third, fourth);
 }
-
-constexpr int buffer_size = 255;
 
 template <typename Head, typename... Tail>
 void debug_out(int size, bool first, std::string name, Head H, Tail... T) {
+    constexpr static int buffer_size = 255;
+
     std::string tmp;
     int off = 0;
     while ((!name.empty() && name[0] != ',') || off != 0) {
@@ -110,12 +111,12 @@ void debug_out(int size, bool first, std::string name, Head H, Tail... T) {
             --off;
         }
     }
-    if (!name.empty()) {
+
+    if (!name.empty())
         name.erase(name.begin());
-    }
-    if (tmp[0] == ' ') {
+
+    if (tmp[0] == ' ')
         tmp.erase(tmp.begin());
-    }
 
     std::string buff = to_string(H);
     if ((int)buff.size() + size + (int)tmp.size() > buffer_size - 5 && !first) {

@@ -78,11 +78,6 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit,
                 .count();
         search_info.pv = pv_line;
 
-        if (search_info.pv.moves[0].from() == 4 &&
-            search_info.pv.moves[0].to() == 12) {
-            debug("");
-        }
-
         debug(depth, alpha, score, beta, nodes_searched, pv_line.moves,
               board->get_castle_rights());
     }
