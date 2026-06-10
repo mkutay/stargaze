@@ -49,9 +49,11 @@ void Board::make_move(Move move) {
 #endif
 
     // rook move or capture - clear castling rights for the side that had the
-    // rook on the original square white queen-side rook is on square 0 (a1),
-    // white king-side rook on 7 (h1) black queen-side rook is on 56 (a8), black
-    // king-side rook on 63 (h8)
+    // rook on the original square
+    // white queen-side rook is on square 0 (a1),
+    // white king-side rook on 7 (h1),
+    // black queen-side rook is on 56 (a8),
+    // black king-side rook on 63 (h8)
     if (from == 0 || to == 0)
         can_castle[1] = false; // white queen-side
     if (from == 7 || to == 7)

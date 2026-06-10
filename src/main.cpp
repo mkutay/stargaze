@@ -19,7 +19,7 @@ int32_t main() {
 
     std::optional<SearchInfo> info = std::nullopt;
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 300; i++) {
         std::cout << "\n=== Move " << (i + 1) << " ===\n";
         std::cout << "board:\n" << board.to_string() << std::endl;
 

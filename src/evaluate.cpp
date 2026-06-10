@@ -113,8 +113,12 @@ constexpr std::array<std::array<int, 64>, 12> calculate_mg_table() {
     std::array<std::array<int, 64>, 12> table{};
     for (int p = 0, pc = 0; p < 6; pc += 2, p++) {
         for (int i = 0; i < 64; i++) {
-            table[pc][i] = mg_value[p] + mg_pesto_table[p][i];
-            table[pc + 1][i] = mg_value[p] + mg_pesto_table[p][i ^ 56]; // flip
+            // Board uses a1=0 (LERF); PeSTO tables use a8=0 convention.
+            // White pieces sit at low indices (rank 1-2) so flip i^56 to
+            // convert to a8=0 before indexing the table.
+            // Black mirrors white, so (i^56)^56 == i so no flip needed.
+            table[pc][i] = mg_value[p] + mg_pesto_table[p][i ^ 56]; // white
+            table[pc + 1][i] = mg_value[p] + mg_pesto_table[p][i];  // black
         }
     }
     return table;
@@ -124,8 +128,8 @@ constexpr std::array<std::array<int, 64>, 12> calculate_eg_table() {
     std::array<std::array<int, 64>, 12> table{};
     for (int p = 0, pc = 0; p < 6; pc += 2, p++) {
         for (int i = 0; i < 64; i++) {
-            table[pc][i] = eg_value[p] + eg_pesto_table[p][i];
-            table[pc + 1][i] = eg_value[p] + eg_pesto_table[p][i ^ 56]; // flip
+            table[pc][i] = eg_value[p] + eg_pesto_table[p][i ^ 56]; // white
+            table[pc + 1][i] = eg_value[p] + eg_pesto_table[p][i];  // black
         }
     }
     return table;
@@ -171,6 +175,31 @@ int evaluate(Board& board) {
                 eg[c] += eg_table[pc][i];
                 game_phase += gamephase_inc[pc];
                 piece_bb ^= ls1b;
+            }
+        }
+    }
+
+    // Castle safety (middlegame only — fades naturally via gamephase).
+    // +30 for having the king on a typical castled square (g1/c1 or g8/c8).
+    // -15 for still holding castling rights without having used them — creates
+    // urgency so the engine doesn't keep deferring castling in favour of
+    // marginally better-looking tactical moves.
+    constexpr int MG_CASTLE_BONUS = 30;
+    constexpr int MG_UNCASTLED_PENALTY = 15;
+    {
+        auto castle_rights = board.get_castle_rights();
+        // Castled squares: white g1=6 or c1=2; black g8=62 or c8=58
+        constexpr int castled_sq[2][2] = {{6, 2}, {62, 58}};
+        for (int c = 0; c < 2; c++) {
+            uint64_t king_bb = pieces[n_king] & pieces[c];
+            if (!king_bb)
+                continue;
+            int sq = bit_scan_forward(king_bb);
+            if (sq == castled_sq[c][0] || sq == castled_sq[c][1]) {
+                mg[c] += MG_CASTLE_BONUS;
+            } else if (castle_rights[c * 2] || castle_rights[c * 2 + 1]) {
+                // Has castling rights but king is still in the centre
+                mg[c] -= MG_UNCASTLED_PENALTY;
             }
         }
     }

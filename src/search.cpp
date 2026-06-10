@@ -173,17 +173,23 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine* pline) {
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
 
+            // Copy the TT line into pline starting at index 0.
+            // The TT entry may have more moves than pline can hold
+            // (tt_entry->depth >= depth_left), so we must clamp to
+            // pline's size to avoid a buffer overflow.
+            auto copy_tt_line = [&]() {
+                size_t n = std::min(tt_line->moves.size(), pline->moves.size());
+                std::copy_n(tt_line->moves.begin(), n, pline->moves.begin());
+            };
+
             if (tt_entry->bound == Bound::EXACT) {
-                std::copy(tt_line->moves.begin(), tt_line->moves.end(),
-                          pline->moves.begin() + 1);
+                copy_tt_line();
                 return tt_score;
             } else if (tt_entry->bound == Bound::LOWER && tt_score >= beta) {
-                std::copy(tt_line->moves.begin(), tt_line->moves.end(),
-                          pline->moves.begin() + 1);
+                copy_tt_line();
                 return tt_score;
             } else if (tt_entry->bound == Bound::UPPER && tt_score <= alpha) {
-                std::copy(tt_line->moves.begin(), tt_line->moves.end(),
-                          pline->moves.begin() + 1);
+                copy_tt_line();
                 return tt_score;
             }
         }
@@ -213,11 +219,10 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine* pline) {
             // full window search for first move
             score = -alpha_beta(-beta, -alpha, depth_left - 1, &line);
         } else {
-            // null window search for remaining moves
-            score = -alpha_beta(-alpha - ASPIRATION_WINDOW, -alpha,
-                                depth_left - 1, &line);
+            // narrow null-window search: just check if move beats alpha
+            score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1, &line);
 
-            // re-search with full window if null window failed high
+            // re-search with full window if the move is genuinely better
             if (score > alpha && score < beta) {
                 score = -alpha_beta(-beta, -alpha, depth_left - 1, &line);
             }
