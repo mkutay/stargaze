@@ -174,7 +174,7 @@ std::vector<Move> Board::get_moves() {
             }
             temp = temp_queens;
             while (temp) {
-                u_int64_t ls1b = temp & -temp;
+                uint64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
                 pseudo.emplace_back(
                     Move(i - (m + 1) * diagonal_moves_d[d], i,
@@ -214,7 +214,7 @@ std::vector<Move> Board::get_moves() {
             }
             temp = temp_queens;
             while (temp) {
-                u_int64_t ls1b = temp & -temp;
+                uint64_t ls1b = temp & -temp;
                 int i = bit_scan_forward(ls1b);
                 pseudo.emplace_back(
                     Move(i - (m + 1) * cc, i,

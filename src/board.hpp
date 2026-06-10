@@ -19,13 +19,13 @@ enum BBPiece {
 };
 
 class Board {
-    std::array<u_int64_t, 8> pieces = {0}; // unsigned long long
+    std::array<uint64_t, 8> pieces = {0}; // unsigned long long
     Colour turn = WHITE;
     std::array<bool, 4> can_castle = {
         true, true, true, true}; // 0: white king's side, 1: white queen's side,
                                  // 2: black king's side, 3: black queen's side
     std::vector<Move> moves;
-    std::vector<std::array<u_int64_t, 8>> board_history;
+    std::vector<std::array<uint64_t, 8>> board_history;
     std::vector<std::array<bool, 4>> castle_history;
 
     void debug_print();
@@ -41,7 +41,7 @@ class Board {
     int get_hash();
     bool is_in_check(Colour by_colour);
     bool is_attacked(Colour by_colour,
-                     std::variant<unsigned int, u_int64_t> square);
+                     std::variant<unsigned int, uint64_t> square);
 
     Colour get_colour(int i);
     Piece get_piece(int i);
@@ -50,26 +50,26 @@ class Board {
     bool is_empty(int i);
     void set_piece(int i, Piece p, Colour c);
 
-    u_int64_t get_white_pieces();
-    u_int64_t get_black_pieces();
-    u_int64_t get_white_pawns();
-    u_int64_t get_black_pawns();
-    u_int64_t get_white_knights();
-    u_int64_t get_black_knights();
-    u_int64_t get_white_bishops();
-    u_int64_t get_black_bishops();
-    u_int64_t get_white_rooks();
-    u_int64_t get_black_rooks();
-    u_int64_t get_white_queens();
-    u_int64_t get_black_queens();
-    u_int64_t get_white_king();
-    u_int64_t get_black_king();
-    u_int64_t get_knights();
-    u_int64_t get_bishops();
-    u_int64_t get_rooks();
-    u_int64_t get_queens();
-    u_int64_t get_kings();
-    u_int64_t get_pawns();
-    std::array<u_int64_t, 8> get_all_pieces() const;
+    uint64_t get_white_pieces();
+    uint64_t get_black_pieces();
+    uint64_t get_white_pawns();
+    uint64_t get_black_pawns();
+    uint64_t get_white_knights();
+    uint64_t get_black_knights();
+    uint64_t get_white_bishops();
+    uint64_t get_black_bishops();
+    uint64_t get_white_rooks();
+    uint64_t get_black_rooks();
+    uint64_t get_white_queens();
+    uint64_t get_black_queens();
+    uint64_t get_white_king();
+    uint64_t get_black_king();
+    uint64_t get_knights();
+    uint64_t get_bishops();
+    uint64_t get_rooks();
+    uint64_t get_queens();
+    uint64_t get_kings();
+    uint64_t get_pawns();
+    std::array<uint64_t, 8> get_all_pieces() const;
     std::array<bool, 4> get_castle_rights() const;
 };
