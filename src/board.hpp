@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cassert>
 #include <string>
 #include <variant>
@@ -8,12 +9,11 @@
 #include "move.hpp"
 
 class Board {
-    std::array<uint64_t, 8> pieces = {0, 0, 0, 0,
-                                      0, 0, 0, 0}; // unsigned long long
+    std::array<uint64_t, 8> pieces = {0}; // unsigned long long
     Colour turn = Colour::WHITE;
     std::array<bool, 4> can_castle = {
-        true, true, true, true}; // 0: white king's side, 1: white queen's side,
-                                 // 2: black king's side, 3: black queen's side
+        true}; // 0: white king's side, 1: white queen's side,
+               // 2: black king's side, 3: black queen's side
     std::vector<Move> moves;
     std::vector<std::array<uint64_t, 8>> board_history;
     std::vector<std::array<bool, 4>> castle_history;
