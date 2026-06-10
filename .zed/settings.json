@@ -2,7 +2,15 @@
     "languages": {
         "C++": {
             "format_on_save": "on",
+            "formatter": "language_server",
         },
     },
     "tab_size": 4,
+    "lsp": {
+        "clangd": {
+            "binary": {
+                "path": "/opt/homebrew/opt/llvm/bin/clangd",
+            },
+        },
+    },
 }
