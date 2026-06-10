@@ -1,14 +1,10 @@
 // inspired by https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 
 #include "evaluate.hpp"
+#include "enums.hpp"
 #include "move_gen.hpp"
 #include <array>
-
-#ifdef DEBUG
-#include "debug.hpp"
-#else
-#define debug(...) void(38)
-#endif
+#include <utility>
 
 const std::array<int, 64> mg_pawn_table = {
     0,   0,  0,   0,   0,   0,  0,  0,   98,  134, 61, 95,  68, 126, 34, -11,
@@ -191,7 +187,8 @@ int evaluate(Board& board) {
         // Castled squares: white g1=6 or c1=2; black g8=62 or c8=58
         constexpr int castled_sq[2][2] = {{6, 2}, {62, 58}};
         for (int c = 0; c < 2; c++) {
-            uint64_t king_bb = pieces[n_king] & pieces[c];
+            uint64_t king_bb =
+                pieces[std::to_underlying(BBPiece::KING)] & pieces[c];
             if (!king_bb)
                 continue;
             int sq = bit_scan_forward(king_bb);
@@ -204,10 +201,11 @@ int evaluate(Board& board) {
         }
     }
 
-    Colour turn = board.get_turn();
+    auto turn_underlying = std::to_underlying(board.get_turn());
+    auto not_turn_underlying = std::to_underlying(!board.get_turn());
 
-    int mg_score = mg[turn] - mg[!turn];
-    int eg_score = eg[turn] - eg[!turn];
+    int mg_score = mg[turn_underlying] - mg[not_turn_underlying];
+    int eg_score = eg[turn_underlying] - eg[not_turn_underlying];
     int mg_phase = game_phase;
     if (mg_phase > gamephase_sum)
         mg_phase = gamephase_sum; // in case of early promotion

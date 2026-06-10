@@ -2,7 +2,7 @@
 #include "move.hpp"
 #include <algorithm>
 #include <array>
-#include <iostream>
+#include <utility>
 #include <vector>
 
 #ifdef DEBUG
@@ -13,22 +13,24 @@
 
 Board::Board() {
     for (int i = 0; i < 16; i++)
-        pieces[n_white] |= 1ull << i;
+        pieces[std::to_underlying(BBPiece::WHITE)] |= 1ull << i;
     for (int i = 48; i < 64; i++)
-        pieces[n_black] |= 1ull << i;
+        pieces[std::to_underlying(BBPiece::BLACK)] |= 1ull << i;
     for (int i = 8; i < 16; i++)
-        pieces[n_pawn] |= 1ull << i, pieces[n_pawn] |= 1ull << (i + 40);
-    pieces[n_knight] = 1ull << 1 | 1ull << 6 | 1ull << 57 | 1ull << 62;
-    pieces[n_bishop] = 1ull << 2 | 1ull << 5 | 1ull << 58 | 1ull << 61;
-    pieces[n_rook] = 1 | 1ull << 7 | 1ull << 56 | 1ull << 63;
-    pieces[n_queen] = 1ull << 3 | 1ull << 59;
-    pieces[n_king] = 1ull << 4 | 1ull << 60;
+        pieces[std::to_underlying(BBPiece::PAWN)] |= 1ull << i,
+            pieces[std::to_underlying(BBPiece::PAWN)] |= 1ull << (i + 40);
+    pieces[std::to_underlying(BBPiece::KNIGHT)] =
+        1ull << 1 | 1ull << 6 | 1ull << 57 | 1ull << 62;
+    pieces[std::to_underlying(BBPiece::BISHOP)] =
+        1ull << 2 | 1ull << 5 | 1ull << 58 | 1ull << 61;
+    pieces[std::to_underlying(BBPiece::ROOK)] =
+        1 | 1ull << 7 | 1ull << 56 | 1ull << 63;
+    pieces[std::to_underlying(BBPiece::QUEEN)] = 1ull << 3 | 1ull << 59;
+    pieces[std::to_underlying(BBPiece::KING)] = 1ull << 4 | 1ull << 60;
 
     moves = std::vector<Move>();
     board_history = std::vector<std::array<uint64_t, 8>>();
 }
-
-void Board::debug_print() { std::cerr << to_string() << turn << std::endl; }
 
 // assumes move is valid
 void Board::make_move(Move move) {
@@ -39,13 +41,16 @@ void Board::make_move(Move move) {
     int to = move.to();
     int flags = move.flags();
 
-    if (get_piece(from) == KING || get_piece(to) == KING)
-        can_castle[turn * 2] = can_castle[turn * 2 + 1] = false;
+    auto turn_underlying = std::to_underlying(turn);
+
+    if (get_piece(from) == Piece::KING || get_piece(to) == Piece::KING)
+        can_castle[turn_underlying * 2] = can_castle[turn_underlying * 2 + 1] =
+            false;
 
 #ifdef DEBUG
-    if (get_piece(from) == EMPTY)
+    if (get_piece(from) == Piece::EMPTY)
         debug(move, to_string());
-    assert(get_piece(from) != EMPTY);
+    assert(get_piece(from) != Piece::EMPTY);
 #endif
 
     // rook move or capture - clear castling rights for the side that had the
@@ -77,9 +82,10 @@ void Board::make_move(Move move) {
         make_move_bb(from, to, true);
     } else if (flags == 0b0101) { // en passant
         make_move_bb(from, to, true);
-        clear(to +
-              (turn ? -8 : 8)); // remove the pawn according to who's turn it is
-    } else {                    // promotion
+        clear(to + (turn == Colour::BLACK
+                        ? -8
+                        : 8)); // remove the pawn according to who's turn it is
+    } else {                   // promotion
         set_piece(to, move.promotion_piece(), turn);
         clear(from);
     }
@@ -105,57 +111,57 @@ std::string Board::to_string() {
         std::string ch;
         Piece p = get_piece(i);
         Colour c = get_colour(i);
-        if (c == WHITE) {
+        if (c == Colour::WHITE) {
             switch (p) {
-            case W_PAWN:
+            case Piece::W_PAWN:
                 ch = "P";
                 break;
-            case KNIGHT:
+            case Piece::KNIGHT:
                 ch = "N";
                 break;
-            case BISHOP:
+            case Piece::BISHOP:
                 ch = "B";
                 break;
-            case ROOK:
+            case Piece::ROOK:
                 ch = "R";
                 break;
-            case QUEEN:
+            case Piece::QUEEN:
                 ch = "Q";
                 break;
-            case KING:
+            case Piece::KING:
                 ch = "K";
                 break;
-            case EMPTY:
+            case Piece::EMPTY:
                 ch = ".";
                 break;
-            case B_PAWN:
+            case Piece::B_PAWN:
                 assert(false);
                 break;
             }
         } else {
             switch (p) {
-            case B_PAWN:
+            case Piece::B_PAWN:
                 ch = "p";
                 break;
-            case KNIGHT:
+            case Piece::KNIGHT:
                 ch = "n";
                 break;
-            case BISHOP:
+            case Piece::BISHOP:
                 ch = "b";
                 break;
-            case ROOK:
+            case Piece::ROOK:
                 ch = "r";
                 break;
-            case QUEEN:
+            case Piece::QUEEN:
                 ch = "q";
                 break;
-            case KING:
+            case Piece::KING:
                 ch = "k";
                 break;
-            case EMPTY:
+            case Piece::EMPTY:
                 ch = ".";
                 break;
-            case W_PAWN:
+            case Piece::W_PAWN:
                 assert(false);
                 break;
             }
@@ -170,23 +176,27 @@ std::string Board::to_string() {
 }
 
 Colour Board::get_colour(int i) {
-    return pieces[n_white] & (1ull << i) ? WHITE : BLACK;
+    return pieces[std::to_underlying(BBPiece::WHITE)] & (1ull << i)
+               ? Colour::WHITE
+               : Colour::BLACK;
 }
 
 Piece Board::get_piece(int i) {
-    if (pieces[n_pawn] & (1ull << i))
-        return pieces[n_white] & (1ull << i) ? W_PAWN : B_PAWN;
-    if (pieces[n_knight] & (1ull << i))
-        return KNIGHT;
-    if (pieces[n_bishop] & (1ull << i))
-        return BISHOP;
-    if (pieces[n_rook] & (1ull << i))
-        return ROOK;
-    if (pieces[n_queen] & (1ull << i))
-        return QUEEN;
-    if (pieces[n_king] & (1ull << i))
-        return KING;
-    return EMPTY;
+    if (pieces[std::to_underlying(BBPiece::PAWN)] & (1ull << i))
+        return pieces[std::to_underlying(BBPiece::WHITE)] & (1ull << i)
+                   ? Piece::W_PAWN
+                   : Piece::B_PAWN;
+    if (pieces[std::to_underlying(BBPiece::KNIGHT)] & (1ull << i))
+        return Piece::KNIGHT;
+    if (pieces[std::to_underlying(BBPiece::BISHOP)] & (1ull << i))
+        return Piece::BISHOP;
+    if (pieces[std::to_underlying(BBPiece::ROOK)] & (1ull << i))
+        return Piece::ROOK;
+    if (pieces[std::to_underlying(BBPiece::QUEEN)] & (1ull << i))
+        return Piece::QUEEN;
+    if (pieces[std::to_underlying(BBPiece::KING)] & (1ull << i))
+        return Piece::KING;
+    return Piece::EMPTY;
 }
 
 void Board::make_move_bb(int from, int to, bool is_capture) {
@@ -196,9 +206,10 @@ void Board::make_move_bb(int from, int to, bool is_capture) {
     uint64_t toBB = 1ull << to;
     uint64_t bb = fromBB | toBB;
     pieces[piece_code(from_piece)] ^= bb;
-    pieces[from_colour] ^= bb;
-    if (is_capture && to_piece != EMPTY)
-        pieces[piece_code(to_piece)] ^= toBB, pieces[to_colour] ^= toBB;
+    pieces[std::to_underlying(from_colour)] ^= bb;
+    if (is_capture && to_piece != Piece::EMPTY)
+        pieces[piece_code(to_piece)] ^= toBB,
+            pieces[std::to_underlying(to_colour)] ^= toBB;
 }
 
 void Board::clear(int i) {
@@ -208,48 +219,95 @@ void Board::clear(int i) {
 }
 
 bool Board::is_empty(int i) {
-    return !((pieces[n_white] | pieces[n_black]) & (1ull << i));
+    return !((pieces[std::to_underlying(BBPiece::WHITE)] |
+              pieces[std::to_underlying(BBPiece::BLACK)]) &
+             (1ull << i));
 }
 
 void Board::set_piece(int i, Piece p, Colour c) {
     clear(i);
-    pieces[c == WHITE ? n_white : n_black] |= (1ull << i);
+    pieces[std::to_underlying(
+        c == Colour::WHITE ? BBPiece::WHITE : BBPiece::BLACK)] |= (1ull << i);
     pieces[piece_code(p)] |= (1ull << i);
 }
 
 int Board::piece_code(Piece p) { // get enum bb piece code from piece
-    if (p == W_PAWN || p == B_PAWN)
-        p = B_PAWN;
+    if (p == Piece::W_PAWN || p == Piece::B_PAWN)
+        p = Piece::B_PAWN;
     return int(p);
 }
 
-uint64_t Board::get_white_pieces() { return pieces[n_white]; }
-uint64_t Board::get_black_pieces() { return pieces[n_black]; }
-uint64_t Board::get_white_pawns() { return pieces[n_pawn] & pieces[n_white]; }
-uint64_t Board::get_black_pawns() { return pieces[n_pawn] & pieces[n_black]; }
+uint64_t Board::get_white_pieces() {
+    return pieces[std::to_underlying(BBPiece::WHITE)];
+}
+uint64_t Board::get_black_pieces() {
+    return pieces[std::to_underlying(BBPiece::BLACK)];
+}
+uint64_t Board::get_white_pawns() {
+    return pieces[std::to_underlying(BBPiece::PAWN)] &
+           pieces[std::to_underlying(BBPiece::WHITE)];
+}
+uint64_t Board::get_black_pawns() {
+    return pieces[std::to_underlying(BBPiece::PAWN)] &
+           pieces[std::to_underlying(BBPiece::BLACK)];
+}
 uint64_t Board::get_white_knights() {
-    return pieces[n_knight] & pieces[n_white];
+    return pieces[std::to_underlying(BBPiece::KNIGHT)] &
+           pieces[std::to_underlying(BBPiece::WHITE)];
 }
 uint64_t Board::get_black_knights() {
-    return pieces[n_knight] & pieces[n_black];
+    return pieces[std::to_underlying(BBPiece::KNIGHT)] &
+           pieces[std::to_underlying(BBPiece::BLACK)];
 }
 uint64_t Board::get_white_bishops() {
-    return pieces[n_bishop] & pieces[n_white];
+    return pieces[std::to_underlying(BBPiece::BISHOP)] &
+           pieces[std::to_underlying(BBPiece::WHITE)];
 }
 uint64_t Board::get_black_bishops() {
-    return pieces[n_bishop] & pieces[n_black];
+    return pieces[std::to_underlying(BBPiece::BISHOP)] &
+           pieces[std::to_underlying(BBPiece::BLACK)];
 }
-uint64_t Board::get_white_rooks() { return pieces[n_rook] & pieces[n_white]; }
-uint64_t Board::get_black_rooks() { return pieces[n_rook] & pieces[n_black]; }
-uint64_t Board::get_white_queens() { return pieces[n_queen] & pieces[n_white]; }
-uint64_t Board::get_black_queens() { return pieces[n_queen] & pieces[n_black]; }
-uint64_t Board::get_white_king() { return pieces[n_king] & pieces[n_white]; }
-uint64_t Board::get_black_king() { return pieces[n_king] & pieces[n_black]; }
-uint64_t Board::get_knights() { return pieces[n_knight]; }
-uint64_t Board::get_bishops() { return pieces[n_bishop]; }
-uint64_t Board::get_rooks() { return pieces[n_rook]; }
-uint64_t Board::get_queens() { return pieces[n_queen]; }
-uint64_t Board::get_kings() { return pieces[n_king]; }
-uint64_t Board::get_pawns() { return pieces[n_pawn]; }
+uint64_t Board::get_white_rooks() {
+    return pieces[std::to_underlying(BBPiece::ROOK)] &
+           pieces[std::to_underlying(BBPiece::WHITE)];
+}
+uint64_t Board::get_black_rooks() {
+    return pieces[std::to_underlying(BBPiece::ROOK)] &
+           pieces[std::to_underlying(BBPiece::BLACK)];
+}
+uint64_t Board::get_white_queens() {
+    return pieces[std::to_underlying(BBPiece::QUEEN)] &
+           pieces[std::to_underlying(BBPiece::WHITE)];
+}
+uint64_t Board::get_black_queens() {
+    return pieces[std::to_underlying(BBPiece::QUEEN)] &
+           pieces[std::to_underlying(BBPiece::BLACK)];
+}
+uint64_t Board::get_white_king() {
+    return pieces[std::to_underlying(BBPiece::KING)] &
+           pieces[std::to_underlying(BBPiece::WHITE)];
+}
+uint64_t Board::get_black_king() {
+    return pieces[std::to_underlying(BBPiece::KING)] &
+           pieces[std::to_underlying(BBPiece::BLACK)];
+}
+uint64_t Board::get_knights() {
+    return pieces[std::to_underlying(BBPiece::KNIGHT)];
+}
+uint64_t Board::get_bishops() {
+    return pieces[std::to_underlying(BBPiece::BISHOP)];
+}
+uint64_t Board::get_rooks() {
+    return pieces[std::to_underlying(BBPiece::ROOK)];
+}
+uint64_t Board::get_queens() {
+    return pieces[std::to_underlying(BBPiece::QUEEN)];
+}
+uint64_t Board::get_kings() {
+    return pieces[std::to_underlying(BBPiece::KING)];
+}
+uint64_t Board::get_pawns() {
+    return pieces[std::to_underlying(BBPiece::PAWN)];
+}
 std::array<uint64_t, 8> Board::get_all_pieces() const { return pieces; }
 std::array<bool, 4> Board::get_castle_rights() const { return can_castle; }

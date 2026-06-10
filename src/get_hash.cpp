@@ -58,7 +58,7 @@ int Board::get_hash() {
             ret_hash ^= castling[i];
     }
 
-    if (turn == BLACK)
+    if (turn == Colour::BLACK)
         ret_hash ^= black_move;
 
     if (!moves.empty() && moves.back().flags() == 0b0001) {

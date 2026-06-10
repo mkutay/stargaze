@@ -4,23 +4,12 @@
 #include <variant>
 #include <vector>
 
+#include "enums.hpp"
 #include "move.hpp"
-
-// bit board representation (dense):
-enum BBPiece {
-    n_white = 0, // any white piece
-    n_black = 1, // any black piece
-    n_pawn = 2,
-    n_knight = 3,
-    n_bishop = 4,
-    n_rook = 5,
-    n_queen = 6,
-    n_king = 7,
-};
 
 class Board {
     std::array<uint64_t, 8> pieces = {0}; // unsigned long long
-    Colour turn = WHITE;
+    Colour turn = Colour::WHITE;
     std::array<bool, 4> can_castle = {
         true, true, true, true}; // 0: white king's side, 1: white queen's side,
                                  // 2: black king's side, 3: black queen's side
@@ -28,7 +17,6 @@ class Board {
     std::vector<std::array<uint64_t, 8>> board_history;
     std::vector<std::array<bool, 4>> castle_history;
 
-    void debug_print();
     int piece_code(Piece p);
 
   public:

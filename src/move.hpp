@@ -22,12 +22,12 @@ class Move {
 #endif
         int specials = flags() & 0b0011;
         if (specials == 0)
-            return KNIGHT; // knight
+            return Piece::KNIGHT; // knight
         if (specials == 1)
-            return BISHOP; // bishop
+            return Piece::BISHOP; // bishop
         if (specials == 2)
-            return ROOK; // rook
-        return QUEEN;    // queen
+            return Piece::ROOK; // rook
+        return Piece::QUEEN;    // queen
     }
     bool operator==(const Move& other) const { return m_move == other.m_move; }
 };

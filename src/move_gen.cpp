@@ -1,12 +1,6 @@
 #include "move_gen.hpp"
 #include "board.hpp"
 
-#ifdef DEBUG
-#include "debug.hpp"
-#else
-#define debug(...) void(38)
-#endif
-
 const int knight_moves_d[8] = {-10, -6, -17, -15, 6, 10, 15, 17};
 const int diagonal_moves_d[4] = {7, 9, -7, -9};
 const int cardinal_moves_d[4] = {8, 1, -8, -1};
@@ -49,19 +43,19 @@ std::vector<Move> Board::get_moves() {
      */
     std::vector<Move> pseudo;
 
-    int mul = turn == WHITE ? 1 : -1;
+    int mul = turn == Colour::WHITE ? 1 : -1;
 
     uint64_t white_pieces = get_white_pieces();
     uint64_t black_pieces = get_black_pieces();
     uint64_t occupied = white_pieces | black_pieces;
     uint64_t empty = ~occupied;
-    uint64_t other_pieces = turn == WHITE ? black_pieces : white_pieces;
+    uint64_t other_pieces = turn == Colour::WHITE ? black_pieces : white_pieces;
 
     uint64_t pawns, pawn_push_one, pawn_push_two, pawn_capture_left,
         pawn_capture_right, pawn_push_one_promotion,
         pawn_capture_left_promotion, pawn_capture_right_promotion;
     // pawns
-    if (turn == WHITE) {
+    if (turn == Colour::WHITE) {
         pawns = get_white_pawns();
         pawn_push_one = (pawns << 8) & empty;
         pawn_push_two = ((pawn_push_one & (0xffull << 16)) << 8) & empty;
@@ -125,7 +119,7 @@ std::vector<Move> Board::get_moves() {
 
     // knight
     uint64_t knights =
-        turn == WHITE ? get_white_knights() : get_black_knights();
+        turn == Colour::WHITE ? get_white_knights() : get_black_knights();
     for (int d = 0; d < 8; d++) {
         uint64_t temp = knights & knight_masks[d];
         if (d < 4)
@@ -145,8 +139,9 @@ std::vector<Move> Board::get_moves() {
 
     // bishop and queen
     uint64_t bishops =
-        turn == WHITE ? get_white_bishops() : get_black_bishops();
-    uint64_t queens = turn == WHITE ? get_white_queens() : get_black_queens();
+        turn == Colour::WHITE ? get_white_bishops() : get_black_bishops();
+    uint64_t queens =
+        turn == Colour::WHITE ? get_white_queens() : get_black_queens();
     for (int d = 0; d < 4; d++) {
         uint64_t temp_bishops = bishops;
         uint64_t temp_queens = queens;
@@ -187,7 +182,8 @@ std::vector<Move> Board::get_moves() {
     }
 
     // rook and queen
-    uint64_t rooks = turn == WHITE ? get_white_rooks() : get_black_rooks();
+    uint64_t rooks =
+        turn == Colour::WHITE ? get_white_rooks() : get_black_rooks();
     for (int d = 0; d < 4; d++) {
         int cc = cardinal_moves_d[d];
         uint64_t temp_rooks = rooks;
@@ -227,7 +223,7 @@ std::vector<Move> Board::get_moves() {
     }
 
     // king
-    uint64_t king = turn == WHITE ? get_white_king() : get_black_king();
+    uint64_t king = turn == Colour::WHITE ? get_white_king() : get_black_king();
     for (int d = 0; d < 4; d++) {
         int cc = cardinal_moves_d[d], dd = diagonal_moves_d[d];
         uint64_t temp_king_cardinal = king;
@@ -282,29 +278,34 @@ std::vector<Move> Board::get_moves() {
     }
 
     // castling
-    if (turn == WHITE && get_piece(4) == KING && get_colour(4) == WHITE) {
-        if (can_castle[0] && !(occupied & 0x60) && get_piece(7) == ROOK &&
-            !is_attacked(WHITE, 4u) && !is_attacked(WHITE, 5u) &&
-            !is_attacked(WHITE, 6u)) { // white king's side
+    if (turn == Colour::WHITE && get_piece(4) == Piece::KING &&
+        get_colour(4) == Colour::WHITE) {
+        if (can_castle[0] && !(occupied & 0x60) &&
+            get_piece(7) == Piece::ROOK && !is_attacked(Colour::WHITE, 4u) &&
+            !is_attacked(Colour::WHITE, 5u) &&
+            !is_attacked(Colour::WHITE, 6u)) { // white king's side
             non_pseudo_moves.emplace_back(Move(4, 6, 0b0010));
         }
-        if (can_castle[1] && !(occupied & 0x0e) && get_piece(0) == ROOK &&
-            !is_attacked(WHITE, 4u) && !is_attacked(WHITE, 3u) &&
-            !is_attacked(WHITE, 2u)) { // white queen's side
+        if (can_castle[1] && !(occupied & 0x0e) &&
+            get_piece(0) == Piece::ROOK && !is_attacked(Colour::WHITE, 4u) &&
+            !is_attacked(Colour::WHITE, 3u) &&
+            !is_attacked(Colour::WHITE, 2u)) { // white queen's side
             non_pseudo_moves.emplace_back(Move(4, 2, 0b0011));
         }
-    } else if (turn == BLACK && get_piece(60) == KING &&
-               get_colour(60) == BLACK) {
+    } else if (turn == Colour::BLACK && get_piece(60) == Piece::KING &&
+               get_colour(60) == Colour::BLACK) {
         if (can_castle[2] && !(occupied & (0x60ll << 56)) &&
-            get_piece(63) == ROOK && get_colour(63) == BLACK &&
-            !is_attacked(BLACK, 60u) && !is_attacked(BLACK, 61u) &&
-            !is_attacked(BLACK, 62u)) { // black king's side
+            get_piece(63) == Piece::ROOK && get_colour(63) == Colour::BLACK &&
+            !is_attacked(Colour::BLACK, 60u) &&
+            !is_attacked(Colour::BLACK, 61u) &&
+            !is_attacked(Colour::BLACK, 62u)) { // black king's side
             non_pseudo_moves.emplace_back(Move(60, 62, 0b0010));
         }
         if (can_castle[3] && !(occupied & (0x0ell << 56)) &&
-            get_piece(56) == ROOK && get_colour(56) == BLACK &&
-            !is_attacked(BLACK, 60u) && !is_attacked(BLACK, 59u) &&
-            !is_attacked(BLACK, 58u)) { // black queen's side
+            get_piece(56) == Piece::ROOK && get_colour(56) == Colour::BLACK &&
+            !is_attacked(Colour::BLACK, 60u) &&
+            !is_attacked(Colour::BLACK, 59u) &&
+            !is_attacked(Colour::BLACK, 58u)) { // black queen's side
             non_pseudo_moves.emplace_back(Move(60, 58, 0b0011));
         }
     }
@@ -313,7 +314,8 @@ std::vector<Move> Board::get_moves() {
 }
 
 bool Board::is_in_check(Colour by_colour) {
-    uint64_t king_bb = by_colour == WHITE ? get_white_king() : get_black_king();
+    uint64_t king_bb =
+        by_colour == Colour::WHITE ? get_white_king() : get_black_king();
     return is_attacked(by_colour, king_bb);
 }
 
@@ -327,13 +329,13 @@ bool Board::is_attacked(Colour by_colour,
     }
 
     uint64_t other_queens =
-        by_colour == WHITE ? get_black_queens() : get_white_queens();
+        by_colour == Colour::WHITE ? get_black_queens() : get_white_queens();
     uint64_t other_rooks =
-        by_colour == WHITE ? get_black_rooks() : get_white_rooks();
+        by_colour == Colour::WHITE ? get_black_rooks() : get_white_rooks();
     uint64_t other_bishops =
-        by_colour == WHITE ? get_black_bishops() : get_white_bishops();
+        by_colour == Colour::WHITE ? get_black_bishops() : get_white_bishops();
     uint64_t other_knights =
-        by_colour == WHITE ? get_black_knights() : get_white_knights();
+        by_colour == Colour::WHITE ? get_black_knights() : get_white_knights();
     uint64_t empty = ~(get_white_pieces() | get_black_pieces());
 
     for (int d = 0; d < 8; d++) {
