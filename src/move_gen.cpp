@@ -275,12 +275,6 @@ std::vector<Move> Board::get_moves() {
         undo_move();
     }
 
-#ifdef DEBUG
-    for (Move move : non_pseudo_moves) {
-        assert(move.m_move != 0);
-    }
-#endif
-
     // castling
     if (turn == Piece::WHITE && get_piece(4) == Piece::W_KING) {
         if (can_castle[0] && !(occupied & 0x60) &&

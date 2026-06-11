@@ -203,9 +203,6 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
 
     for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
         Move move = moves[i];
-#ifdef DEBUG
-        assert(move.m_move != 0);
-#endif
 
         board->make_move(move);
         int score;
