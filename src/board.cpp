@@ -53,9 +53,8 @@ void Board::make_move(Move move) {
 
     if (get_bb(BBPiece::KING) & (1ull << from) ||
         get_bb(BBPiece::KING) & (1ull << to)) {
-        auto turn_underlying = std::to_underlying(turn) - 13;
-        can_castle[turn_underlying * 2] = can_castle[turn_underlying * 2 + 1] =
-            false;
+        int turn_index = turn == Piece::BLACK ? 1 : 0;
+        can_castle[turn_index * 2] = can_castle[turn_index * 2 + 1] = false;
     }
 
     /**
@@ -109,12 +108,8 @@ void Board::undo_move() {
 }
 
 Piece Board::get_turn() {
-    // Make sure the underlying values of WHITE and BLACK are as expected.
-    static_assert(std::to_underlying(Piece::WHITE) == 13);
-    static_assert(std::to_underlying(Piece::BLACK) == 14);
-
-    uint8_t turn_underlying = (moves.size() % 2) + 13;
-    return static_cast<Piece>(turn_underlying);
+    bool is_black = moves.size() & 1;
+    return static_cast<Piece>(6 + is_black * 7);
 }
 
 std::string Board::to_string() {
@@ -142,12 +137,9 @@ std::string Board::to_string() {
 }
 
 Piece Board::get_colour(int i) const {
-    static_assert(std::to_underlying(Piece::WHITE) == 13);
-    static_assert(std::to_underlying(Piece::BLACK) == 14);
-
     auto bb = 1ull << i;
     auto is_black = static_cast<bool>(get_bb(BBPiece::BLACK) & bb);
-    return static_cast<Piece>(is_black + 13);
+    return static_cast<Piece>(6 + is_black * 7);
 }
 
 Piece Board::get_piece(int i) const {
@@ -211,13 +203,7 @@ std::array<uint64_t, 8> Board::get_all_pieces() const { return pieces; }
 std::array<bool, 4> Board::get_castle_rights() const { return can_castle; }
 
 uint64_t Board::get_piece_bb(Piece piece) const {
-    static_assert(std::to_underlying(Piece::WHITE) == 13);
-    static_assert(std::to_underlying(Piece::BLACK) == 14);
-    static_assert(std::to_underlying(BBPiece::WHITE) == 0);
-    static_assert(std::to_underlying(BBPiece::BLACK) == 1);
-
-    auto underlying = std::to_underlying(piece);
-    if (underlying >= 13) {
+    if (piece == Piece::WHITE || piece == Piece::BLACK) {
         return get_bb(get_bb_piece(piece));
     }
 

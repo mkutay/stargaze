@@ -201,10 +201,7 @@ int evaluate(Board &board) {
         }
     }
 
-    static_assert(std::to_underlying(Piece::WHITE) == 13);
-    static_assert(std::to_underlying(Piece::BLACK) == 14);
-
-    auto turn = static_cast<bool>(std::to_underlying(board.get_turn()) - 13);
+    auto turn = board.get_turn() == Piece::BLACK;
 
     int mg_score = mg[turn] - mg[!turn];
     int eg_score = eg[turn] - eg[!turn];

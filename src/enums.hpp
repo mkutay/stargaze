@@ -3,6 +3,10 @@
 #include <cstdint>
 #include <utility>
 
+/**
+ * These WHITE and BLACK states are useful to only
+ * represent colours where necessary.
+ */
 enum class Piece : uint8_t {
     W_PAWN = 0,
     W_KNIGHT = 1,
@@ -10,19 +14,15 @@ enum class Piece : uint8_t {
     W_ROOK = 3,
     W_QUEEN = 4,
     W_KING = 5,
-    B_PAWN = 6,
-    B_KNIGHT = 7,
-    B_BISHOP = 8,
-    B_ROOK = 9,
-    B_QUEEN = 10,
-    B_KING = 11,
-    EMPTY = 12,
-    /**
-     * These WHITE and BLACK states are useful to only
-     * represent colours where necessary.
-     */
-    WHITE = 13, // any white piece
-    BLACK = 14, // any black piece
+    WHITE = 6, // any white piece
+    B_PAWN = 7,
+    B_KNIGHT = 8,
+    B_BISHOP = 9,
+    B_ROOK = 10,
+    B_QUEEN = 11,
+    B_KING = 12,
+    BLACK = 13, // any black piece
+    EMPTY = 14,
 };
 
 /**
@@ -33,16 +33,15 @@ constexpr Piece operator!(const Piece &piece) {
     assert(piece != Piece::EMPTY);
 
     auto underlying = std::to_underlying(piece);
-    return static_cast<Piece>((underlying + 6) % 12);
+    return static_cast<Piece>((underlying + 7) % 14);
 }
 
 /**
  * Return the colour of a piece. For example, `get_colour(W_PAWN) = WHITE`.
  */
 constexpr Piece get_piece_colour(const Piece &piece) {
-    assert(piece != Piece::EMPTY && piece != Piece::WHITE &&
-           piece != Piece::BLACK);
-    return static_cast<Piece>(std::to_underlying(piece) / 6 + 13);
+    assert(piece != Piece::EMPTY);
+    return static_cast<Piece>((std::to_underlying(piece) / 7) * 7 + 6);
 }
 
 // bit board representation (dense)
@@ -70,8 +69,10 @@ constexpr BBPiece get_bb_piece(const Piece &piece) {
     auto underlying = std::to_underlying(piece);
 
     // For converting WHITE and BLACK.
-    if (underlying >= 13)
-        return static_cast<BBPiece>(underlying - 13);
+    if (underlying == 6)
+        return BBPiece::WHITE;
+    if (underlying == 13)
+        return BBPiece::BLACK;
 
-    return static_cast<BBPiece>((underlying % 6) + 2);
+    return static_cast<BBPiece>((underlying % 7) + 2);
 }
