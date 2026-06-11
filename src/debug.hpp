@@ -20,6 +20,7 @@ std::string to_string(const Bound bound);
 std::string to_string(const Move move);
 std::string to_string(const SearchInfo result);
 std::string to_string(const Piece piece);
+std::string to_string(const Colour colour);
 void debug_out([[maybe_unused]] int size, [[maybe_unused]] bool first,
                [[maybe_unused]] std::string name);
 

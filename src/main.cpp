@@ -21,7 +21,7 @@ int32_t main() {
     while (true) {
         std::print("\n===============\nMove {}: {}\n===============\n",
                    board.get_move_history().size() / 2 + 1,
-                   board.get_turn() == Piece::WHITE ? "WHITE" : "BLACK");
+                   board.get_turn() == Colour::WHITE ? "WHITE" : "BLACK");
         std::cout << board.to_string() << std::endl;
 
         // Perform iterative deepening search

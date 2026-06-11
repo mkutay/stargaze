@@ -159,12 +159,12 @@ int Board::evaluate() {
     int game_phase = 0;
 
     for (int c = 0; c < 2; c++) {
-        for (int p = 2; p < 8; p++) {
-            uint64_t piece_bb = pieces[p] & pieces[c];
+        for (int p = 0; p < 6; p++) {
+            uint64_t piece_bb = type_bbs[p] & colour_bbs[c];
             while (piece_bb) {
                 uint64_t ls1b = piece_bb & -piece_bb;
                 int i = bit_scan_forward(ls1b);
-                int pc = (p - 2) * 2 + c;
+                int pc = p * 2 + c;
                 mg[c] += mg_table[pc][i];
                 eg[c] += eg_table[pc][i];
                 game_phase += gamephase_inc[pc];
@@ -185,7 +185,7 @@ int Board::evaluate() {
         constexpr int castled_sq[2][2] = {{6, 2}, {62, 58}};
         for (int c = 0; c < 2; c++) {
             uint64_t king_bb =
-                pieces[std::to_underlying(BBPiece::KING)] & pieces[c];
+                type_bbs[std::to_underlying(Piece::KING)] & colour_bbs[c];
             if (!king_bb)
                 continue;
             int sq = bit_scan_forward(king_bb);
@@ -198,7 +198,7 @@ int Board::evaluate() {
         }
     }
 
-    auto turn = get_turn() == Piece::BLACK;
+    auto turn = get_turn() == Colour::BLACK;
 
     int mg_score = mg[turn] - mg[!turn];
     int eg_score = eg[turn] - eg[!turn];

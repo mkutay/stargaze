@@ -50,16 +50,15 @@ std::string to_string(const SearchInfo result) {
 
 std::string to_string(const Piece piece) {
     const static std::map<Piece, std::string> piece_to_string = {
-        {Piece::W_PAWN, "W_PAWN"},     {Piece::W_KNIGHT, "W_KNIGHT"},
-        {Piece::W_BISHOP, "W_BISHOP"}, {Piece::W_ROOK, "W_ROOK"},
-        {Piece::W_QUEEN, "W_QUEEN"},   {Piece::W_KING, "W_KING"},
-        {Piece::B_PAWN, "B_PAWN"},     {Piece::B_KNIGHT, "B_KNIGHT"},
-        {Piece::B_BISHOP, "B_BISHOP"}, {Piece::B_ROOK, "B_ROOK"},
-        {Piece::B_QUEEN, "B_QUEEN"},   {Piece::B_KING, "B_KING"},
-        {Piece::EMPTY, "EMPTY"},       {Piece::WHITE, "WHITE"},
-        {Piece::BLACK, "BLACK"}};
-
+        {Piece::PAWN, "PAWN"},     {Piece::KNIGHT, "KNIGHT"},
+        {Piece::BISHOP, "BISHOP"}, {Piece::ROOK, "ROOK"},
+        {Piece::QUEEN, "QUEEN"},   {Piece::KING, "KING"},
+    };
     return piece_to_string.at(piece);
+}
+
+std::string to_string(const Colour colour) {
+    return colour == Colour::WHITE ? "WHITE" : "BLACK";
 }
 
 void debug_out([[maybe_unused]] int size, [[maybe_unused]] bool first,

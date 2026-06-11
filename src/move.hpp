@@ -51,23 +51,21 @@ class Move {
     bool is_castle() const { return flags() == 0b0010 || flags() == 0b0011; }
 
     /**
-     * Return the piece that a pawn is promoted to in this move. Only valid if
-     * this move is a promotion.
-     *
-     * Returns a "white" piece (e.g. W_QUEEN) since the colour of the piece can
-     * be inferred from the turn of the board when the move is applied.
+     * Return the piece type that a pawn is promoted to in this move. Only valid
+     * if this move is a promotion. The colour is inferred from the board turn
+     * at the time the move is applied.
      */
     Piece promotion_piece() const {
         assert(is_promotion());
 
         int specials = flags() & 0b0011;
         if (specials == 0)
-            return Piece::W_KNIGHT;
+            return Piece::KNIGHT;
         if (specials == 1)
-            return Piece::W_BISHOP;
+            return Piece::BISHOP;
         if (specials == 2)
-            return Piece::W_ROOK;
-        return Piece::W_QUEEN;
+            return Piece::ROOK;
+        return Piece::QUEEN;
     }
     bool operator==(const Move &other) const { return m_move == other.m_move; }
 };

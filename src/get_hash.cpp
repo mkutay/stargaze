@@ -41,12 +41,12 @@ int Board::get_hash() {
     uint64_t ret_hash = 0;
 
     for (int c = 0; c < 2; c++) {
-        for (int p = 2; p < 8; p++) {
-            uint64_t piece_bb = pieces[p] & pieces[c];
+        for (int p = 0; p < 6; p++) {
+            uint64_t piece_bb = type_bbs[p] & colour_bbs[c];
             while (piece_bb) {
                 uint64_t ls1b = piece_bb & -piece_bb;
                 int i = bit_scan_forward(ls1b);
-                int pc = (p - 2) * 2 + c; // piece code
+                int pc = p * 2 + c; // piece code
                 ret_hash ^= hash[pc][i];
                 piece_bb ^= ls1b;
             }
@@ -58,7 +58,7 @@ int Board::get_hash() {
             ret_hash ^= castling[i];
     }
 
-    if (get_turn() == Piece::BLACK)
+    if (get_turn() == Colour::BLACK)
         ret_hash ^= black_move;
 
     if (!moves.empty() && moves.back().flags() == 0b0001) {
