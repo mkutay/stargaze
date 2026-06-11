@@ -37,7 +37,8 @@ constexpr Piece operator!(const Piece &piece) {
 }
 
 /**
- * Return the colour of a piece. For example, `get_colour(W_PAWN) = WHITE`.
+ * Return the colour of a piece. For example, `get_piece_colour(W_PAWN) =
+ * WHITE`.
  */
 constexpr Piece get_piece_colour(const Piece &piece) {
     assert(piece != Piece::EMPTY);
@@ -62,17 +63,35 @@ enum class BBPiece : uint8_t {
  *
  * It can also be used to get the colour bitboard piece, for example
  * `get_bb_piece(Piece::WHITE) = BBPiece::WHITE`.
+ *
+ * The `check_colour` template parameter controls whether the function should
+ * check for the WHITE and BLACK pieces. If `check_colour` is false, then the
+ * function will not check for WHITE and BLACK and will instead return the piece
+ * type bitboard piece.
  */
+template <bool check_colour = true>
 constexpr BBPiece get_bb_piece(const Piece &piece) {
     assert(piece != Piece::EMPTY);
 
     auto underlying = std::to_underlying(piece);
 
-    // For converting WHITE and BLACK.
-    if (underlying == 6)
-        return BBPiece::WHITE;
-    if (underlying == 13)
-        return BBPiece::BLACK;
+    if constexpr (check_colour) {
+        // For converting WHITE and BLACK.
+        if (underlying == 6)
+            return BBPiece::WHITE;
+        if (underlying == 13)
+            return BBPiece::BLACK;
+    }
 
     return static_cast<BBPiece>((underlying % 7) + 2);
+}
+
+/**
+ * Get the colour bitboard piece for a piece. For example,
+ * `get_piece_colour_bb(Piece::W_PAWN) = BBPiece::WHITE` and
+ * `get_piece_colour_bb(Piece::B_KING) = BBPiece::BLACK`.
+ */
+constexpr BBPiece get_piece_colour_bb(const Piece &piece) {
+    assert(piece != Piece::EMPTY);
+    return static_cast<BBPiece>((std::to_underlying(piece) / 7));
 }

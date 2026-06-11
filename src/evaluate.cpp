@@ -1,6 +1,6 @@
 // inspired by https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 
-#include "evaluate.hpp"
+#include "board.hpp"
 #include "enums.hpp"
 #include "move_gen.hpp"
 #include <array>
@@ -154,11 +154,9 @@ const std::array<int, 12> gamephase_inc = {0,   0,   155,  155,  305, 305,
                                            405, 405, 1050, 1050, 0,   0};
 const int gamephase_sum = calculate_gamephase_sum(gamephase_inc);
 
-int evaluate(Board &board) {
+int Board::evaluate() {
     std::array<int, 2> mg = {0, 0}, eg = {0, 0}; // middle game, end game
     int game_phase = 0;
-
-    std::array<uint64_t, 8> pieces = board.get_all_pieces();
 
     for (int c = 0; c < 2; c++) {
         for (int p = 2; p < 8; p++) {
@@ -183,7 +181,6 @@ int evaluate(Board &board) {
     constexpr int MG_CASTLE_BONUS = 30;
     constexpr int MG_UNCASTLED_PENALTY = 15;
     {
-        auto castle_rights = board.get_castle_rights();
         // Castled squares: white g1=6 or c1=2; black g8=62 or c8=58
         constexpr int castled_sq[2][2] = {{6, 2}, {62, 58}};
         for (int c = 0; c < 2; c++) {
@@ -194,14 +191,14 @@ int evaluate(Board &board) {
             int sq = bit_scan_forward(king_bb);
             if (sq == castled_sq[c][0] || sq == castled_sq[c][1]) {
                 mg[c] += MG_CASTLE_BONUS;
-            } else if (castle_rights[c * 2] || castle_rights[c * 2 + 1]) {
+            } else if (can_castle[c * 2] || can_castle[c * 2 + 1]) {
                 // Has castling rights but king is still in the centre
                 mg[c] -= MG_UNCASTLED_PENALTY;
             }
         }
     }
 
-    auto turn = board.get_turn() == Piece::BLACK;
+    auto turn = get_turn() == Piece::BLACK;
 
     int mg_score = mg[turn] - mg[!turn];
     int eg_score = eg[turn] - eg[!turn];

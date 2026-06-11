@@ -32,13 +32,13 @@ class Board {
      *
      * Returns an lvalue reference so that it can be modified directly.
      */
-    uint64_t &get_bb(BBPiece piece) {
-        return pieces[std::to_underlying(piece)];
-    }
+    uint64_t &get_bb(BBPiece piece);
 
-    uint64_t get_bb(BBPiece piece) const {
-        return pieces[std::to_underlying(piece)];
-    }
+    /**
+     * Get the bitboard for a given piece type, with `this` as a const
+     * reference.
+     */
+    uint64_t get_bb(BBPiece piece) const;
 
   public:
     Board();
@@ -51,18 +51,12 @@ class Board {
     bool is_in_check(Piece by_colour);
     bool is_attacked(Piece by_colour,
                      std::variant<unsigned int, uint64_t> square);
-
-    Piece get_colour(int i) const;
     Piece get_piece(int i) const;
     void make_move_bb(int from, int to, bool is_capture);
     void clear(int i);
-    bool is_empty(int i);
     void set_piece(int i, Piece p);
-
-    std::array<uint64_t, 8> get_all_pieces() const;
-    std::array<bool, 4> get_castle_rights() const;
-
     uint64_t get_piece_bb(Piece piece) const;
-
-    size_t get_move_count() const { return moves.size(); }
+    const std::vector<Move> get_move_history() const;
+    const std::array<bool, 4> get_castling_rights() const;
+    int evaluate();
 };

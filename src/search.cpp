@@ -1,5 +1,4 @@
 #include "search.hpp"
-#include "evaluate.hpp"
 #include <algorithm>
 #include <chrono>
 
@@ -79,7 +78,7 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit,
         search_info.pv = pv_line;
 
         debug(depth, alpha, score, beta, nodes_searched, pv_line.moves,
-              board->get_castle_rights());
+              board->get_castling_rights());
     }
 
     search_info.stopped = time_up;
@@ -272,7 +271,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
 int Search::quiescence(int alpha, int beta, int depth) {
     nodes_searched++;
 
-    int stand_pat = evaluate(*board);
+    int stand_pat = board->evaluate();
     if (depth == 0)
         return stand_pat;
     if (stand_pat >= beta)

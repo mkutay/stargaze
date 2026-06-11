@@ -129,66 +129,56 @@ std::string Board::to_string() {
 
         temp += piece_string.at(get_piece(i)) + " ";
     }
-    result.emplace_back(temp), temp = "";
+    result.emplace_back(temp);
+    temp = "";
     reverse(result.begin(), result.end());
     for (std::string i : result)
         temp += i + "\n";
     return temp;
 }
 
-Piece Board::get_colour(int i) const {
-    auto bb = 1ull << i;
-    auto is_black = static_cast<bool>(get_bb(BBPiece::BLACK) & bb);
-    return static_cast<Piece>(6 + is_black * 7);
-}
-
 Piece Board::get_piece(int i) const {
     auto bb = 1ull << i;
+    auto is_black = static_cast<bool>(get_bb(BBPiece::BLACK) & bb);
+    auto handle_colour = [is_black](Piece piece) {
+        return static_cast<Piece>(std::to_underlying(piece) + is_black * 7);
+    };
 
     if (get_bb(BBPiece::PAWN) & bb)
-        return get_colour(i) == Piece::WHITE ? Piece::W_PAWN : Piece::B_PAWN;
+        return handle_colour(Piece::W_PAWN);
     if (get_bb(BBPiece::KNIGHT) & bb)
-        return get_colour(i) == Piece::WHITE ? Piece::W_KNIGHT
-                                             : Piece::B_KNIGHT;
+        return handle_colour(Piece::W_KNIGHT);
     if (get_bb(BBPiece::BISHOP) & bb)
-        return get_colour(i) == Piece::WHITE ? Piece::W_BISHOP
-                                             : Piece::B_BISHOP;
+        return handle_colour(Piece::W_BISHOP);
     if (get_bb(BBPiece::ROOK) & bb)
-        return get_colour(i) == Piece::WHITE ? Piece::W_ROOK : Piece::B_ROOK;
+        return handle_colour(Piece::W_ROOK);
     if (get_bb(BBPiece::QUEEN) & bb)
-        return get_colour(i) == Piece::WHITE ? Piece::W_QUEEN : Piece::B_QUEEN;
+        return handle_colour(Piece::W_QUEEN);
     if (get_bb(BBPiece::KING) & bb)
-        return get_colour(i) == Piece::WHITE ? Piece::W_KING : Piece::B_KING;
+        return handle_colour(Piece::W_KING);
 
     return Piece::EMPTY;
 }
 
 void Board::make_move_bb(int from, int to, bool is_capture) {
     Piece from_piece = get_piece(from), to_piece = get_piece(to);
-    Piece from_colour = get_colour(from), to_colour = get_colour(to);
 
-    uint64_t fromBB = 1ull << from;
-    uint64_t toBB = 1ull << to;
-    uint64_t bb = fromBB | toBB;
+    auto fromBB = 1ull << from;
+    auto toBB = 1ull << to;
+    auto bb = fromBB | toBB;
 
-    get_bb(get_bb_piece(from_piece)) ^= bb;
-    get_bb(get_bb_piece(from_colour)) ^= bb;
+    get_bb(get_bb_piece<false>(from_piece)) ^= bb;
+    get_bb(get_piece_colour_bb(from_piece)) ^= bb;
     if (is_capture && to_piece != Piece::EMPTY) {
-        get_bb(get_bb_piece(to_piece)) ^= toBB;
-        get_bb(get_bb_piece(to_colour)) ^= toBB;
+        get_bb(get_bb_piece<false>(to_piece)) ^= toBB;
+        get_bb(get_piece_colour_bb(to_piece)) ^= toBB;
     }
 }
 
 void Board::clear(int i) {
-    for (int j = 0; j < 8; j++) {
-        pieces[j] &= ~(1ull << i);
+    for (auto &bb : pieces) {
+        bb &= ~(1ull << i);
     }
-}
-
-bool Board::is_empty(int i) {
-    return !((pieces[std::to_underlying(BBPiece::WHITE)] |
-              pieces[std::to_underlying(BBPiece::BLACK)]) &
-             (1ull << i));
 }
 
 void Board::set_piece(int i, Piece p) {
@@ -198,9 +188,6 @@ void Board::set_piece(int i, Piece p) {
     get_bb(get_bb_piece(get_piece_colour(p))) |= bb;
     get_bb(get_bb_piece(p)) |= bb;
 }
-
-std::array<uint64_t, 8> Board::get_all_pieces() const { return pieces; }
-std::array<bool, 4> Board::get_castle_rights() const { return can_castle; }
 
 uint64_t Board::get_piece_bb(Piece piece) const {
     if (piece == Piece::WHITE || piece == Piece::BLACK) {
@@ -214,4 +201,17 @@ uint64_t Board::get_piece_bb(Piece piece) const {
 
     return get_bb(get_bb_piece(piece)) &
            get_bb(get_bb_piece(get_piece_colour(piece)));
+}
+
+const std::vector<Move> Board::get_move_history() const { return moves; }
+const std::array<bool, 4> Board::get_castling_rights() const {
+    return can_castle;
+}
+
+uint64_t &Board::get_bb(BBPiece piece) {
+    return pieces[std::to_underlying(piece)];
+}
+
+uint64_t Board::get_bb(BBPiece piece) const {
+    return pieces[std::to_underlying(piece)];
 }
