@@ -8,12 +8,6 @@
 #include <utility>
 #include <vector>
 
-#ifdef DEBUG
-#include "debug.hpp"
-#else
-#define debug(...) void(38)
-#endif
-
 Board::Board() {
     for (int i = 0; i < 16; i++) {
         get_bb(BBPiece::WHITE) |= 1ull << i;
@@ -36,10 +30,20 @@ Board::Board() {
     castle_history = std::vector<std::array<bool, 4>>();
 }
 
-// assumes move is valid
+/**
+ * Make a move on the board, updating the board state accordingly. This includes
+ * updating the pieces, castling rights, and move history.
+ *
+ * Note that we assume the move is valid and legal. That is, we don't check if
+ * the move is actually possible, such as moving a piece that isn't there, or
+ * moving to a square occupied by your own piece, or moving into check. We also
+ * don't check if the move is legal in terms of the rules of chess, such as
+ * castling through check or en passant when not possible.
+ */
 void Board::make_move(Move move) {
     board_history.emplace_back(pieces);
     castle_history.emplace_back(can_castle);
+    moves.emplace_back(move);
 
     int from = move.from();
     int to = move.to();
@@ -54,49 +58,46 @@ void Board::make_move(Move move) {
             false;
     }
 
-#ifdef DEBUG
-    if (get_piece(from) == Piece::EMPTY)
-        debug(move, to_string());
-    assert(get_piece(from) != Piece::EMPTY);
-#endif
+    /**
+     * Rook move or capture of the rook -- clear castling rights for the side
+     * that had the rook on the original square.
+     */
+    if (from == 0 || to == 0)   // a1
+        can_castle[1] = false;  // white queen-side
+    if (from == 7 || to == 7)   // h1
+        can_castle[0] = false;  // white king-side
+    if (from == 56 || to == 56) // a8
+        can_castle[3] = false;  // black queen-side
+    if (from == 63 || to == 63) // h8
+        can_castle[2] = false;  // black king-side
 
-    // rook move or capture - clear castling rights for the side that had the
-    // rook on the original square
-    // white queen-side rook is on square 0 (a1),
-    // white king-side rook on 7 (h1),
-    // black queen-side rook is on 56 (a8),
-    // black king-side rook on 63 (h8)
-    if (from == 0 || to == 0)
-        can_castle[1] = false; // white queen-side
-    if (from == 7 || to == 7)
-        can_castle[0] = false; // white king-side
-    if (from == 56 || to == 56)
-        can_castle[3] = false; // black queen-side
-    if (from == 63 || to == 63)
-        can_castle[2] = false; // black king-side
-
-    if (flags == 0b0000) { // quiet move
+    if (flags == Move::QUIET) {
         make_move_bb(from, to, false);
-    } else if (flags == 0b0001) { // double pawn push
+    } else if (flags == Move::DOUBLE_PAWN_PUSH) {
         make_move_bb(from, to, false);
-    } else if (flags == 0b0010) { // king's side castle
+    } else if (flags == Move::KING_SIDE_CASTLE) {
         make_move_bb(from, to, false);
         make_move_bb(to + 1, to - 1, false);
-    } else if (flags == 0b0011) { // queen's side castle
+    } else if (flags == Move::QUEEN_SIDE_CASTLE) {
         make_move_bb(from, to, false);
         make_move_bb(to - 2, to + 1, false);
-    } else if (flags == 0b0100) { // captures
+    } else if (flags == Move::CAPTURE) {
         make_move_bb(from, to, true);
-    } else if (flags == 0b0101) { // en passant
+    } else if (flags == Move::EN_PASSANT) {
         make_move_bb(from, to, true);
-        clear(to + (turn == Piece::BLACK
-                        ? -8
-                        : 8)); // remove the pawn according to who's turn it is
-    } else {                   // promotion
-        set_piece(to, move.promotion_piece(turn));
+
+        // remove the pawn according to who's turn it is
+        clear(to + (turn == Piece::BLACK ? -8 : 8));
+    } else { // promotion
+        auto promoted = move.promotion_piece();
+
+        // if it's black's turn, we need to flip the promoted piece to the black
+        // version.
+        promoted = turn == Piece::WHITE ? promoted : !promoted;
+
+        set_piece(to, promoted);
         clear(from);
     }
-    moves.emplace_back(move);
 }
 
 void Board::undo_move() {
