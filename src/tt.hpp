@@ -8,7 +8,7 @@
 
 struct PVLine {
     std::vector<Move> moves;
-    PVLine(int max_depth) : moves(max_depth) {}
+    PVLine(int max_depth) { moves.reserve(max_depth); }
     PVLine() {}
 };
 

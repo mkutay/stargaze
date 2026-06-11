@@ -6,7 +6,7 @@
 class Move {
   public:
     uint16_t m_move; // 16 bits (6 for from and to, 4 for type)
-    Move() : m_move(0) {}
+    Move() = delete;
     Move(uint16_t move) : m_move(move) {}
     Move(int from, int to, int flags)
         : m_move(from | (to << 6) | (flags << 12)) {}

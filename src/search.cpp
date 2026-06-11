@@ -108,8 +108,7 @@ inline bool Search::should_stop() {
 void Search::order_moves(std::vector<Move> &moves, const PVLine *pv_line,
                          const PVLine *tt_line) {
     std::sort(moves.begin(), moves.end(), [&](const Move &a, const Move &b) {
-        if (tt_line && !tt_line->moves.empty() && tt_line->moves.size() >= 2 &&
-            tt_line->moves[0].m_move != 0) {
+        if (tt_line && !tt_line->moves.empty()) {
             Move tt_move = tt_line->moves[0];
             if (a == tt_move)
                 return true;
@@ -117,8 +116,7 @@ void Search::order_moves(std::vector<Move> &moves, const PVLine *pv_line,
                 return false;
         }
 
-        if (pv_line && !pv_line->moves.empty() && pv_line->moves.size() >= 2 &&
-            pv_line->moves[0].m_move != 0) {
+        if (pv_line && !pv_line->moves.empty()) {
             Move pv_move = pv_line->moves[0];
             if (a == pv_move)
                 return true;
@@ -173,8 +171,10 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
             // (tt_entry->depth >= depth_left), so we must clamp to
             // pline's size to avoid a buffer overflow.
             auto copy_tt_line = [&]() {
-                size_t n = std::min(tt_line->moves.size(), pline->moves.size());
-                std::copy_n(tt_line->moves.begin(), n, pline->moves.begin());
+                pline->moves.clear();
+                size_t n = std::min(tt_line->moves.size(), (size_t)depth_left);
+                pline->moves.insert(pline->moves.end(), tt_line->moves.begin(),
+                                    tt_line->moves.begin() + n);
             };
 
             if (tt_entry->bound == Bound::EXACT) {
@@ -199,7 +199,6 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     order_moves(moves, pline, tt_line);
 
     bool found_pv = false;
-    Move best_move;
 
     for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
         Move move = moves[i];
@@ -224,12 +223,12 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
 
         if (score > alpha) {
             alpha = score;
-            best_move = move;
             found_pv = true;
 
-            pline->moves[0] = move;
-            std::copy(line.moves.begin(), line.moves.end(),
-                      pline->moves.begin() + 1);
+            pline->moves.clear();
+            pline->moves.push_back(move);
+            pline->moves.insert(pline->moves.end(), line.moves.begin(),
+                                line.moves.end());
         }
 
         if (score >= beta) {
@@ -251,11 +250,11 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     }
 
     // store best move (or first legal move if no improvement)
-    if (best_move.m_move == 0 && !moves.empty()) {
-        best_move = moves[0];
+    if (pline->moves.empty() && !moves.empty()) {
+        pline->moves.push_back(moves[0]);
     }
 
-    if (best_move.m_move != 0) {
+    if (!pline->moves.empty()) {
         tt.store(hash, *pline, alpha, depth_left, bound);
         return alpha;
     }
