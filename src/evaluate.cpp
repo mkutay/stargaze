@@ -201,11 +201,13 @@ int evaluate(Board &board) {
         }
     }
 
-    auto turn_underlying = std::to_underlying(board.get_turn());
-    auto not_turn_underlying = std::to_underlying(!board.get_turn());
+    static_assert(std::to_underlying(Piece::WHITE) == 13);
+    static_assert(std::to_underlying(Piece::BLACK) == 14);
 
-    int mg_score = mg[turn_underlying] - mg[not_turn_underlying];
-    int eg_score = eg[turn_underlying] - eg[not_turn_underlying];
+    auto turn = static_cast<bool>(std::to_underlying(board.get_turn()) - 13);
+
+    int mg_score = mg[turn] - mg[!turn];
+    int eg_score = eg[turn] - eg[!turn];
     int mg_phase = game_phase;
     if (mg_phase > gamephase_sum)
         mg_phase = gamephase_sum; // in case of early promotion

@@ -1,6 +1,7 @@
 #pragma once
 #include "enums.hpp"
 #include <cassert>
+#include <utility>
 
 class Move {
   public:
@@ -16,18 +17,25 @@ class Move {
     bool is_capture() const { return (m_move >> 14) & 0x01; }
     bool is_en_passant() const { return flags() == 0b0101; }
     bool is_castle() const { return flags() == 0b0010 || flags() == 0b0011; }
-    Piece promotion_piece() const {
+    Piece promotion_piece(Piece colour) const {
 #ifdef DEBUG
         assert(is_promotion());
 #endif
+        static_assert(std::to_underlying(Piece::WHITE) == 13);
+        static_assert(std::to_underlying(Piece::BLACK) == 14);
+
+        auto c = std::to_underlying(colour);
+        assert(c >= 13);
+        c -= 13; // 0 for white, 1 for black
+
         int specials = flags() & 0b0011;
         if (specials == 0)
-            return Piece::KNIGHT; // knight
+            return static_cast<Piece>(c * 6 + 1); // knight
         if (specials == 1)
-            return Piece::BISHOP; // bishop
+            return static_cast<Piece>(c * 6 + 2); // bishop
         if (specials == 2)
-            return Piece::ROOK; // rook
-        return Piece::QUEEN;    // queen
+            return static_cast<Piece>(c * 6 + 3); // rook
+        return static_cast<Piece>(c * 6 + 4);     // queen
     }
     bool operator==(const Move &other) const { return m_move == other.m_move; }
 };
