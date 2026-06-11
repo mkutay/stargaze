@@ -10,11 +10,11 @@
 
 using std::to_string;
 
-std::string to_string(const std::string& s);
-std::string to_string(const char& c);
-std::string to_string(const char* c);
-std::string to_string(const bool& b);
-std::string to_string(const std::vector<bool>& v);
+std::string to_string(const std::string &s);
+std::string to_string(const char &c);
+std::string to_string(const char *c);
+std::string to_string(const bool &b);
+std::string to_string(const std::vector<bool> &v);
 std::string to_string(const Bound bound);
 std::string to_string(const Move move);
 std::string to_string(const SearchInfo result);
@@ -24,7 +24,7 @@ void debug_out([[maybe_unused]] int size, [[maybe_unused]] bool first,
 /**
  * to_string for containers (except vector<bool> which is a special case).
  */
-template <size_t T> std::string to_string(const std::bitset<T>& bs) {
+template <size_t T> std::string to_string(const std::bitset<T> &bs) {
     return bs.to_string();
 }
 template <typename T> std::string to_string(std::queue<T> q) {
@@ -58,10 +58,10 @@ std::string to_string(std::priority_queue<T, std::vector<T>, C> pq) {
 template <typename T>
     requires std::ranges::input_range<const T> &&
              (!std::is_arithmetic_v<std::remove_cvref_t<T>>)
-std::string to_string(const T& v) {
+std::string to_string(const T &v) {
     std::string res = "{";
     bool first = true;
-    for (const auto& el : v) {
+    for (const auto &el : v) {
         if (!first)
             res += ", ";
         first = false;
@@ -75,19 +75,19 @@ std::string to_string(const T& v) {
  * to_string for pairs and tuples (up to 4 elements).
  */
 template <typename A, typename B>
-std::string to_string(const std::pair<A, B>& p) {
+std::string to_string(const std::pair<A, B> &p) {
     const std::string first = to_string(p.first), second = to_string(p.second);
     return std::format("({}, {})", first, second);
 }
 template <typename A, typename B, typename C>
-std::string to_string(const std::tuple<A, B, C>& t) {
+std::string to_string(const std::tuple<A, B, C> &t) {
     const std::string first = to_string(get<0>(t)),
                       second = to_string(get<1>(t)),
                       third = to_string(get<2>(t));
     return std::format("({}, {}, {})", first, second, third);
 }
 template <typename A, typename B, typename C, typename D>
-std::string to_string(const std::tuple<A, B, C, D>& t) {
+std::string to_string(const std::tuple<A, B, C, D> &t) {
     const std::string first = to_string(get<0>(t)),
                       second = to_string(get<1>(t)),
                       third = to_string(get<2>(t)),

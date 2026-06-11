@@ -29,5 +29,5 @@ class Move {
             return Piece::ROOK; // rook
         return Piece::QUEEN;    // queen
     }
-    bool operator==(const Move& other) const { return m_move == other.m_move; }
+    bool operator==(const Move &other) const { return m_move == other.m_move; }
 };

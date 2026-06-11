@@ -105,9 +105,9 @@ inline bool Search::should_stop() {
     return false;
 }
 
-void Search::order_moves(std::vector<Move>& moves, const PVLine* pv_line,
-                         const PVLine* tt_line) {
-    std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {
+void Search::order_moves(std::vector<Move> &moves, const PVLine *pv_line,
+                         const PVLine *tt_line) {
+    std::sort(moves.begin(), moves.end(), [&](const Move &a, const Move &b) {
         if (tt_line && !tt_line->moves.empty() && tt_line->moves.size() >= 2 &&
             tt_line->moves[0].m_move != 0) {
             Move tt_move = tt_line->moves[0];
@@ -148,14 +148,14 @@ void Search::order_moves(std::vector<Move>& moves, const PVLine* pv_line,
     });
 }
 
-int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine* pline) {
+int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     nodes_searched++;
     if (should_stop())
         return alpha;
 
     int original_alpha = alpha;
     bool is_pv_node = (beta - alpha) > 1;
-    PVLine* tt_line = nullptr;
+    PVLine *tt_line = nullptr;
 
     uint64_t hash = board->get_hash();
     auto result = tt.probe(hash);

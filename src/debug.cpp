@@ -6,11 +6,11 @@
 #include <string>
 #include <vector>
 
-std::string to_string(const std::string& s) { return std::format("'{}'", s); }
-std::string to_string(const char& c) { return std::format("'{}'", c); }
-std::string to_string(const char* c) { return std::string(c); }
-std::string to_string(const bool& b) { return (b ? "true" : "false"); }
-std::string to_string(const std::vector<bool>& v) {
+std::string to_string(const std::string &s) { return std::format("'{}'", s); }
+std::string to_string(const char &c) { return std::format("'{}'", c); }
+std::string to_string(const char *c) { return std::string(c); }
+std::string to_string(const bool &b) { return (b ? "true" : "false"); }
+std::string to_string(const std::vector<bool> &v) {
     std::string res = "{";
     for (int i = 0; i < (int)v.size(); ++i) {
         if (i > 0) {

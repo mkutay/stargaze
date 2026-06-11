@@ -40,7 +40,7 @@ class TT {
     TT() : current_age(0) {}
     void clear();
     void new_search();
-    std::optional<TTEntry*> probe(uint64_t hash);
+    std::optional<TTEntry *> probe(uint64_t hash);
     void store(uint64_t hash, PVLine line, int score, int depth, Bound bound);
     size_t get_num_entries() const;
 };

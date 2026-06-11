@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <utility>
 
 enum class Piece : uint8_t {
     EMPTY = 0,
@@ -17,10 +18,9 @@ enum class Colour : bool {
     BLACK = 1,
 };
 
-constexpr Colour operator!(const Colour& a) {
-    if (a == Colour::WHITE)
-        return Colour::BLACK;
-    return Colour::WHITE;
+constexpr Colour operator!(const Colour &a) {
+    auto underlying = std::to_underlying(a);
+    return static_cast<Colour>(!underlying);
 }
 
 // bit board representation (dense)

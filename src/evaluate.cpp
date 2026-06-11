@@ -131,7 +131,7 @@ constexpr std::array<std::array<int, 64>, 12> calculate_eg_table() {
     return table;
 }
 
-constexpr int calculate_gamephase_sum(const std::array<int, 12>& inc) {
+constexpr int calculate_gamephase_sum(const std::array<int, 12> &inc) {
     int sum = 0;
     sum += inc[0] * 8; // pawn
     sum += inc[1] * 8;
@@ -154,7 +154,7 @@ const std::array<int, 12> gamephase_inc = {0,   0,   155,  155,  305, 305,
                                            405, 405, 1050, 1050, 0,   0};
 const int gamephase_sum = calculate_gamephase_sum(gamephase_inc);
 
-int evaluate(Board& board) {
+int evaluate(Board &board) {
     std::array<int, 2> mg = {0, 0}, eg = {0, 0}; // middle game, end game
     int game_phase = 0;
 

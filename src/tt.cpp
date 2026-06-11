@@ -7,7 +7,7 @@ void TT::clear() {
 
 void TT::new_search() { current_age++; }
 
-std::optional<TTEntry*> TT::probe(uint64_t hash) {
+std::optional<TTEntry *> TT::probe(uint64_t hash) {
     if (table.count(hash) == 0) {
         return std::nullopt;
     }
@@ -22,7 +22,7 @@ void TT::store(uint64_t hash, PVLine line, int score, int depth, Bound bound) {
         return;
     }
 
-    TTEntry* entry = &table[hash];
+    TTEntry *entry = &table[hash];
 
     bool should_replace = entry->bound == Bound::NONE ||
                           depth >= entry->depth ||
