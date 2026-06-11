@@ -12,7 +12,7 @@ std::string to_string(const char *c) { return std::string(c); }
 std::string to_string(const bool &b) { return (b ? "true" : "false"); }
 std::string to_string(const std::vector<bool> &v) {
     std::string res = "{";
-    for (int i = 0; i < (int)v.size(); ++i) {
+    for (int i = 0; i < (int) v.size(); ++i) {
         if (i > 0) {
             res += ", ";
         }
@@ -31,8 +31,8 @@ std::string to_string(const Bound bound) {
     return bound_to_string.at(bound);
 }
 std::string to_string(const Move move) {
-    return std::format("[{} {} {}]", (int)move.from(), (int)move.to(),
-                       (int)move.flags());
+    return std::format("[{} {} {}]", (int) move.from(), (int) move.to(),
+                       (int) move.flags());
 }
 
 std::string to_string(const SearchInfo result) {

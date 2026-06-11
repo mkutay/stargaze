@@ -172,7 +172,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
             // pline's size to avoid a buffer overflow.
             auto copy_tt_line = [&]() {
                 pline->moves.clear();
-                size_t n = std::min(tt_line->moves.size(), (size_t)depth_left);
+                size_t n = std::min(tt_line->moves.size(), (size_t) depth_left);
                 pline->moves.insert(pline->moves.end(), tt_line->moves.begin(),
                                     tt_line->moves.begin() + n);
             };

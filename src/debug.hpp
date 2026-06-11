@@ -33,7 +33,7 @@ template <typename T> std::string to_string(std::queue<T> q) {
     while (sz--) {
         T cur = q.front();
         q.pop();
-        if ((int)res.size() > 1) {
+        if ((int) res.size() > 1) {
             res += ", ";
         }
         res += to_string(cur);
@@ -47,7 +47,7 @@ std::string to_string(std::priority_queue<T, std::vector<T>, C> pq) {
     while (!pq.empty()) {
         T cur = pq.top();
         pq.pop();
-        if ((int)res.size() > 1) {
+        if ((int) res.size() > 1) {
             res += ", ";
         }
         res += to_string(cur);
@@ -119,12 +119,13 @@ void debug_out(int size, bool first, std::string name, Head H, Tail... T) {
         tmp.erase(tmp.begin());
 
     std::string buff = to_string(H);
-    if ((int)buff.size() + size + (int)tmp.size() > buffer_size - 5 && !first) {
+    if ((int) buff.size() + size + (int) tmp.size() > buffer_size - 5 &&
+        !first) {
         std::cerr << '\n';
         size = 0;
     }
     std::cerr << '[' << tmp << ": " << buff << "] ";
-    debug_out(((int)buff.size() + size + (int)tmp.size() + 5) % buffer_size,
+    debug_out(((int) buff.size() + size + (int) tmp.size() + 5) % buffer_size,
               false, name, T...);
 }
 
