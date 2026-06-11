@@ -14,14 +14,14 @@ const long long TIME_LIMIT_MS = 5000;
 
 int32_t main() {
     Board board;
-
     Search search(&board);
 
     std::optional<SearchInfo> info = std::nullopt;
 
-    for (int i = 0; i < 300; i++) {
-        std::cout << "\n=== Move " << (i + 1) << " ===\n";
-        std::cout << "board:\n" << board.to_string() << std::endl;
+    while (true) {
+        std::print("\n===============\nMove {}: {}\n===============\n",
+                   board.get_move_count() / 2 + 1, to_string(board.get_turn()));
+        std::cout << board.to_string() << std::endl;
 
         // Perform iterative deepening search
         SearchInfo result =
@@ -32,7 +32,6 @@ int32_t main() {
         if (!result.pv.moves.empty()) {
             Move best_move = result.pv.moves[0];
             info = result;
-            debug(search.get_tt()->get_num_entries());
 
             // Make the best move
             board.make_move(best_move);

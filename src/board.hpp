@@ -63,4 +63,6 @@ class Board {
     std::array<bool, 4> get_castle_rights() const;
 
     uint64_t get_piece_bb(Piece piece) const;
+
+    size_t get_move_count() const { return moves.size(); }
 };
