@@ -1,6 +1,8 @@
+#include "bitboard.hpp"
 #include "board.hpp"
 #include "enums.hpp"
 #include "move.hpp"
+#include "square.hpp"
 #include <algorithm>
 #include <array>
 #include <sys/types.h>
@@ -8,27 +10,26 @@
 #include <utility>
 #include <vector>
 
-Board::Board() {
-    for (int i = 0; i < 16; i++) {
-        get_bb(Colour::WHITE) |= 1ull << i;
-        get_bb(Colour::BLACK) |= 1ull << (i + 48);
-    }
-
-    for (int i = 8; i < 16; i++) {
-        get_bb(Piece::PAWN) |= 1ull << i;
-        get_bb(Piece::PAWN) |= 1ull << (i + 40);
-    }
-
-    get_bb(Piece::KNIGHT) = 1ull << 1 | 1ull << 6 | 1ull << 57 | 1ull << 62;
-    get_bb(Piece::BISHOP) = 1ull << 2 | 1ull << 5 | 1ull << 58 | 1ull << 61;
-    get_bb(Piece::ROOK) = 1 | 1ull << 7 | 1ull << 56 | 1ull << 63;
-    get_bb(Piece::QUEEN) = 1ull << 3 | 1ull << 59;
-    get_bb(Piece::KING) = 1ull << 4 | 1ull << 60;
-
-    moves = std::vector<Move>();
-    board_history = std::vector<BoardSnapshot>();
-    castle_history = std::vector<std::array<bool, 4>>();
-}
+Board::Board()
+    : piece_bbs{
+          BB::A2 | BB::B2 | BB::C2 | BB::D2 | BB::E2 | BB::F2 | BB::G2 |
+              BB::H2 | BB::A7 | BB::B7 | BB::C7 | BB::D7 | BB::E7 | BB::F7 |
+              BB::G7 | BB::H7,               // PAWN
+          BB::B1 | BB::G1 | BB::B8 | BB::G8, // KNIGHT
+          BB::C1 | BB::F1 | BB::C8 | BB::F8, // BISHOP
+          BB::A1 | BB::H1 | BB::A8 | BB::H8, // ROOK
+          BB::D1 | BB::D8,                   // QUEEN
+          BB::E1 | BB::E8,                   // KING
+      },
+      colour_bbs{
+          BB::A1 | BB::B1 | BB::C1 | BB::D1 | BB::E1 | BB::F1 | BB::G1 |
+              BB::H1 | BB::A2 | BB::B2 | BB::C2 | BB::D2 | BB::E2 | BB::F2 |
+              BB::G2 | BB::H2, // WHITE
+          BB::A8 | BB::B8 | BB::C8 | BB::D8 | BB::E8 | BB::F8 | BB::G8 |
+              BB::H8 | BB::A7 | BB::B7 | BB::C7 | BB::D7 | BB::E7 | BB::F7 |
+              BB::G7 | BB::H7, // BLACK
+      },
+      can_castle{true, true, true, true}, turn{Colour::WHITE} {}
 
 /**
  * Make a move on the board, updating the board state accordingly. This includes
@@ -41,18 +42,20 @@ Board::Board() {
  * castling through check or en passant when not possible.
  */
 void Board::make_move(Move move) {
-    board_history.push_back({type_bbs, colour_bbs});
+    board_history.emplace_back(piece_bbs, colour_bbs);
     castle_history.emplace_back(can_castle);
 
-    int from = move.from();
-    int to = move.to();
-    int flags = move.flags();
+    auto from = move.from();
+    auto to = move.to();
+    auto flags = move.flags();
 
-    Colour turn = get_turn();
-
-    if (get_bb(Piece::KING) & (1ull << from) ||
-        get_bb(Piece::KING) & (1ull << to)) {
-        int turn_index = turn == Colour::BLACK ? 1 : 0;
+    /**
+     * King move -- clear both castling rights for the side that moved, since
+     * the king can never castle again after it has moved.
+     */
+    if ((get_bb(Piece::KING) & BitBoard(from)) ||
+        (get_bb(Piece::KING) & BitBoard(to))) {
+        int turn_index = std::to_underlying(turn);
         can_castle[turn_index * 2] = can_castle[turn_index * 2 + 1] = false;
     }
 
@@ -60,53 +63,102 @@ void Board::make_move(Move move) {
      * Rook move or capture of the rook -- clear castling rights for the side
      * that had the rook on the original square.
      */
-    if (from == 0 || to == 0)   // a1
-        can_castle[1] = false;  // white queen-side
-    if (from == 7 || to == 7)   // h1
-        can_castle[0] = false;  // white king-side
-    if (from == 56 || to == 56) // a8
-        can_castle[3] = false;  // black queen-side
-    if (from == 63 || to == 63) // h8
-        can_castle[2] = false;  // black king-side
+    if (from == SQ::A1 || to == SQ::A1)
+        can_castle[1] = false; // white queen-side
+    if (from == SQ::H1 || to == SQ::H1)
+        can_castle[0] = false; // white king-side
+    if (from == SQ::A8 || to == SQ::A8)
+        can_castle[3] = false; // black queen-side
+    if (from == SQ::H8 || to == SQ::H8)
+        can_castle[2] = false; // black king-side
 
-    if (flags == Move::QUIET) {
-        make_move_bb(from, to, false);
-    } else if (flags == Move::DOUBLE_PAWN_PUSH) {
-        make_move_bb(from, to, false);
-    } else if (flags == Move::KING_SIDE_CASTLE) {
-        make_move_bb(from, to, false);
-        make_move_bb(to + 1, to - 1, false);
-    } else if (flags == Move::QUEEN_SIDE_CASTLE) {
-        make_move_bb(from, to, false);
-        make_move_bb(to - 2, to + 1, false);
-    } else if (flags == Move::CAPTURE) {
-        make_move_bb(from, to, true);
-    } else if (flags == Move::EN_PASSANT) {
-        make_move_bb(from, to, true);
-
+    switch (flags) {
+    case Move::QUIET:
+    case Move::DOUBLE_PAWN_PUSH:
+        make_move_bb<false>(from, to);
+        break;
+    case Move::KING_SIDE_CASTLE:
+        make_move_bb<false>(from, to);
+        make_move_bb<false>(to + 1, to - 1);
+        break;
+    case Move::QUEEN_SIDE_CASTLE:
+        make_move_bb<false>(from, to);
+        make_move_bb<false>(to - 2, to + 1);
+        break;
+    case Move::CAPTURE:
+        make_move_bb<true>(from, to);
+        break;
+    case Move::EN_PASSANT: {
+        make_move_bb<false>(from, to);
         // remove the captured pawn according to whose turn it is
-        clear(to + (turn == Colour::BLACK ? -8 : 8));
-    } else { // promotion
-        set_piece(to, move.promotion_piece(), turn);
-        clear(from);
+        auto turn_underlying = std::to_underlying(turn);
+        auto addition = turn_underlying * (-16) + 8;
+        BitBoard bb = to + addition;
+
+        get_bb(Piece::PAWN) &= ~bb;
+        get_bb(!turn) &= ~bb;
+        break;
+    }
+    case Move::KNIGHT_PROMOTION_CAPTURE:
+    case Move::BISHOP_PROMOTION_CAPTURE:
+    case Move::ROOK_PROMOTION_CAPTURE:
+    case Move::QUEEN_PROMOTION_CAPTURE: {
+        /**
+         * With a capture, we need to clear the `to` square for the piece that
+         * is being captured.
+         */
+
+        auto piece = get_piece(to);
+        BitBoard bb = to;
+
+        get_bb(*piece) &= ~bb;
+        get_bb(!turn) &= ~bb;
+
+        [[fallthrough]];
+    }
+    case Move::KNIGHT_PROMOTION:
+    case Move::BISHOP_PROMOTION:
+    case Move::ROOK_PROMOTION:
+    case Move::QUEEN_PROMOTION: {
+        /**
+         * For all promotions, we need to clear the `from` square for the
+         * pawn that is moving, and set the `to` square for the piece that
+         * is being promoted to.
+         *
+         * Captures are handled with the fallthrough from above.
+         */
+
+        BitBoard from_bb = from;
+        BitBoard to_bb = to;
+        Piece promoted_piece = move.promotion_piece();
+
+        get_bb(Piece::PAWN) &= ~from_bb;
+        get_bb(turn) &= ~from_bb;
+
+        get_bb(promoted_piece) |= to_bb;
+        get_bb(turn) |= to_bb;
+        break;
+    }
     }
 
     moves.emplace_back(move);
+    turn = !turn;
 }
 
 void Board::undo_move() {
     auto snap = board_history.back();
-    type_bbs = snap.types;
-    colour_bbs = snap.colours;
+    piece_bbs = snap.piece_bbs;
+    colour_bbs = snap.colour_bbs;
     board_history.pop_back();
     moves.pop_back();
     can_castle = castle_history.back();
     castle_history.pop_back();
+    turn = !turn;
 }
 
-Colour Board::get_turn() { return static_cast<Colour>(moves.size() & 1); }
+Colour Board::get_turn() const { return turn; }
 
-std::string Board::to_string() {
+std::string Board::to_string() const {
     const static std::unordered_map<Piece, std::array<std::string, 2>>
         piece_string = {
             {Piece::PAWN, {"♟", "♙"}},   {Piece::KNIGHT, {"♞", "♘"}},
@@ -137,7 +189,8 @@ std::string Board::to_string() {
     return temp;
 }
 
-std::optional<std::pair<Piece, Colour>> Board::get_piece_colour(int sq) const {
+std::optional<std::pair<Piece, Colour>>
+Board::get_piece_colour(Square sq) const {
     auto piece = get_piece(sq);
     auto colour = get_colour(sq);
 
@@ -148,75 +201,50 @@ std::optional<std::pair<Piece, Colour>> Board::get_piece_colour(int sq) const {
     return std::nullopt;
 }
 
-std::optional<Piece> Board::get_piece(int sq) const {
-    auto bb = 1ull << sq;
+std::optional<Piece> Board::get_piece(Square sq) const {
+    BitBoard bb = sq;
 
-    for (auto type : {Piece::PAWN, Piece::KNIGHT, Piece::BISHOP, Piece::ROOK,
-                      Piece::QUEEN, Piece::KING}) {
+    for (auto type : PIECES)
         if (get_bb(type) & bb)
             return type;
-    }
 
     return std::nullopt;
 }
 
-std::optional<Colour> Board::get_colour(int sq) const {
-    auto bb = 1ull << sq;
+std::optional<Colour> Board::get_colour(Square sq) const {
+    BitBoard bb = sq;
 
-    for (auto colour : {Colour::WHITE, Colour::BLACK}) {
+    for (auto colour : COLOURS)
         if (get_bb(colour) & bb)
             return colour;
-    }
 
     return std::nullopt;
 }
 
-bool Board::has_piece_at(int sq, Piece type, Colour colour) const {
-    auto bb = 1ull << sq;
-    return (get_bb(type) & get_bb(colour) & bb) != 0;
+bool Board::has_piece_at(BitBoard bb, Piece type, Colour colour) const {
+    return get_bb(type) & get_bb(colour) & bb;
 }
 
-void Board::make_move_bb(int from, int to, bool is_capture) {
-    auto from_sq = get_piece_colour(from);
-    auto to_sq = get_piece_colour(to);
+template <bool is_capture> void Board::make_move_bb(Square from, Square to) {
+    auto from_pc = get_piece_colour(from);
 
-    auto fromBB = 1ull << from;
-    auto toBB = 1ull << to;
-    auto bb = fromBB | toBB;
+    // Snapshot the captured piece BEFORE modifying any bitboard. If we read
+    // it after the XOR below, the moving piece has already landed on `to`,
+    // so get_piece_colour would return the mover (or nullopt for same-type
+    // captures where the XOR clears the bit), corrupting the board state.
+    [[maybe_unused]] auto to_pc = get_piece_colour(to);
 
-    get_bb(from_sq->first) ^= bb;
-    get_bb(from_sq->second) ^= bb;
+    BitBoard from_bb = from;
+    BitBoard to_bb = to;
+    auto bb = from_bb | to_bb;
 
-    if (is_capture && to_sq) {
-        get_bb(to_sq->first) ^= toBB;
-        get_bb(to_sq->second) ^= toBB;
+    get_bb(from_pc->first) ^= bb;
+    get_bb(from_pc->second) ^= bb;
+
+    if constexpr (is_capture) {
+        get_bb(to_pc->first) ^= to_bb;
+        get_bb(to_pc->second) ^= to_bb;
     }
-}
-
-void Board::clear(int i) {
-    auto bb = ~(1ull << i);
-    for (auto &b : type_bbs)
-        b &= bb;
-    for (auto &b : colour_bbs)
-        b &= bb;
-}
-
-void Board::set_piece(int i, Piece type, Colour colour) {
-    clear(i);
-    auto bb = 1ull << i;
-    get_bb(type) |= bb;
-    get_bb(colour) |= bb;
-}
-
-uint64_t Board::get_piece_bb(Piece type, Colour colour) const {
-    return get_bb(type) & get_bb(colour);
-}
-
-uint64_t Board::get_colour_bb(Colour colour) const { return get_bb(colour); }
-
-uint64_t Board::get_empty_bb() const {
-    auto occupied = get_bb(Colour::WHITE) | get_bb(Colour::BLACK);
-    return ~occupied;
 }
 
 const std::vector<Move> Board::get_move_history() const { return moves; }
@@ -224,16 +252,22 @@ const std::array<bool, 4> Board::get_castling_rights() const {
     return can_castle;
 }
 
-uint64_t &Board::get_bb(Piece type) {
-    return type_bbs[std::to_underlying(type)];
-}
-uint64_t Board::get_bb(Piece type) const {
-    return type_bbs[std::to_underlying(type)];
+BitBoard &Board::get_bb(Piece type) {
+    return piece_bbs[std::to_underlying(type)];
 }
 
-uint64_t &Board::get_bb(Colour colour) {
+BitBoard Board::get_bb(Piece type) const {
+    return piece_bbs[std::to_underlying(type)];
+}
+
+BitBoard &Board::get_bb(Colour colour) {
     return colour_bbs[std::to_underlying(colour)];
 }
-uint64_t Board::get_bb(Colour colour) const {
+
+BitBoard Board::get_bb(Colour colour) const {
     return colour_bbs[std::to_underlying(colour)];
+}
+
+BitBoard Board::get_bb(Piece type, Colour colour) const {
+    return get_bb(type) & get_bb(colour);
 }

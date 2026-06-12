@@ -4,35 +4,39 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
+#include "bitboard.hpp"
 #include "enums.hpp"
 #include "move.hpp"
+#include "square.hpp"
 
 class Board {
-    // Bitboard for each piece type, indexed by Piece (PAWN=0..KING=5).
-    std::array<uint64_t, 6> type_bbs = {};
+    // Bitboard for each piece, indexed by Piece (PAWN=0..KING=5).
+    std::array<BitBoard, 6> piece_bbs;
 
     // Bitboard for each colour, indexed by Colour (WHITE=0, BLACK=1).
-    std::array<uint64_t, 2> colour_bbs = {};
+    std::array<BitBoard, 2> colour_bbs;
 
     // 0: white king's side, 1: white queen's side,
     // 2: black king's side, 3: black queen's side
-    std::array<bool, 4> can_castle = {true, true, true, true};
+    std::array<bool, 4> can_castle;
 
     /**
-     * Moves made in the game so far, in order. This is used for undoing moves
-     * and also for keeping track of whose turn it is.
-     *
-     * In particular, it's white's turn if moves.size() is even.
+     * Moves made in the game so far, in order. This is used for undoing moves.
      */
     std::vector<Move> moves;
 
+    /**
+     * Colour of the player whose turn it is to move.
+     */
+    Colour turn;
+
     struct BoardSnapshot {
-        std::array<uint64_t, 6> types;
-        std::array<uint64_t, 2> colours;
+        std::array<BitBoard, 6> piece_bbs;
+        std::array<BitBoard, 2> colour_bbs;
     };
+
     std::vector<BoardSnapshot> board_history;
     std::vector<std::array<bool, 4>> castle_history;
 
@@ -40,71 +44,71 @@ class Board {
      * Get the bitboard for a given piece type, as an lvalue reference so it
      * can be modified directly.
      */
-    uint64_t &get_bb(Piece type);
-    uint64_t get_bb(Piece type) const;
+    BitBoard &get_bb(Piece type);
+    BitBoard get_bb(Piece type) const;
 
     /**
      * Get the bitboard for a given colour, as an lvalue reference so it can
      * be modified directly.
      */
-    uint64_t &get_bb(Colour colour);
-    uint64_t get_bb(Colour colour) const;
+    BitBoard &get_bb(Colour colour);
+    BitBoard get_bb(Colour colour) const;
 
-  public:
-    Board();
-    void make_move(Move move);
-    void undo_move();
-    Colour get_turn();
-    std::vector<Move> get_moves();
-    std::string to_string();
-    int get_hash();
-    bool is_in_check(Colour by_colour);
-    bool is_attacked(Colour by_colour,
-                     std::variant<unsigned int, uint64_t> square);
+    /**
+     * Return the bitboard for a specific coloured piece type (e.g., white
+     * pawns).
+     */
+    BitBoard get_bb(Piece type, Colour colour) const;
+
+    /**
+     * Make a move from the from square to the to square, updating the bitboards
+     * accordingly. If is_capture is true, also clear the piece on the to
+     * square.
+     *
+     * Note: There must be a piece on the from square, and if is_capture is
+     * true, there must be a piece on the to square, otherwise the behavior is
+     * undefined.
+     */
+    template <bool is_capture> void make_move_bb(Square from, Square to);
 
     /**
      * Return the piece type and colour occupying sq, or nullopt if the
      * square is empty.
      */
-    std::optional<std::pair<Piece, Colour>> get_piece_colour(int sq) const;
+    std::optional<std::pair<Piece, Colour>> get_piece_colour(Square sq) const;
 
     /**
      * Return the piece type occupying sq, or nullopt if the square is
      * empty.
      */
-    std::optional<Piece> get_piece(int sq) const;
+    std::optional<Piece> get_piece(Square sq) const;
 
     /**
      * Return the colour occupying sq, or nullopt if the square is empty.
      */
-    std::optional<Colour> get_colour(int sq) const;
+    std::optional<Colour> get_colour(Square sq) const;
 
     /**
-     * Return true if the piece of the given type and colour occupies square i.
+     * Return true if the piece of the given type and colour occupies the
+     * square.
+     *
+     * The Square to BitBoard implicit conversion can be utilised here.
      */
-    bool has_piece_at(int sq, Piece type, Colour colour) const;
+    bool has_piece_at(BitBoard bb, Piece type, Colour colour) const;
 
-    void make_move_bb(int from, int to, bool is_capture);
-    void clear(int i);
-    void set_piece(int i, Piece type, Colour colour);
+    bool is_attacked(Colour by_colour, BitBoard bb);
 
-    /**
-     * Return the bitboard for a specific coloured piece type (e.g. white
-     * pawns).
-     */
-    uint64_t get_piece_bb(Piece type, Colour colour) const;
-
-    /**
-     * Return the bitboard for all pieces of the given colour.
-     */
-    uint64_t get_colour_bb(Colour colour) const;
-
-    /**
-     * Return the bitboard of empty squares.
-     */
-    uint64_t get_empty_bb() const;
+  public:
+    Board();
+    void make_move(Move move);
+    void undo_move();
+    Colour get_turn() const;
+    std::vector<Move> get_moves();
+    std::string to_string() const;
+    int get_hash() const;
+    bool is_in_check(Colour by_colour);
 
     const std::vector<Move> get_move_history() const;
     const std::array<bool, 4> get_castling_rights() const;
-    int evaluate();
+    int evaluate() const;
 };
