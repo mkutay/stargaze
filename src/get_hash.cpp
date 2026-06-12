@@ -1,5 +1,4 @@
 #include "board.hpp"
-#include "move_gen.hpp"
 #include <random>
 
 std::mt19937 rng;
@@ -37,18 +36,16 @@ const std::array<uint64_t, 8> en_passant_file = create_en_passant_file();
 const std::array<uint64_t, 4> castling = create_castling();
 const uint64_t black_move = my_rand(rng);
 
-int Board::get_hash() {
+int Board::get_hash() const {
     uint64_t ret_hash = 0;
 
     for (int c = 0; c < 2; c++) {
         for (int p = 0; p < 6; p++) {
-            uint64_t piece_bb = type_bbs[p] & colour_bbs[c];
+            auto piece_bb = piece_bbs[p] & colour_bbs[c];
             while (piece_bb) {
-                uint64_t ls1b = piece_bb & -piece_bb;
-                int i = bit_scan_forward(ls1b);
+                auto sq = piece_bb.get_square_pop();
                 int pc = p * 2 + c; // piece code
-                ret_hash ^= hash[pc][i];
-                piece_bb ^= ls1b;
+                ret_hash ^= hash[pc][sq];
             }
         }
     }

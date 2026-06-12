@@ -258,7 +258,8 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
         return alpha;
     }
 
-    // no legal moves (checkmate or stalemate)
+    // no legal moves now, so: checkmate or stalemate
+
     if (board->is_in_check(board->get_turn())) {
         alpha = CHECKMATE_SCORE + depth_left;
     } else {

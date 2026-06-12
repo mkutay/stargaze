@@ -2,9 +2,7 @@
 
 #include "board.hpp"
 #include "enums.hpp"
-#include "move_gen.hpp"
 #include <array>
-#include <utility>
 
 const std::array<int, 64> mg_pawn_table = {
     0,   0,  0,   0,   0,   0,  0,  0,   98,  134, 61, 95,  68, 126, 34, -11,
@@ -154,54 +152,27 @@ const std::array<int, 12> gamephase_inc = {0,   0,   155,  155,  305, 305,
                                            405, 405, 1050, 1050, 0,   0};
 const int gamephase_sum = calculate_gamephase_sum(gamephase_inc);
 
-int Board::evaluate() {
+int Board::evaluate() const {
     std::array<int, 2> mg = {0, 0}, eg = {0, 0}; // middle game, end game
     int game_phase = 0;
 
     for (int c = 0; c < 2; c++) {
         for (int p = 0; p < 6; p++) {
-            uint64_t piece_bb = type_bbs[p] & colour_bbs[c];
+            auto piece_bb = piece_bbs[p] & colour_bbs[c];
             while (piece_bb) {
-                uint64_t ls1b = piece_bb & -piece_bb;
-                int i = bit_scan_forward(ls1b);
+                auto sq = piece_bb.get_square_pop();
                 int pc = p * 2 + c;
-                mg[c] += mg_table[pc][i];
-                eg[c] += eg_table[pc][i];
+                mg[c] += mg_table[pc][sq];
+                eg[c] += eg_table[pc][sq];
                 game_phase += gamephase_inc[pc];
-                piece_bb ^= ls1b;
             }
         }
     }
 
-    // Castle safety (middlegame only — fades naturally via gamephase).
-    // +30 for having the king on a typical castled square (g1/c1 or g8/c8).
-    // -15 for still holding castling rights without having used them — creates
-    // urgency so the engine doesn't keep deferring castling in favour of
-    // marginally better-looking tactical moves.
-    constexpr int MG_CASTLE_BONUS = 30;
-    constexpr int MG_UNCASTLED_PENALTY = 15;
-    {
-        // Castled squares: white g1=6 or c1=2; black g8=62 or c8=58
-        constexpr int castled_sq[2][2] = {{6, 2}, {62, 58}};
-        for (int c = 0; c < 2; c++) {
-            uint64_t king_bb =
-                type_bbs[std::to_underlying(Piece::KING)] & colour_bbs[c];
-            if (!king_bb)
-                continue;
-            int sq = bit_scan_forward(king_bb);
-            if (sq == castled_sq[c][0] || sq == castled_sq[c][1]) {
-                mg[c] += MG_CASTLE_BONUS;
-            } else if (can_castle[c * 2] || can_castle[c * 2 + 1]) {
-                // Has castling rights but king is still in the centre
-                mg[c] -= MG_UNCASTLED_PENALTY;
-            }
-        }
-    }
+    bool _turn = turn == Colour::BLACK;
 
-    auto turn = get_turn() == Colour::BLACK;
-
-    int mg_score = mg[turn] - mg[!turn];
-    int eg_score = eg[turn] - eg[!turn];
+    int mg_score = mg[_turn] - mg[!_turn];
+    int eg_score = eg[_turn] - eg[!_turn];
     int mg_phase = game_phase;
     if (mg_phase > gamephase_sum)
         mg_phase = gamephase_sum; // in case of early promotion

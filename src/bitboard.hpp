@@ -63,9 +63,30 @@ class BitBoard {
     constexpr BitBoard operator|(const uint64_t &o) const { return bb | o; }
     constexpr BitBoard operator&(const uint64_t &o) const { return bb & o; }
     constexpr BitBoard operator^(const uint64_t &o) const { return bb ^ o; }
-    constexpr BitBoard operator<<(const int8_t s) const { return bb << s; }
-    constexpr BitBoard operator>>(const int8_t s) const { return bb >> s; }
+    constexpr BitBoard operator<<(const int s) const { return bb << s; }
+    constexpr BitBoard operator>>(const int s) const { return bb >> s; }
     constexpr BitBoard operator~() const { return ~bb; }
+
+    constexpr BitBoard north() const { return bb << 8; }
+    constexpr BitBoard south() const { return bb >> 8; }
+    constexpr BitBoard east() const {
+        return (bb & 0x7f7f7f7f7f7f7f7full) << 1;
+    }
+    constexpr BitBoard west() const {
+        return (bb & 0xfefefefefefefefeull) >> 1;
+    }
+    constexpr BitBoard north_east() const {
+        return (bb & 0x7f7f7f7f7f7f7f7full) << 9;
+    }
+    constexpr BitBoard north_west() const {
+        return (bb & 0xfefefefefefefefeull) << 7;
+    }
+    constexpr BitBoard south_east() const {
+        return (bb & 0x7f7f7f7f7f7f7f7full) >> 7;
+    }
+    constexpr BitBoard south_west() const {
+        return (bb & 0xfefefefefefefefeull) >> 9;
+    }
 
     BitBoard &operator|=(const BitBoard &o) {
         bb |= o.bb;
@@ -91,6 +112,14 @@ class BitBoard {
         bb ^= o;
         return *this;
     }
+    BitBoard &operator<<=(const int s) {
+        bb <<= s;
+        return *this;
+    }
+    BitBoard &operator>>=(const int s) {
+        bb >>= s;
+        return *this;
+    }
 
     constexpr bool operator!=(const BitBoard &o) const { return bb != o.bb; }
     constexpr bool operator!=(const uint64_t &o) const { return bb != o; }
@@ -100,6 +129,18 @@ class BitBoard {
     void set_bit(Square sq) { bb |= (1ull << sq); }
     void erase_bit(Square sq) { bb &= ~(1ull << sq); }
     void toggle_bit(Square sq) { bb ^= (1ull << sq); }
+
+    /**
+     * Checks if the bitboard has not set any of the bits in check.
+     */
+    constexpr bool empty(BitBoard check) const { return !(bb & check); }
+
+    /**
+     * Checks if the bitboard has set all of the bits in check.
+     */
+    constexpr bool occupied(BitBoard check) const {
+        return (bb & check) == check;
+    }
 
     std::string to_string() {
         BitBoard copy = bb;
