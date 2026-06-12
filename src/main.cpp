@@ -2,6 +2,7 @@
 #include "move.hpp"
 #include "search.hpp"
 #include <iostream>
+#include <print>
 
 #ifdef DEBUG
 #include "debug.hpp"
