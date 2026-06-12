@@ -1,5 +1,5 @@
-#include "board.hpp"
 #include "bitboard.hpp"
+#include "board.hpp"
 #include "enums.hpp"
 #include "move.hpp"
 #include "square.hpp"
@@ -234,7 +234,10 @@ template <bool is_capture> void Board::make_move_bb(Square from, Square to) {
     // it after the XOR below, the moving piece has already landed on `to`,
     // so get_piece_colour would return the mover (or nullopt for same-type
     // captures where the XOR clears the bit), corrupting the board state.
-    [[maybe_unused]] auto to_pc = get_piece_colour(to);
+    std::optional<std::pair<Piece, Colour>> to_pc;
+    if constexpr (is_capture) {
+        to_pc = get_piece_colour(to);
+    }
 
     BitBoard from_bb = from;
     BitBoard to_bb = to;
