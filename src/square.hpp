@@ -43,8 +43,10 @@ class Square {
 
     constexpr Square operator+(const Square &o) const { return sq + o.sq; }
     constexpr Square operator-(const Square &o) const { return sq - o.sq; }
+    constexpr Square operator^(const Square &o) const { return sq ^ o; }
     constexpr Square operator+(const int &o) const { return sq + o; }
     constexpr Square operator-(const int &o) const { return sq - o; }
+    constexpr Square operator^(const int &o) const { return sq ^ o; }
 
     Square &operator+=(const Square &o) {
         sq += o.sq;
