@@ -1,5 +1,5 @@
-#include "bitboard.hpp"
 #include "board.hpp"
+#include "bitboard.hpp"
 #include "enums.hpp"
 #include "move.hpp"
 #include "square.hpp"
