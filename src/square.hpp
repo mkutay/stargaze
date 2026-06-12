@@ -139,3 +139,5 @@ constexpr Square F8 = Square(61);
 constexpr Square G8 = Square(62);
 constexpr Square H8 = Square(63);
 }; // namespace SQ
+
+static_assert(sizeof(Square) == sizeof(uint8_t));

@@ -48,16 +48,16 @@ std::vector<Move> Board::get_moves() {
     if (turn == Colour::WHITE) {
         pawn_push_one = pawns.north() & empty;
         pawn_push_two = (pawn_push_one & (0xffull << 16)).north() & empty;
-        pawn_capture_left = pawns.north_west() & other_pieces;
-        pawn_capture_right = pawns.north_east() & other_pieces;
+        pawn_capture_left = pawns.north().west() & other_pieces;
+        pawn_capture_right = pawns.north().east() & other_pieces;
         pawn_push_one_promotion = pawn_push_one & (0xffull << 56);
         pawn_capture_left_promotion = pawn_capture_left & (0xffull << 56);
         pawn_capture_right_promotion = pawn_capture_right & (0xffull << 56);
     } else {
         pawn_push_one = pawns.south() & empty;
         pawn_push_two = (pawn_push_one & (0xffull << 40)).south() & empty;
-        pawn_capture_left = pawns.south_east() & other_pieces;
-        pawn_capture_right = pawns.south_west() & other_pieces;
+        pawn_capture_left = pawns.south().east() & other_pieces;
+        pawn_capture_right = pawns.south().west() & other_pieces;
         pawn_push_one_promotion = pawn_push_one & 0xffull;
         pawn_capture_left_promotion = pawn_capture_left & 0xffull;
         pawn_capture_right_promotion = pawn_capture_right & 0xffull;

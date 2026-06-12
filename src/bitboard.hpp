@@ -85,18 +85,6 @@ class BitBoard {
     constexpr BitBoard west() const {
         return (bb & 0xfefefefefefefefeull) >> 1;
     }
-    constexpr BitBoard north_east() const {
-        return (bb & 0x7f7f7f7f7f7f7f7full) << 9;
-    }
-    constexpr BitBoard north_west() const {
-        return (bb & 0xfefefefefefefefeull) << 7;
-    }
-    constexpr BitBoard south_east() const {
-        return (bb & 0x7f7f7f7f7f7f7f7full) >> 7;
-    }
-    constexpr BitBoard south_west() const {
-        return (bb & 0xfefefefefefefefeull) >> 9;
-    }
 
     BitBoard &operator|=(const BitBoard &o) {
         bb |= o.bb;
@@ -156,6 +144,14 @@ class BitBoard {
         return (bb & check) == check;
     }
 
+    /**
+     * Return the adjacent squares.
+     */
+    constexpr BitBoard adjacent() const {
+        return north() | south() | east() | west() | north().east() |
+               north().west() | south().east() | south().west();
+    }
+
     std::string to_string() {
         BitBoard copy = bb;
         std::string board_str;
@@ -167,68 +163,80 @@ class BitBoard {
 };
 
 namespace BB {
-constexpr BitBoard A1 = SQ::A1;
-constexpr BitBoard B1 = SQ::B1;
-constexpr BitBoard C1 = SQ::C1;
-constexpr BitBoard D1 = SQ::D1;
-constexpr BitBoard E1 = SQ::E1;
-constexpr BitBoard F1 = SQ::F1;
-constexpr BitBoard G1 = SQ::G1;
-constexpr BitBoard H1 = SQ::H1;
-constexpr BitBoard A2 = SQ::A2;
-constexpr BitBoard B2 = SQ::B2;
-constexpr BitBoard C2 = SQ::C2;
-constexpr BitBoard D2 = SQ::D2;
-constexpr BitBoard E2 = SQ::E2;
-constexpr BitBoard F2 = SQ::F2;
-constexpr BitBoard G2 = SQ::G2;
-constexpr BitBoard H2 = SQ::H2;
-constexpr BitBoard A3 = SQ::A3;
-constexpr BitBoard B3 = SQ::B3;
-constexpr BitBoard C3 = SQ::C3;
-constexpr BitBoard D3 = SQ::D3;
-constexpr BitBoard E3 = SQ::E3;
-constexpr BitBoard F3 = SQ::F3;
-constexpr BitBoard G3 = SQ::G3;
-constexpr BitBoard H3 = SQ::H3;
-constexpr BitBoard A4 = SQ::A4;
-constexpr BitBoard B4 = SQ::B4;
-constexpr BitBoard C4 = SQ::C4;
-constexpr BitBoard D4 = SQ::D4;
-constexpr BitBoard E4 = SQ::E4;
-constexpr BitBoard F4 = SQ::F4;
-constexpr BitBoard G4 = SQ::G4;
-constexpr BitBoard H4 = SQ::H4;
-constexpr BitBoard A5 = SQ::A5;
-constexpr BitBoard B5 = SQ::B5;
-constexpr BitBoard C5 = SQ::C5;
-constexpr BitBoard D5 = SQ::D5;
-constexpr BitBoard E5 = SQ::E5;
-constexpr BitBoard F5 = SQ::F5;
-constexpr BitBoard G5 = SQ::G5;
-constexpr BitBoard H5 = SQ::H5;
-constexpr BitBoard A6 = SQ::A6;
-constexpr BitBoard B6 = SQ::B6;
-constexpr BitBoard C6 = SQ::C6;
-constexpr BitBoard D6 = SQ::D6;
-constexpr BitBoard E6 = SQ::E6;
-constexpr BitBoard F6 = SQ::F6;
-constexpr BitBoard H6 = SQ::H6;
-constexpr BitBoard G6 = SQ::G6;
-constexpr BitBoard A7 = SQ::A7;
-constexpr BitBoard B7 = SQ::B7;
-constexpr BitBoard C7 = SQ::C7;
-constexpr BitBoard D7 = SQ::D7;
-constexpr BitBoard E7 = SQ::E7;
-constexpr BitBoard F7 = SQ::F7;
-constexpr BitBoard G7 = SQ::G7;
-constexpr BitBoard H7 = SQ::H7;
-constexpr BitBoard A8 = SQ::A8;
-constexpr BitBoard B8 = SQ::B8;
-constexpr BitBoard C8 = SQ::C8;
-constexpr BitBoard D8 = SQ::D8;
-constexpr BitBoard E8 = SQ::E8;
-constexpr BitBoard F8 = SQ::F8;
-constexpr BitBoard G8 = SQ::G8;
-constexpr BitBoard H8 = SQ::H8;
+constexpr auto A1 = BitBoard(SQ::A1);
+constexpr auto B1 = BitBoard(SQ::B1);
+constexpr auto C1 = BitBoard(SQ::C1);
+constexpr auto D1 = BitBoard(SQ::D1);
+constexpr auto E1 = BitBoard(SQ::E1);
+constexpr auto F1 = BitBoard(SQ::F1);
+constexpr auto G1 = BitBoard(SQ::G1);
+constexpr auto H1 = BitBoard(SQ::H1);
+constexpr auto A2 = BitBoard(SQ::A2);
+constexpr auto B2 = BitBoard(SQ::B2);
+constexpr auto C2 = BitBoard(SQ::C2);
+constexpr auto D2 = BitBoard(SQ::D2);
+constexpr auto E2 = BitBoard(SQ::E2);
+constexpr auto F2 = BitBoard(SQ::F2);
+constexpr auto G2 = BitBoard(SQ::G2);
+constexpr auto H2 = BitBoard(SQ::H2);
+constexpr auto A3 = BitBoard(SQ::A3);
+constexpr auto B3 = BitBoard(SQ::B3);
+constexpr auto C3 = BitBoard(SQ::C3);
+constexpr auto D3 = BitBoard(SQ::D3);
+constexpr auto E3 = BitBoard(SQ::E3);
+constexpr auto F3 = BitBoard(SQ::F3);
+constexpr auto G3 = BitBoard(SQ::G3);
+constexpr auto H3 = BitBoard(SQ::H3);
+constexpr auto A4 = BitBoard(SQ::A4);
+constexpr auto B4 = BitBoard(SQ::B4);
+constexpr auto C4 = BitBoard(SQ::C4);
+constexpr auto D4 = BitBoard(SQ::D4);
+constexpr auto E4 = BitBoard(SQ::E4);
+constexpr auto F4 = BitBoard(SQ::F4);
+constexpr auto G4 = BitBoard(SQ::G4);
+constexpr auto H4 = BitBoard(SQ::H4);
+constexpr auto A5 = BitBoard(SQ::A5);
+constexpr auto B5 = BitBoard(SQ::B5);
+constexpr auto C5 = BitBoard(SQ::C5);
+constexpr auto D5 = BitBoard(SQ::D5);
+constexpr auto E5 = BitBoard(SQ::E5);
+constexpr auto F5 = BitBoard(SQ::F5);
+constexpr auto G5 = BitBoard(SQ::G5);
+constexpr auto H5 = BitBoard(SQ::H5);
+constexpr auto A6 = BitBoard(SQ::A6);
+constexpr auto B6 = BitBoard(SQ::B6);
+constexpr auto C6 = BitBoard(SQ::C6);
+constexpr auto D6 = BitBoard(SQ::D6);
+constexpr auto E6 = BitBoard(SQ::E6);
+constexpr auto F6 = BitBoard(SQ::F6);
+constexpr auto H6 = BitBoard(SQ::H6);
+constexpr auto G6 = BitBoard(SQ::G6);
+constexpr auto A7 = BitBoard(SQ::A7);
+constexpr auto B7 = BitBoard(SQ::B7);
+constexpr auto C7 = BitBoard(SQ::C7);
+constexpr auto D7 = BitBoard(SQ::D7);
+constexpr auto E7 = BitBoard(SQ::E7);
+constexpr auto F7 = BitBoard(SQ::F7);
+constexpr auto G7 = BitBoard(SQ::G7);
+constexpr auto H7 = BitBoard(SQ::H7);
+constexpr auto A8 = BitBoard(SQ::A8);
+constexpr auto B8 = BitBoard(SQ::B8);
+constexpr auto C8 = BitBoard(SQ::C8);
+constexpr auto D8 = BitBoard(SQ::D8);
+constexpr auto E8 = BitBoard(SQ::E8);
+constexpr auto F8 = BitBoard(SQ::F8);
+constexpr auto G8 = BitBoard(SQ::G8);
+constexpr auto H8 = BitBoard(SQ::H8);
+
+static_assert(A1.adjacent() == (A2 | B1 | B2));
+static_assert(H1.adjacent() == (H2 | G1 | G2));
+static_assert(A8.adjacent() == (A7 | B7 | B8));
+static_assert(H8.adjacent() == (G7 | G8 | H7));
+static_assert(D4.adjacent() == (C3 | C4 | C5 | E3 | E4 | E5 | D3 | D5));
+static_assert(A4.lsb() == SQ::A4);
+static_assert(D4.lsb() == SQ::D4);
+static_assert(H8.lsb() == SQ::H8);
+static_assert((C3 | C4 | C5 | E3 | E4 | E5 | D3 | D5).lsb() == SQ::C3);
 } // namespace BB
+
+static_assert(sizeof(BitBoard) == sizeof(uint64_t));

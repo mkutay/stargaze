@@ -79,3 +79,5 @@ class Move {
         return m_move == other.m_move;
     }
 };
+
+static_assert(sizeof(Move) == sizeof(uint16_t));
