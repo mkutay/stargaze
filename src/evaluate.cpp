@@ -161,8 +161,8 @@ const std::array<std::array<int, 64>, 6> eg_pesto_table = {
  * a8=0 before indexing the table. Black mirrors white so no flip needed.
  */
 constexpr auto
-calculate_table(const std::array<std::array<int, 64>, 6> pesto_table,
-                const std::array<int, 6> value) {
+calculate_table(const std::array<std::array<int, 64>, 6> &pesto_table,
+                const std::array<int, 6> &value) {
     std::array<std::array<std::array<int, 64>, 6>, 2> table{};
     for (Colour c : COLOURS) {
         for (Piece p : PIECES) {

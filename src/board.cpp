@@ -92,7 +92,9 @@ void Board::make_move(Move move) {
         make_move_bb<false>(from, to);
         // remove the captured pawn according to whose turn it is
         auto turn_underlying = std::to_underlying(turn);
-        auto addition = turn_underlying * (-16) + 8;
+
+        // if black, add 8; if white, remove 8
+        auto addition = turn_underlying * 16 - 8;
         BitBoard bb = to + addition;
 
         get_bb(Piece::PAWN) &= ~bb;
