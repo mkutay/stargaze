@@ -1,6 +1,7 @@
 #pragma once
 #include "square.hpp"
 #include <cassert>
+#include <concepts>
 #include <string>
 
 class BitBoard {
@@ -60,9 +61,18 @@ class BitBoard {
     constexpr BitBoard operator|(const BitBoard &o) const { return bb | o.bb; }
     constexpr BitBoard operator&(const BitBoard &o) const { return bb & o.bb; }
     constexpr BitBoard operator^(const BitBoard &o) const { return bb ^ o.bb; }
-    constexpr BitBoard operator|(const uint64_t &o) const { return bb | o; }
-    constexpr BitBoard operator&(const uint64_t &o) const { return bb & o; }
-    constexpr BitBoard operator^(const uint64_t &o) const { return bb ^ o; }
+    template <std::unsigned_integral T>
+    constexpr BitBoard operator|(T o) const {
+        return bb | o;
+    }
+    template <std::unsigned_integral T>
+    constexpr BitBoard operator&(T o) const {
+        return bb & o;
+    }
+    template <std::unsigned_integral T>
+    constexpr BitBoard operator^(T o) const {
+        return bb ^ o;
+    }
     constexpr BitBoard operator<<(const int s) const { return bb << s; }
     constexpr BitBoard operator>>(const int s) const { return bb >> s; }
     constexpr BitBoard operator~() const { return ~bb; }
@@ -100,15 +110,15 @@ class BitBoard {
         bb ^= o.bb;
         return *this;
     }
-    BitBoard &operator|=(const uint64_t &o) {
+    template <std::unsigned_integral T> BitBoard &operator|=(T o) {
         bb |= o;
         return *this;
     }
-    BitBoard &operator&=(const uint64_t &o) {
+    template <std::unsigned_integral T> BitBoard &operator&=(T o) {
         bb &= o;
         return *this;
     }
-    BitBoard &operator^=(const uint64_t &o) {
+    template <std::unsigned_integral T> BitBoard &operator^=(T o) {
         bb ^= o;
         return *this;
     }
@@ -122,9 +132,13 @@ class BitBoard {
     }
 
     constexpr bool operator!=(const BitBoard &o) const { return bb != o.bb; }
-    constexpr bool operator!=(const uint64_t &o) const { return bb != o; }
     constexpr bool operator==(const BitBoard &o) const { return bb == o.bb; }
-    constexpr bool operator==(const uint64_t &o) const { return bb == o; }
+    template <std::unsigned_integral T> constexpr bool operator!=(T o) const {
+        return bb != o;
+    }
+    template <std::unsigned_integral T> constexpr bool operator==(T o) const {
+        return bb == o;
+    }
 
     void set_bit(Square sq) { bb |= (1ull << sq); }
     void erase_bit(Square sq) { bb &= ~(1ull << sq); }
