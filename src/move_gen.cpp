@@ -64,7 +64,7 @@ std::vector<Move> Board::get_moves() {
     if (turn == Colour::WHITE) {
         pawn_push_one = pawns.north() & empty;
         pawn_push_two =
-            ((pawns & Mask::RANK_1).north() & empty).north() & empty;
+            ((pawns & Mask::RANK_2).north() & empty).north() & empty;
         pawn_capture_left = pawns.north().west() & other_pieces;
         pawn_capture_right = pawns.north().east() & other_pieces;
         pawn_push_one_promotion = pawn_push_one & Mask::RANK_8;
@@ -189,7 +189,7 @@ std::vector<Move> Board::get_moves() {
                                           Move::KING_SIDE_CASTLE);
         }
         if (can_castle[3] && occupied.empty(0x0eull << 56) &&
-            has_piece_at(56, Piece::ROOK, Colour::BLACK) &&
+            has_piece_at(BB::A8, Piece::ROOK, Colour::BLACK) &&
             !is_attacked(Colour::BLACK, SQ::E8) &&
             !is_attacked(Colour::BLACK, SQ::D8) &&
             !is_attacked(Colour::BLACK, SQ::C8)) {

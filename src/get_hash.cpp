@@ -41,7 +41,7 @@ const auto en_passant_file = create_en_passant_file();
 const auto castling = create_castling();
 const uint64_t black_move = my_rand(rng);
 
-int Board::get_hash() const {
+uint64_t Board::get_hash() const {
     uint64_t ret_hash = 0;
 
     for (Colour c : COLOURS) {

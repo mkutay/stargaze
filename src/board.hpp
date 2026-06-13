@@ -108,7 +108,7 @@ class Board {
     Colour get_turn() const;
     std::vector<Move> get_moves();
     std::string to_string() const;
-    int get_hash() const;
+    uint64_t get_hash() const;
     bool is_in_check(Colour by_colour);
 
     const std::vector<Move> get_move_history() const;
