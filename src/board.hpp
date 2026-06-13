@@ -93,6 +93,9 @@ class Board {
      * square.
      *
      * The Square to BitBoard implicit conversion can be utilised here.
+     *
+     * On any square set on the bitboard, the type and the colour match, still
+     * returns true.
      */
     bool has_piece_at(BitBoard bb, Piece type, Colour colour) const;
 

@@ -31,8 +31,8 @@ std::string to_string(const Bound bound) {
     return bound_to_string.at(bound);
 }
 std::string to_string(const Move move) {
-    return std::format("[{} {} {}]", (int) move.from(), (int) move.to(),
-                       (int) move.flags());
+    return std::format("[{} {} {}]", move.from().to_string(),
+                       move.to().to_string(), move.flags());
 }
 
 std::string to_string(const SearchInfo result) {

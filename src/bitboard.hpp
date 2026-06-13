@@ -1,5 +1,6 @@
 #pragma once
 #include "square.hpp"
+#include <array>
 #include <cassert>
 #include <concepts>
 #include <string>
@@ -49,6 +50,8 @@ class BitBoard {
     /**
      * Get the index of the least significant bit (LSB) and remove it from the
      * bitboard, returning the index as a Square.
+     *
+     * Note that if the bitboard is zero, this will throw.
      */
     constexpr Square get_square_pop() {
         const Square sq = get_lsb_square();
@@ -79,12 +82,8 @@ class BitBoard {
 
     constexpr BitBoard north() const { return bb << 8; }
     constexpr BitBoard south() const { return bb >> 8; }
-    constexpr BitBoard east() const {
-        return (bb & 0x7f7f7f7f7f7f7f7full) << 1;
-    }
-    constexpr BitBoard west() const {
-        return (bb & 0xfefefefefefefefeull) >> 1;
-    }
+    constexpr BitBoard east() const { return (bb & (~FILE_H)) << 1; }
+    constexpr BitBoard west() const { return (bb & (~FILE_A)) >> 1; }
 
     constexpr BitBoard &operator|=(const BitBoard &o) {
         bb |= o.bb;
@@ -128,9 +127,9 @@ class BitBoard {
         return bb == o;
     }
 
-    void set_bit(Square sq) { bb |= (1ull << sq); }
-    void erase_bit(Square sq) { bb &= ~(1ull << sq); }
-    void toggle_bit(Square sq) { bb ^= (1ull << sq); }
+    constexpr void set_bit(Square sq) { bb |= (1ull << sq); }
+    constexpr void erase_bit(Square sq) { bb &= ~(1ull << sq); }
+    constexpr void toggle_bit(Square sq) { bb ^= (1ull << sq); }
 
     /**
      * Checks if the bitboard has not set any of the bits in check.
@@ -160,6 +159,77 @@ class BitBoard {
         }
         return board_str;
     }
+
+    /**
+     * Moves the bitboard using the value in `move`.
+     *
+     * Also see Square::move(int8_t).
+     */
+    constexpr BitBoard move(int8_t move) const {
+        auto [rank_difference, file_difference] = Square::decompose(move);
+
+        BitBoard result = bb;
+
+        // Apply rank shift (north/south).
+        if (rank_difference > 0)
+            result <<= (rank_difference * 8);
+        else if (rank_difference < 0)
+            result >>= (-rank_difference * 8);
+
+        // Apply file shift (east/west), one step at a time to avoid
+        // wrap-around.
+        if (file_difference > 0) {
+            for (int8_t i = 0; i < file_difference; ++i)
+                result = result.east();
+        } else if (file_difference < 0) {
+            for (int8_t i = 0; i > file_difference; --i)
+                result = result.west();
+        }
+
+        return result;
+    }
+
+    /**
+     * Same as BitBoard::move, but without masking anything.
+     */
+    constexpr BitBoard direct_move(int8_t move) const {
+        BitBoard ret = bb;
+        if (move < 0)
+            ret >>= -move;
+        else
+            ret <<= move;
+        return ret;
+    }
+
+    constexpr static const uint64_t FILE_A = 0x0101010101010101ull;
+    constexpr static const uint64_t FILE_B = 0x0202020202020202ull;
+    constexpr static const uint64_t FILE_C = 0x0404040404040404ull;
+    constexpr static const uint64_t FILE_D = 0x0808080808080808ull;
+    constexpr static const uint64_t FILE_E = 0x1010101010101010ull;
+    constexpr static const uint64_t FILE_F = 0x2020202020202020ull;
+    constexpr static const uint64_t FILE_G = 0x4040404040404040ull;
+    constexpr static const uint64_t FILE_H = 0x8080808080808080ull;
+
+    constexpr static const uint64_t RANK_1 = 0x00000000000000ffull;
+    constexpr static const uint64_t RANK_2 = 0x000000000000ff00ull;
+    constexpr static const uint64_t RANK_3 = 0x0000000000ff0000ull;
+    constexpr static const uint64_t RANK_4 = 0x00000000ff000000ull;
+    constexpr static const uint64_t RANK_5 = 0x000000ff00000000ull;
+    constexpr static const uint64_t RANK_6 = 0x0000ff0000000000ull;
+    constexpr static const uint64_t RANK_7 = 0x00ff000000000000ull;
+    constexpr static const uint64_t RANK_8 = 0xff00000000000000ull;
+
+    constexpr static const std::array<uint64_t, 8> FILES = {
+        FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H};
+
+    constexpr static const std::array<uint64_t, 8> RANKS = {
+        RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
+
+    constexpr static const uint64_t LIGHT_SQUARES = 0x55aa55aa55aa55aaull;
+    constexpr static const uint64_t DARK_SQUARES = 0xaa55aa55aa55aa55ull;
+    constexpr static const uint64_t EMPTY = 0x0000000000000000ull;
+    constexpr static const uint64_t ALL_SQUARES = 0xffffffffffffffffull;
+    constexpr static const uint64_t EDGE_SQUARES = 0xff818181818181ffull;
 };
 
 namespace BB {

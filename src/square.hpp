@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <optional>
 #include <string>
+#include <utility>
 
 class Square {
   private:
@@ -96,13 +97,25 @@ class Square {
 
     /**
      * Create a new square with a difference of `move`.
-     *
+     */
+    constexpr std::optional<Square> move(int8_t move) const {
+        auto [rank_difference, file_difference] = decompose(move);
+
+        auto new_rank = rank_difference + rank();
+        auto new_file = file_difference + file();
+
+        if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8)
+            return Square(new_rank, new_file);
+        return std::nullopt;
+    }
+
+    /**
      * Decomposes the signed offset into rank and file components using the
      * symmetric remainder (file in [-4, 4]). This correctly handles offsets
      * such as +7 (NW: rank + 1, file - 1) and -7 (SE: rank - 1, file + 1),
      * which straddle a rank boundary.
      */
-    constexpr std::optional<Square> move(int8_t move) const {
+    constexpr static std::pair<int8_t, int8_t> decompose(int8_t move) {
         int8_t rank_difference = move / 8;
         int8_t file_difference = move % 8;
 
@@ -115,12 +128,7 @@ class Square {
             file_difference += 8;
         }
 
-        auto new_rank = rank_difference + rank();
-        auto new_file = file_difference + file();
-
-        if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8)
-            return Square(new_rank, new_file);
-        return std::nullopt;
+        return {rank_difference, file_difference};
     }
 
     constexpr uint8_t file() const { return sq % 8; }
