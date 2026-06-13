@@ -50,7 +50,7 @@ class BitBoard {
      * Get the index of the least significant bit (LSB) and remove it from the
      * bitboard, returning the index as a Square.
      */
-    Square get_square_pop() {
+    constexpr Square get_square_pop() {
         const Square sq = get_lsb_square();
         bb &= bb - 1;
         return sq;
@@ -86,35 +86,35 @@ class BitBoard {
         return (bb & 0xfefefefefefefefeull) >> 1;
     }
 
-    BitBoard &operator|=(const BitBoard &o) {
+    constexpr BitBoard &operator|=(const BitBoard &o) {
         bb |= o.bb;
         return *this;
     }
-    BitBoard &operator&=(const BitBoard &o) {
+    constexpr BitBoard &operator&=(const BitBoard &o) {
         bb &= o.bb;
         return *this;
     }
-    BitBoard &operator^=(const BitBoard &o) {
+    constexpr BitBoard &operator^=(const BitBoard &o) {
         bb ^= o.bb;
         return *this;
     }
-    template <std::unsigned_integral T> BitBoard &operator|=(T o) {
+    template <std::unsigned_integral T> constexpr BitBoard &operator|=(T o) {
         bb |= o;
         return *this;
     }
-    template <std::unsigned_integral T> BitBoard &operator&=(T o) {
+    template <std::unsigned_integral T> constexpr BitBoard &operator&=(T o) {
         bb &= o;
         return *this;
     }
-    template <std::unsigned_integral T> BitBoard &operator^=(T o) {
+    template <std::unsigned_integral T> constexpr BitBoard &operator^=(T o) {
         bb ^= o;
         return *this;
     }
-    BitBoard &operator<<=(const int s) {
+    constexpr BitBoard &operator<<=(const int s) {
         bb <<= s;
         return *this;
     }
-    BitBoard &operator>>=(const int s) {
+    constexpr BitBoard &operator>>=(const int s) {
         bb >>= s;
         return *this;
     }
@@ -152,7 +152,7 @@ class BitBoard {
                north().west() | south().east() | south().west();
     }
 
-    std::string to_string() {
+    constexpr std::string to_string() {
         BitBoard copy = bb;
         std::string board_str;
         while (copy) {

@@ -1,6 +1,8 @@
 #pragma once
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
+#include <optional>
 #include <string>
 
 class Square {
@@ -48,29 +50,81 @@ class Square {
     constexpr Square operator-(const int &o) const { return sq - o; }
     constexpr Square operator^(const int &o) const { return sq ^ o; }
 
-    Square &operator+=(const Square &o) {
+    constexpr Square &operator+=(const Square &o) {
         sq += o.sq;
         return *this;
     }
-    Square &operator-=(const Square &o) {
+    constexpr Square &operator-=(const Square &o) {
         sq -= o.sq;
         return *this;
     }
-    Square &operator++() {
+    constexpr Square &operator++() {
         sq++;
         return *this;
     }
-    Square operator++(int) {
+    constexpr Square operator++(int) {
         Square temp = *this;
         sq++;
         return temp;
     }
 
-    std::string to_string() {
+    constexpr std::string to_string() {
         char file = 'a' + (sq % 8);
         char rank = '1' + (sq / 8);
         return std::string() + file + rank;
     }
+
+    constexpr Square north() const {
+        assert(rank() < 7);
+        return sq + 8;
+    }
+
+    constexpr Square south() const {
+        assert(rank() >= 1);
+        return sq - 8;
+    }
+
+    constexpr Square west() const {
+        assert(file() >= 1);
+        return sq - 1;
+    }
+
+    constexpr Square east() const {
+        assert(file() < 7);
+        return sq + 1;
+    }
+
+    /**
+     * Create a new square with a difference of `move`.
+     *
+     * Decomposes the signed offset into rank and file components using the
+     * symmetric remainder (file in [-4, 4]). This correctly handles offsets
+     * such as +7 (NW: rank + 1, file - 1) and -7 (SE: rank - 1, file + 1),
+     * which straddle a rank boundary.
+     */
+    constexpr std::optional<Square> move(int8_t move) const {
+        int8_t rank_difference = move / 8;
+        int8_t file_difference = move % 8;
+
+        // Normalise file_difference into [-4, +4].
+        if (file_difference > 4) {
+            rank_difference += 1;
+            file_difference -= 8;
+        } else if (file_difference < -4) {
+            rank_difference -= 1;
+            file_difference += 8;
+        }
+
+        auto new_rank = rank_difference + rank();
+        auto new_file = file_difference + file();
+
+        if (new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8)
+            return Square(new_rank, new_file);
+        return std::nullopt;
+    }
+
+    constexpr uint8_t file() const { return sq % 8; }
+    constexpr uint8_t rank() const { return sq / 8; }
 };
 
 namespace SQ {
