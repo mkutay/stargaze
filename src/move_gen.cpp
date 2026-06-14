@@ -159,42 +159,23 @@ std::vector<Move> Board::get_moves() {
         undo_move();
     }
 
-    // castling
-    if (turn == Colour::WHITE &&
-        has_piece_at(BB::E1, Piece::KING, Colour::WHITE)) {
-        if (can_castle[0] && occupied.empty(0x60ull) &&
-            has_piece_at(BB::H1, Piece::ROOK, Colour::WHITE) &&
-            !is_attacked(Colour::WHITE, SQ::E1) &&
-            !is_attacked(Colour::WHITE, SQ::F1) &&
-            !is_attacked(Colour::WHITE, SQ::G1)) {
-            non_pseudo_moves.emplace_back(SQ::E1, SQ::G1,
-                                          Move::KING_SIDE_CASTLE);
+    {
+        auto turn_index = std::to_underlying(turn);
+        auto SQE1 = SQ::E1.flip(turn), SQF1 = SQ::F1.flip(turn),
+             SQG1 = SQ::G1.flip(turn), SQD1 = SQ::D1.flip(turn),
+             SQC1 = SQ::C1.flip(turn);
+        auto BBF1 = BB::F1.flip(turn), BBG1 = BB::G1.flip(turn),
+             BBD1 = BB::D1.flip(turn), BBC1 = BB::C1.flip(turn),
+             BBB1 = BB::B1.flip(turn);
+        if (can_castle[turn_index * 2] && occupied.empty(BBF1 | BBG1) &&
+            !is_attacked(turn, SQE1) && !is_attacked(turn, SQF1) &&
+            !is_attacked(turn, SQG1)) {
+            non_pseudo_moves.emplace_back(SQE1, SQG1, Move::KING_SIDE_CASTLE);
         }
-        if (can_castle[1] && occupied.empty(0x0eull) &&
-            has_piece_at(BB::A1, Piece::ROOK, Colour::WHITE) &&
-            !is_attacked(Colour::WHITE, SQ::E1) &&
-            !is_attacked(Colour::WHITE, SQ::D1) &&
-            !is_attacked(Colour::WHITE, SQ::C1)) {
-            non_pseudo_moves.emplace_back(SQ::E1, SQ::C1,
-                                          Move::QUEEN_SIDE_CASTLE);
-        }
-    } else if (turn == Colour::BLACK &&
-               has_piece_at(BB::E8, Piece::KING, Colour::BLACK)) {
-        if (can_castle[2] && occupied.empty(0x60ull << 56) &&
-            has_piece_at(BB::H8, Piece::ROOK, Colour::BLACK) &&
-            !is_attacked(Colour::BLACK, SQ::E8) &&
-            !is_attacked(Colour::BLACK, SQ::F8) &&
-            !is_attacked(Colour::BLACK, SQ::G8)) {
-            non_pseudo_moves.emplace_back(SQ::E8, SQ::G8,
-                                          Move::KING_SIDE_CASTLE);
-        }
-        if (can_castle[3] && occupied.empty(0x0eull << 56) &&
-            has_piece_at(BB::A8, Piece::ROOK, Colour::BLACK) &&
-            !is_attacked(Colour::BLACK, SQ::E8) &&
-            !is_attacked(Colour::BLACK, SQ::D8) &&
-            !is_attacked(Colour::BLACK, SQ::C8)) {
-            non_pseudo_moves.emplace_back(SQ::E8, SQ::C8,
-                                          Move::QUEEN_SIDE_CASTLE);
+        if (can_castle[turn_index * 2 + 1] &&
+            occupied.empty(BBB1 | BBC1 | BBD1) && !is_attacked(turn, SQE1) &&
+            !is_attacked(turn, SQD1) && !is_attacked(turn, SQC1)) {
+            non_pseudo_moves.emplace_back(SQE1, SQC1, Move::QUEEN_SIDE_CASTLE);
         }
     }
 
