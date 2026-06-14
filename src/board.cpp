@@ -263,11 +263,11 @@ std::string Board::to_string() const {
         if (i != 0 && i % 8 == 0)
             result.emplace_back(temp), temp = "";
 
-        auto sq = get_piece_colour(i);
-        if (sq) {
+        auto piece = get_piece(Square(i));
+        auto colour = get_colour(Square(i));
+        if (piece && colour) {
             temp +=
-                piece_string.at(sq->first).at(std::to_underlying(sq->second)) +
-                " ";
+                piece_string.at(*piece).at(std::to_underlying(*colour)) + " ";
         } else {
             temp += ". ";
         }
@@ -278,18 +278,6 @@ std::string Board::to_string() const {
     for (std::string i : result)
         temp += i + "\n";
     return temp;
-}
-
-std::optional<std::pair<Piece, Colour>>
-Board::get_piece_colour(Square sq) const {
-    auto piece = get_piece(sq);
-    auto colour = get_colour(sq);
-
-    if (piece && colour) {
-        return std::make_pair(*piece, *colour);
-    }
-
-    return std::nullopt;
 }
 
 std::optional<Piece> Board::get_piece(Square sq) const {

@@ -3,7 +3,6 @@
 #include <cassert>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "bitboard.hpp"
@@ -83,12 +82,6 @@ class Board {
      * otherwise the behaviour is undefined.
      */
     void clear_piece(Piece piece, Colour colour, Square sq);
-
-    /**
-     * Return the piece type and colour occupying sq, or nullopt if the
-     * square is empty.
-     */
-    std::optional<std::pair<Piece, Colour>> get_piece_colour(Square sq) const;
 
     /**
      * Return the piece type occupying sq, or nullopt if the square is
