@@ -33,6 +33,10 @@ release: $(TARGET)
 debug: CXXFLAGS += $(DEBUG_FLAGS)
 debug: $(TARGET)
 
+# Verification target (debug with consistency verification checks)
+verify: CXXFLAGS += $(DEBUG_FLAGS) -DVERIFY_CONSISTENCY
+verify: $(TARGET)
+
 # Link the executable
 $(TARGET): $(OBJECTS)
 	@mkdir -p $(BIN_DIR)
@@ -51,6 +55,10 @@ run: release
 run-debug: debug
 	./$(TARGET)
 
+# Run the verification executable
+run-verify: verify
+	./$(TARGET)
+
 # Clean build artifacts
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
@@ -59,4 +67,4 @@ clean:
 -include $(DEPS)
 
 # Phony targets
-.PHONY: all release debug run run-debug clean
+.PHONY: all release debug verify run run-debug run-verify clean

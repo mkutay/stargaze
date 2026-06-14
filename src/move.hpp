@@ -8,7 +8,8 @@
  *
  * `ssssttttttffffff`
  *
- * where s = special flags (bits 12-15), t = to square (bits 6-11), f = from square (bits 0-5).
+ * where s = special flags (bits 12-15), t = to square (bits 6-11), f = from
+ * square (bits 0-5).
  *
  * The from and to values represent the source and destination squares of the
  * move, encoded as indices of the board.
@@ -53,6 +54,9 @@ class Move {
     constexpr bool is_promotion() const { return (m_move >> 15) & 0x01; }
     constexpr bool is_capture() const { return (m_move >> 14) & 0x01; }
     constexpr bool is_en_passant() const { return flags() == EN_PASSANT; }
+    constexpr bool is_double_pawn_push() const {
+        return flags() == DOUBLE_PAWN_PUSH;
+    }
     constexpr bool is_castle() const {
         return flags() == KING_SIDE_CASTLE || flags() == QUEEN_SIDE_CASTLE;
     }
