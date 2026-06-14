@@ -105,7 +105,11 @@ class Board {
      */
     bool has_piece_at(BitBoard bb, Piece type, Colour colour) const;
 
-    bool is_attacked(Colour by_colour, BitBoard bb);
+    /**
+     * Return true if the square is attacked by any piece of the given colour.
+     * The square is represented as a bitboard with a single bit set.
+     */
+    bool is_attacked(Colour by_colour, BitBoard bb) const;
 
     /**
      * The hash of the current board state, used for transposition table looku.
@@ -150,7 +154,13 @@ class Board {
     std::vector<Move> get_moves();
     std::string to_string() const;
     uint64_t get_hash() const;
-    bool is_in_check(Colour by_colour);
+
+    /**
+     * Return true if the king of the given colour is in check. This is done by
+     * checking if the king's square is attacked by any of the opponent's
+     * pieces.
+     */
+    bool is_in_check(Colour by_colour) const;
 
     const std::vector<Move> get_move_history() const;
     const std::array<bool, 4> get_castling_rights() const;
