@@ -201,12 +201,12 @@ std::vector<Move> Board::get_moves() {
     return non_pseudo_moves;
 }
 
-bool Board::is_in_check(Colour by_colour) {
+bool Board::is_in_check(Colour by_colour) const {
     auto king_bb = get_bb(Piece::KING, by_colour);
     return is_attacked(by_colour, king_bb);
 }
 
-bool Board::is_attacked(Colour by_colour, BitBoard bb) {
+bool Board::is_attacked(Colour by_colour, BitBoard bb) const {
     assert(bb.count() == 1);
 
     Square sq = bb.get_lsb_square();
