@@ -201,6 +201,19 @@ class BitBoard {
         return ret;
     }
 
+    /**
+     * Flip the bitboard vertically, depending on the turn. For white, it
+     * returns the same bitboard; for black, it returns the bitboard mirrored
+     * across the horizontal axis.
+     */
+    constexpr BitBoard flip(Colour turn) const {
+        // Derive an all-ones mask when turn == BLACK (1) and all-zeros when
+        // turn == WHITE (0), exploiting two's-complement negation:
+        // `-(uint64_t) 1 == 0xFFFFFFFFFFFFFFFF`.
+        const uint64_t mask = -static_cast<uint64_t>(turn);
+        return (bb & ~mask) | (__builtin_bswap64(bb) & mask);
+    }
+
     constexpr static const uint64_t FILE_A = 0x0101010101010101ull;
     constexpr static const uint64_t FILE_B = 0x0202020202020202ull;
     constexpr static const uint64_t FILE_C = 0x0404040404040404ull;

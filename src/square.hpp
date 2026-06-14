@@ -1,4 +1,5 @@
 #pragma once
+#include "enums.hpp"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -133,6 +134,15 @@ class Square {
 
     constexpr uint8_t file() const { return sq % 8; }
     constexpr uint8_t rank() const { return sq / 8; }
+
+    /**
+     * Flips the square vertically based on the turn. For white, it returns the
+     * same square; for black, it returns the square mirrored across the
+     * horizontal axis.
+     */
+    constexpr Square flip(Colour turn) const {
+        return sq ^ (std::to_underlying(turn) * 56);
+    }
 };
 
 namespace SQ {
