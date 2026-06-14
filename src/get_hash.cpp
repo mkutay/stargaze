@@ -1,9 +1,7 @@
 #include "board.hpp"
 #include "zobrist_keys.hpp"
 
-uint64_t Board::get_hash() const {
-    return current_hash;
-}
+uint64_t Board::get_hash() const { return current_hash; }
 
 uint64_t Board::calculate_hash() const {
     uint64_t ret_hash = 0;
