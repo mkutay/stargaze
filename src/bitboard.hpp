@@ -1,6 +1,7 @@
 #pragma once
 #include "square.hpp"
 #include <array>
+#include <bit>
 #include <cassert>
 #include <concepts>
 #include <string>
@@ -27,13 +28,15 @@ class BitBoard {
     /**
      * Get the index of the most significant bit (MSB).
      */
-    constexpr Square get_msb_square() const { return 63 - __builtin_clzll(bb); }
+    constexpr Square get_msb_square() const {
+        return 63 - std::countl_zero(bb);
+    }
 
     /**
      * Get the index of the least significant bit (LSB). Same as using the De
      * Brunj algorithm to find the index of the LSB, but faster!
      */
-    constexpr Square get_lsb_square() const { return __builtin_ctzll(bb); }
+    constexpr Square get_lsb_square() const { return std::countr_zero(bb); }
 
     /**
      * Get the bitboard with only the least significant bit (LSB) set. This is
@@ -59,7 +62,7 @@ class BitBoard {
         return sq;
     }
 
-    constexpr int count() const { return __builtin_popcountll(bb); }
+    constexpr int count() const { return std::popcount(bb); }
 
     constexpr BitBoard operator|(const BitBoard &o) const { return bb | o.bb; }
     constexpr BitBoard operator&(const BitBoard &o) const { return bb & o.bb; }
@@ -211,7 +214,7 @@ class BitBoard {
         // turn == WHITE (0), exploiting two's-complement negation:
         // `-(uint64_t) 1 == 0xFFFFFFFFFFFFFFFF`.
         const uint64_t mask = -static_cast<uint64_t>(turn);
-        return (bb & ~mask) | (__builtin_bswap64(bb) & mask);
+        return (bb & ~mask) | (std::byteswap(bb) & mask);
     }
 
     constexpr static const uint64_t FILE_A = 0x0101010101010101ull;
