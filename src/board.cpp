@@ -2,8 +2,11 @@
 
 #include "bitboard.hpp"
 #include "enums.hpp"
+#include "eval_tables.hpp"
+#include "mask.hpp"
 #include "move.hpp"
 #include "square.hpp"
+#include "zobrist_keys.hpp"
 #include <algorithm>
 #include <array>
 #include <sys/types.h>
@@ -30,7 +33,10 @@ Board::Board()
               BB::H8 | BB::A7 | BB::B7 | BB::C7 | BB::D7 | BB::E7 | BB::F7 |
               BB::G7 | BB::H7, // BLACK
       },
-      can_castle{true, true, true, true}, turn{Colour::WHITE} {}
+      can_castle{true, true, true, true}, turn{Colour::WHITE} {
+    initialise_eval(mg_score, eg_score, game_phase);
+    current_hash = calculate_hash();
+}
 
 /**
  * Make a move on the board, updating the board state accordingly. This includes
@@ -43,27 +49,28 @@ Board::Board()
  * castling through check or en passant when not possible.
  */
 void Board::make_move(Move move) {
-    board_history.emplace_back(piece_bbs, colour_bbs);
-    castle_history.emplace_back(can_castle);
-
     auto from = move.from();
     auto to = move.to();
     auto flags = move.flags();
 
-    /**
-     * King move -- clear both castling rights for the side that moved, since
-     * the king can never castle again after it has moved.
-     */
-    if ((get_bb(Piece::KING) & BitBoard(from)) ||
-        (get_bb(Piece::KING) & BitBoard(to))) {
-        int turn_index = std::to_underlying(turn);
+    Piece moving_piece = *get_piece(from);
+    std::optional<Piece> captured_piece = std::nullopt;
+    if (move.is_capture()) {
+        captured_piece = move.is_en_passant() ? Piece::PAWN : *get_piece(to);
+    }
+    history.emplace_back(moving_piece, captured_piece, can_castle);
+
+    if (!moves.empty() && moves.back().is_double_pawn_push()) {
+        current_hash ^= Zobrist::en_passant_file[moves.back().to() & 7];
+    }
+
+    std::array<bool, 4> old_castle = can_castle;
+
+    if (moving_piece == Piece::KING) {
+        auto turn_index = std::to_underlying(turn);
         can_castle[turn_index * 2] = can_castle[turn_index * 2 + 1] = false;
     }
 
-    /**
-     * Rook move or capture of the rook -- clear castling rights for the side
-     * that had the rook on the original square.
-     */
     if (from == SQ::A1 || to == SQ::A1)
         can_castle[1] = false; // white queen-side
     if (from == SQ::H1 || to == SQ::H1)
@@ -73,90 +80,171 @@ void Board::make_move(Move move) {
     if (from == SQ::H8 || to == SQ::H8)
         can_castle[2] = false; // black king-side
 
+    for (size_t i = 0; i < 4; ++i) {
+        if (old_castle[i] != can_castle[i]) {
+            current_hash ^= Zobrist::castling[i];
+        }
+    }
+
+    Colour opponent = !turn;
     switch (flags) {
     case Move::QUIET:
     case Move::DOUBLE_PAWN_PUSH:
-        make_move_bb<false>(from, to);
+        move_piece(moving_piece, turn, from, to);
         break;
     case Move::KING_SIDE_CASTLE:
-        make_move_bb<false>(from, to);
-        make_move_bb<false>(to + 1, to - 1);
+        move_piece(Piece::KING, turn, from, to);
+        move_piece(Piece::ROOK, turn, to + 1, to - 1);
         break;
     case Move::QUEEN_SIDE_CASTLE:
-        make_move_bb<false>(from, to);
-        make_move_bb<false>(to - 2, to + 1);
+        move_piece(Piece::KING, turn, from, to);
+        move_piece(Piece::ROOK, turn, to - 2, to + 1);
         break;
     case Move::CAPTURE:
-        make_move_bb<true>(from, to);
+        clear_piece(*captured_piece, opponent, to);
+        move_piece(moving_piece, turn, from, to);
         break;
     case Move::EN_PASSANT: {
-        make_move_bb<false>(from, to);
-        // remove the captured pawn according to whose turn it is
         auto turn_underlying = std::to_underlying(turn);
-
-        // if black, add 8; if white, remove 8
         auto addition = turn_underlying * 16 - 8;
-        BitBoard bb = to + addition;
-
-        get_bb(Piece::PAWN) &= ~bb;
-        get_bb(!turn) &= ~bb;
+        Square captured_sq = to + addition;
+        clear_piece(Piece::PAWN, opponent, captured_sq);
+        move_piece(Piece::PAWN, turn, from, to);
         break;
     }
     case Move::KNIGHT_PROMOTION_CAPTURE:
     case Move::BISHOP_PROMOTION_CAPTURE:
     case Move::ROOK_PROMOTION_CAPTURE:
-    case Move::QUEEN_PROMOTION_CAPTURE: {
-        /**
-         * With a capture, we need to clear the `to` square for the piece that
-         * is being captured.
-         */
-
-        auto piece = get_piece(to);
-        BitBoard bb = to;
-
-        get_bb(*piece) &= ~bb;
-        get_bb(!turn) &= ~bb;
-
+    case Move::QUEEN_PROMOTION_CAPTURE:
+        clear_piece(*captured_piece, opponent, to);
         [[fallthrough]];
-    }
     case Move::KNIGHT_PROMOTION:
     case Move::BISHOP_PROMOTION:
     case Move::ROOK_PROMOTION:
-    case Move::QUEEN_PROMOTION: {
-        /**
-         * For all promotions, we need to clear the `from` square for the
-         * pawn that is moving, and set the `to` square for the piece that
-         * is being promoted to.
-         *
-         * Captures are handled with the fallthrough from above.
-         */
-
-        BitBoard from_bb = from;
-        BitBoard to_bb = to;
-        Piece promoted_piece = move.promotion_piece();
-
-        get_bb(Piece::PAWN) &= ~from_bb;
-        get_bb(turn) &= ~from_bb;
-
-        get_bb(promoted_piece) |= to_bb;
-        get_bb(turn) |= to_bb;
+    case Move::QUEEN_PROMOTION:
+        clear_piece(Piece::PAWN, turn, from);
+        add_piece(move.promotion_piece(), turn, to);
         break;
-    }
     }
 
     moves.emplace_back(move);
-    turn = !turn;
+    current_hash ^= Zobrist::black_move;
+    turn = opponent;
+
+    if (move.is_double_pawn_push()) {
+        current_hash ^= Zobrist::en_passant_file[to & 7];
+    }
+
+#ifdef VERIFY_CONSISTENCY
+    check_state_consistency();
+#endif
 }
 
 void Board::undo_move() {
-    auto snap = board_history.back();
-    piece_bbs = snap.piece_bbs;
-    colour_bbs = snap.colour_bbs;
-    board_history.pop_back();
+    auto undo_info = history.back();
+    history.pop_back();
+
+    Move move = moves.back();
     moves.pop_back();
-    can_castle = castle_history.back();
-    castle_history.pop_back();
+
+    auto from = move.from();
+    auto to = move.to();
+    auto flags = move.flags();
+
     turn = !turn;
+    current_hash ^= Zobrist::black_move;
+
+    if (move.is_double_pawn_push()) {
+        current_hash ^= Zobrist::en_passant_file[to & 7];
+    }
+
+    if (!moves.empty() && moves.back().is_double_pawn_push()) {
+        current_hash ^= Zobrist::en_passant_file[moves.back().to() & 7];
+    }
+
+    for (size_t i = 0; i < 4; ++i) {
+        if (can_castle[i] != undo_info.can_castle[i]) {
+            current_hash ^= Zobrist::castling[i];
+        }
+    }
+    can_castle = undo_info.can_castle;
+
+    Piece moving_piece = undo_info.moving_piece;
+    Colour opponent = !turn;
+
+    switch (flags) {
+    case Move::QUIET:
+    case Move::DOUBLE_PAWN_PUSH:
+        move_piece(moving_piece, turn, to, from);
+        break;
+    case Move::KING_SIDE_CASTLE:
+        move_piece(Piece::KING, turn, to, from);
+        move_piece(Piece::ROOK, turn, to - 1, to + 1);
+        break;
+    case Move::QUEEN_SIDE_CASTLE:
+        move_piece(Piece::KING, turn, to, from);
+        move_piece(Piece::ROOK, turn, to + 1, to - 2);
+        break;
+    case Move::CAPTURE:
+        move_piece(moving_piece, turn, to, from);
+        add_piece(*undo_info.captured_piece, opponent, to);
+        break;
+    case Move::EN_PASSANT: {
+        move_piece(Piece::PAWN, turn, to, from);
+        auto turn_underlying = std::to_underlying(turn);
+        auto addition = turn_underlying * 16 - 8;
+        Square captured_sq = to + addition;
+        add_piece(Piece::PAWN, opponent, captured_sq);
+        break;
+    }
+    case Move::KNIGHT_PROMOTION_CAPTURE:
+    case Move::BISHOP_PROMOTION_CAPTURE:
+    case Move::ROOK_PROMOTION_CAPTURE:
+    case Move::QUEEN_PROMOTION_CAPTURE:
+        clear_piece(move.promotion_piece(), turn, to);
+        add_piece(*undo_info.captured_piece, opponent, to);
+        add_piece(Piece::PAWN, turn, from);
+        break;
+    case Move::KNIGHT_PROMOTION:
+    case Move::BISHOP_PROMOTION:
+    case Move::ROOK_PROMOTION:
+    case Move::QUEEN_PROMOTION:
+        clear_piece(move.promotion_piece(), turn, to);
+        add_piece(Piece::PAWN, turn, from);
+        break;
+    }
+
+#ifdef VERIFY_CONSISTENCY
+    check_state_consistency();
+#endif
+}
+
+void Board::check_state_consistency() const {
+    uint64_t calculated = calculate_hash();
+    assert(current_hash == calculated);
+
+    std::array<int, 2> _mg_score, _eg_score;
+    int _game_phase;
+    initialise_eval(_mg_score, _eg_score, _game_phase);
+
+    assert(mg_score == _mg_score);
+    assert(eg_score == _eg_score);
+    assert(game_phase == _game_phase);
+
+    // Piece bitboards must be pairwise disjoint.
+    for (int i = 0; i < 6; i++)
+        for (int j = i + 1; j < 6; j++)
+            assert((piece_bbs[i] & piece_bbs[j]) == Mask::EMPTY);
+
+    // Colour bitboards must be disjoint.
+    assert((colour_bbs[0] & colour_bbs[1]) == Mask::EMPTY);
+
+    // Union of piece bitboards must equal union of colour bitboards.
+    BitBoard all_pieces = Mask::EMPTY;
+    for (auto bb : piece_bbs)
+        all_pieces |= bb;
+    BitBoard all_colours = colour_bbs[0] | colour_bbs[1];
+    assert(all_pieces == all_colours);
 }
 
 Colour Board::get_turn() const { return turn; }
@@ -228,29 +316,51 @@ bool Board::has_piece_at(BitBoard bb, Piece type, Colour colour) const {
     return get_bb(type) & get_bb(colour) & bb;
 }
 
-template <bool is_capture> void Board::make_move_bb(Square from, Square to) {
-    auto from_pc = get_piece_colour(from);
+void Board::move_piece(Piece piece, Colour colour, Square from, Square to) {
+    auto ci = std::to_underlying(colour);
+    auto pi = std::to_underlying(piece);
 
-    // Snapshot the captured piece BEFORE modifying any bitboard. If we read
-    // it after the XOR below, the moving piece has already landed on `to`,
-    // so get_piece_colour would return the mover (or nullopt for same-type
-    // captures where the XOR clears the bit), corrupting the board state.
-    std::optional<std::pair<Piece, Colour>> to_pc;
-    if constexpr (is_capture) {
-        to_pc = get_piece_colour(to);
-    }
+    current_hash ^= Zobrist::hash[ci][pi][from];
+    current_hash ^= Zobrist::hash[ci][pi][to];
 
-    BitBoard from_bb = from;
-    BitBoard to_bb = to;
-    auto bb = from_bb | to_bb;
+    mg_score[ci] -= Eval::mg_table[ci][pi][from];
+    eg_score[ci] -= Eval::eg_table[ci][pi][from];
+    mg_score[ci] += Eval::mg_table[ci][pi][to];
+    eg_score[ci] += Eval::eg_table[ci][pi][to];
 
-    get_bb(from_pc->first) ^= bb;
-    get_bb(from_pc->second) ^= bb;
+    BitBoard mask = BitBoard(from) | BitBoard(to);
+    get_bb(piece) ^= mask;
+    get_bb(colour) ^= mask;
+}
 
-    if constexpr (is_capture) {
-        get_bb(to_pc->first) ^= to_bb;
-        get_bb(to_pc->second) ^= to_bb;
-    }
+void Board::add_piece(Piece piece, Colour colour, Square sq) {
+    auto ci = std::to_underlying(colour);
+    auto pi = std::to_underlying(piece);
+
+    current_hash ^= Zobrist::hash[ci][pi][sq];
+
+    mg_score[ci] += Eval::mg_table[ci][pi][sq];
+    eg_score[ci] += Eval::eg_table[ci][pi][sq];
+    game_phase += Eval::gamephase_inc[pi];
+
+    BitBoard mask = BitBoard(sq);
+    get_bb(piece) |= mask;
+    get_bb(colour) |= mask;
+}
+
+void Board::clear_piece(Piece piece, Colour colour, Square sq) {
+    auto ci = std::to_underlying(colour);
+    auto pi = std::to_underlying(piece);
+
+    current_hash ^= Zobrist::hash[ci][pi][sq];
+
+    mg_score[ci] -= Eval::mg_table[ci][pi][sq];
+    eg_score[ci] -= Eval::eg_table[ci][pi][sq];
+    game_phase -= Eval::gamephase_inc[pi];
+
+    BitBoard mask = ~BitBoard(sq);
+    get_bb(piece) &= mask;
+    get_bb(colour) &= mask;
 }
 
 const std::vector<Move> Board::get_move_history() const { return moves; }

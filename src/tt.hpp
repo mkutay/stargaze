@@ -12,7 +12,7 @@ struct PVLine {
     PVLine() {}
 };
 
-enum class Bound {
+enum class Bound : uint8_t {
     NONE = 0,
     EXACT = 1, // PV-node (exact score)
     LOWER = 2, // all-node (failed high, beta cutoff)
@@ -20,16 +20,15 @@ enum class Bound {
 };
 
 struct TTEntry {
-    int16_t score; // score (evaluation)
-    int8_t depth;  // search depth
-    Bound bound;   // bound type (BOUND_EXACT, BOUND_LOWER, BOUND_UPPER)
-    uint8_t age;   // age counter for replacement strategy
+    int score;    // score (evaluation)
+    int8_t depth; // search depth
+    uint8_t age;  // age counter for replacement strategy
+    Bound bound;  // bound type (BOUND_EXACT, BOUND_LOWER, BOUND_UPPER)
     PVLine line;
 
-    TTEntry() : score(0), depth(0), bound(Bound::NONE), age(0), line() {}
-    TTEntry(PVLine line_, int16_t score_, int8_t depth_, Bound bound_,
-            uint8_t age_)
-        : score(score_), depth(depth_), bound(bound_), age(age_), line(line_) {}
+    TTEntry() : score(0), depth(0), age(0), bound(Bound::NONE), line() {}
+    TTEntry(PVLine line_, int score_, int8_t depth_, Bound bound_, uint8_t age_)
+        : score(score_), depth(depth_), age(age_), bound(bound_), line(line_) {}
 };
 
 class TT {
@@ -41,6 +40,7 @@ class TT {
     void clear();
     void new_search();
     std::optional<TTEntry *> probe(uint64_t hash);
-    void store(uint64_t hash, PVLine line, int score, int depth, Bound bound);
+    void store(uint64_t hash, PVLine line, int score, int8_t depth,
+               Bound bound);
     size_t get_num_entries() const;
 };

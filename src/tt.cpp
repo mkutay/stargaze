@@ -8,21 +8,24 @@ void TT::clear() {
 void TT::new_search() { current_age++; }
 
 std::optional<TTEntry *> TT::probe(uint64_t hash) {
-    if (table.count(hash) == 0) {
+    auto it = table.find(hash);
+    if (it == table.end()) {
         return std::nullopt;
     }
 
-    return &table[hash];
+    return &it->second;
 }
 
-void TT::store(uint64_t hash, PVLine line, int score, int depth, Bound bound) {
-    if (table.count(hash) == 0) {
-        table[hash] = TTEntry(line, static_cast<int16_t>(score),
-                              static_cast<int8_t>(depth), bound, current_age);
+void TT::store(uint64_t hash, PVLine line, int score, int8_t depth,
+               Bound bound) {
+    auto [it, inserted] =
+        table.try_emplace(hash, line, score, depth, bound, current_age);
+
+    if (inserted) {
         return;
     }
 
-    TTEntry *entry = &table[hash];
+    TTEntry *entry = &it->second;
 
     bool should_replace = entry->bound == Bound::NONE ||
                           depth >= entry->depth ||
@@ -30,8 +33,8 @@ void TT::store(uint64_t hash, PVLine line, int score, int depth, Bound bound) {
 
     if (should_replace) {
         entry->line = line;
-        entry->score = static_cast<int16_t>(score);
-        entry->depth = static_cast<int8_t>(depth);
+        entry->score = score;
+        entry->depth = depth;
         entry->bound = bound;
         entry->age = current_age;
     }

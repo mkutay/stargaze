@@ -32,13 +32,13 @@ class Board {
      */
     Colour turn;
 
-    struct BoardSnapshot {
-        std::array<BitBoard, 6> piece_bbs;
-        std::array<BitBoard, 2> colour_bbs;
+    struct UndoInfo {
+        Piece moving_piece;
+        std::optional<Piece> captured_piece;
+        std::array<bool, 4> can_castle;
     };
 
-    std::vector<BoardSnapshot> board_history;
-    std::vector<std::array<bool, 4>> castle_history;
+    std::vector<UndoInfo> history;
 
     /**
      * Get the bitboard for a given piece type, as an lvalue reference so it
@@ -61,15 +61,28 @@ class Board {
     BitBoard get_bb(Piece type, Colour colour) const;
 
     /**
-     * Make a move from the from square to the to square, updating the bitboards
-     * accordingly. If is_capture is true, also clear the piece on the to
-     * square.
+     * Move a piece of the given type and colour from one square to another,
+     * updating the bitboards, hash, and evaluation scores accordingly.
      *
-     * Note: There must be a piece on the from square, and if is_capture is
-     * true, there must be a piece on the to square, otherwise the behavior is
-     * undefined.
+     * Note the piece type and colour must match the piece on the from square,
+     * otherwise the behaviour is undefined.
      */
-    template <bool is_capture> void make_move_bb(Square from, Square to);
+    void move_piece(Piece piece, Colour colour, Square from, Square to);
+
+    /**
+     * Add a piece of the given type and colour to the given square, updating
+     * the bitboards, hash, and evaluation scores accordingly.
+     */
+    void add_piece(Piece piece, Colour colour, Square sq);
+
+    /**
+     * Remove a piece of the given type and colour from the given square,
+     * updating the bitboards, hash, and evaluation scores accordingly.
+     *
+     * Note the piece type and colour must match the piece on the square,
+     * otherwise the behaviour is undefined.
+     */
+    void clear_piece(Piece piece, Colour colour, Square sq);
 
     /**
      * Return the piece type and colour occupying sq, or nullopt if the
@@ -100,6 +113,41 @@ class Board {
     bool has_piece_at(BitBoard bb, Piece type, Colour colour) const;
 
     bool is_attacked(Colour by_colour, BitBoard bb);
+
+    /**
+     * The hash of the current board state, used for transposition table looku.
+     * Updated incrementally on each move.
+     */
+    uint64_t current_hash;
+
+    /**
+     * The evaluation score of the board in the middle game and end game, for
+     * each colour. The final evaluation is a linear interpolation of the two
+     * scores based on the game phase.
+     */
+    std::array<int, 2> mg_score;
+    std::array<int, 2> eg_score;
+    int game_phase;
+
+    /**
+     * Calculate the Zobrist hash of the current board state from scratch.
+     */
+    uint64_t calculate_hash() const;
+
+    /**
+     * Initialise the evaluation scores and game phase based on the current
+     * board state.
+     */
+    void initialise_eval(std::array<int, 2> &mg_score,
+                         std::array<int, 2> &eg_score, int &game_phase) const;
+
+    /**
+     * Check that the board state is consistent, i.e., that the current hash
+     * matches the actual board state, evaluation data is correct, and that the
+     * bitboards are consistent with each other. This is useful for debugging
+     * and testing.
+     */
+    void check_state_consistency() const;
 
   public:
     Board();
