@@ -6,9 +6,9 @@
 /**
  * Move encoding (16 bits):
  *
- * `ffffffttttttssss`
+ * `ssssttttttffffff`
  *
- * where f = from square (0-63), t = to square (0-63), s = special flags.
+ * where s = special flags (bits 12-15), t = to square (bits 6-11), f = from square (bits 0-5).
  *
  * The from and to values represent the source and destination squares of the
  * move, encoded as indices of the board.
