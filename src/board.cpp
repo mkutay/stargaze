@@ -190,7 +190,7 @@ void Board::make_move(Move move) { apply_move<false>(move); }
 void Board::undo_move() { apply_move<true>(moves.back()); }
 
 void Board::check_state_consistency() const {
-    uint64_t calculated = calculate_hash();
+    [[maybe_unused]] uint64_t calculated = calculate_hash();
     assert(current_hash == calculated);
 
     std::array<int, 2> _mg_score, _eg_score;
@@ -213,7 +213,7 @@ void Board::check_state_consistency() const {
     BitBoard all_pieces = Mask::EMPTY;
     for (auto bb : piece_bbs)
         all_pieces |= bb;
-    BitBoard all_colours = colour_bbs[0] | colour_bbs[1];
+    [[maybe_unused]] BitBoard all_colours = colour_bbs[0] | colour_bbs[1];
     assert(all_pieces == all_colours);
 }
 
