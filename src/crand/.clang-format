@@ -1,0 +1,4 @@
+# Third-party vendored library (jan-moeller/constexpr-random).
+# Do not reformat: keep it identical to upstream.
+DisableFormat: true
+SortIncludes: false

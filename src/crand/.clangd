@@ -1,0 +1,6 @@
+# Third-party vendored library (jan-moeller/constexpr-random).
+# Suppress all clangd diagnostics so it isn't linted like first-party code.
+Diagnostics:
+    Suppress: "*"
+    UnusedIncludes: None
+    MissingIncludes: None

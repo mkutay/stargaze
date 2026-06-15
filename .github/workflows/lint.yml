@@ -20,6 +20,7 @@ jobs:
                   sudo apt-get install -y clang-format
 
             - name: clang-format
+              # Only first-party sources; src/crand is vendored third-party code.
               run: clang-format --dry-run --Werror src/*.cpp src/*.hpp
 
     build:
