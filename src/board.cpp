@@ -6,7 +6,7 @@
 #include "mask.hpp"
 #include "move.hpp"
 #include "square.hpp"
-#include "zobrist_keys.hpp"
+#include "zobrist.hpp"
 #include <algorithm>
 #include <array>
 #include <sys/types.h>
