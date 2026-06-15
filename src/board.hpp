@@ -106,13 +106,13 @@ class Board {
     bool has_piece_at(BitBoard bb, Piece type, Colour colour) const;
 
     /**
-     * Return true if the square is attacked by any piece of the given colour.
-     * The square is represented as a bitboard with a single bit set.
+     * Return true if the square (a single-bit bitboard) is attacked by the
+     * opponent of `by_colour`.
      */
     bool is_attacked(Colour by_colour, BitBoard bb) const;
 
     /**
-     * The hash of the current board state, used for transposition table looku.
+     * The hash of the current board state, used for transposition table lookup.
      * Updated incrementally on each move.
      */
     uint64_t current_hash;
