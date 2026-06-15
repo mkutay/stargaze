@@ -94,10 +94,9 @@ std::vector<Move> Board::get_moves() {
             auto sq = pawn_push_one.get_square_pop();
             auto from = sq - 8 * mul;
             if (pawn_push_one_promotion.has_square(sq)) {
-                pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION);
-                pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION);
-                pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION);
-                pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION);
+                for (auto promotion_piece : Move::PROMOTION_PIECES) {
+                    pseudo.emplace_back(from, sq, promotion_piece);
+                }
             } else {
                 pseudo.emplace_back(from, sq, Move::QUIET);
             }
@@ -112,10 +111,9 @@ std::vector<Move> Board::get_moves() {
             auto sq = pawn_capture_left.get_square_pop();
             auto from = sq - 7 * mul;
             if (pawn_capture_left_promotion.has_square(sq)) {
-                pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION_CAPTURE);
-                pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION_CAPTURE);
-                pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION_CAPTURE);
-                pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION_CAPTURE);
+                for (auto promotion_piece : Move::PROMOTION_CAPTURE_PIECES) {
+                    pseudo.emplace_back(from, sq, promotion_piece);
+                }
             } else {
                 pseudo.emplace_back(from, sq, Move::CAPTURE);
             }
@@ -125,10 +123,9 @@ std::vector<Move> Board::get_moves() {
             auto sq = pawn_capture_right.get_square_pop();
             auto from = sq - 9 * mul;
             if (pawn_capture_right_promotion.has_square(sq)) {
-                pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION_CAPTURE);
-                pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION_CAPTURE);
-                pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION_CAPTURE);
-                pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION_CAPTURE);
+                for (auto promotion_piece : Move::PROMOTION_CAPTURE_PIECES) {
+                    pseudo.emplace_back(from, sq, promotion_piece);
+                }
             } else {
                 pseudo.emplace_back(from, sq, Move::CAPTURE);
             }

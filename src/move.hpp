@@ -40,6 +40,12 @@ class Move {
     constexpr const static uint8_t ROOK_PROMOTION_CAPTURE = 0b1110;
     constexpr const static uint8_t QUEEN_PROMOTION_CAPTURE = 0b1111;
 
+    constexpr const static std::array PROMOTION_PIECES = {
+        KNIGHT_PROMOTION, BISHOP_PROMOTION, ROOK_PROMOTION, QUEEN_PROMOTION};
+    constexpr const static std::array PROMOTION_CAPTURE_PIECES = {
+        KNIGHT_PROMOTION_CAPTURE, BISHOP_PROMOTION_CAPTURE,
+        ROOK_PROMOTION_CAPTURE, QUEEN_PROMOTION_CAPTURE};
+
     constexpr static uint8_t create_flags(bool is_capture) {
         return is_capture << 2;
     }
