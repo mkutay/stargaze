@@ -146,13 +146,39 @@ class Board {
      */
     void check_state_consistency() const;
 
+    /**
+     * Apply a move to the board, updating the board state accordingly. This
+     * includes updating the pieces, castling rights, and move history.
+     *
+     * Note that we assume the move is valid and legal. That is, we don't check
+     * if the move is actually possible, such as moving a piece that isn't
+     * there, or moving to a square occupied by your own piece, or moving into
+     * check. We also don't check if the move is legal in terms of the rules of
+     * chess, such as castling through check or en passant when not possible.
+     */
+    template <bool Undo> void apply_move(Move move);
+
   public:
     Board();
+
+    /**
+     * Make a move on the board, updating the board state accordingly.
+     */
     void make_move(Move move);
+
+    /**
+     * Undo the last move made on the board, restoring the previous board state.
+     */
     void undo_move();
-    Colour get_turn() const;
+
+    /**
+     * Return a vector of all legal moves for the current player.
+     */
     std::vector<Move> get_moves();
-    std::string to_string() const;
+
+    /**
+     * Return the Zobrist hash of the current board state.
+     */
     uint64_t get_hash() const;
 
     /**
@@ -162,7 +188,14 @@ class Board {
      */
     bool is_in_check(Colour by_colour) const;
 
+    /**
+     * Return the evaluation score of the board from the perspective of the
+     * current player.
+     */
+    int evaluate() const;
+
+    Colour get_turn() const;
     const std::vector<Move> get_move_history() const;
     const std::array<bool, 4> get_castling_rights() const;
-    int evaluate() const;
+    std::string to_string() const;
 };
