@@ -20,27 +20,35 @@ enum class Bound : uint8_t {
 };
 
 struct TTEntry {
-    int score;    // score (evaluation)
-    int8_t depth; // search depth
-    uint8_t age;  // age counter for replacement strategy
-    Bound bound;  // bound type (BOUND_EXACT, BOUND_LOWER, BOUND_UPPER)
+    Bound bound;    // bound type (BOUND_EXACT, BOUND_LOWER, BOUND_UPPER)
+    uint16_t depth; // search depth
+    uint16_t age;   // age counter for replacement strategy
+    int score;      // score (evaluation)
     PVLine line;
 
-    TTEntry() : score(0), depth(0), age(0), bound(Bound::NONE), line() {}
-    TTEntry(PVLine line_, int score_, int8_t depth_, Bound bound_, uint8_t age_)
-        : score(score_), depth(depth_), age(age_), bound(bound_), line(line_) {}
+    TTEntry() : bound(Bound::NONE), depth(0), age(0), score(0), line() {}
+    TTEntry(PVLine line_, int score_, uint16_t depth_, Bound bound_,
+            uint16_t age_)
+        : bound(bound_), depth(depth_), age(age_), score(score_), line(line_) {}
 };
 
 class TT {
     std::unordered_map<uint64_t, TTEntry> table;
-    uint32_t current_age;
+
+    /**
+     * Age counter for the transposition table. This is incremented at the start
+     * of each search, and is used to determine whether an entry is "old" and
+     * should be replaced. Maximum it could get is the number of half-moves in a
+     * game.
+     */
+    uint16_t current_age;
 
   public:
     TT() : current_age(0) {}
     void clear();
     void new_search();
     std::optional<TTEntry *> probe(uint64_t hash);
-    void store(uint64_t hash, PVLine line, int score, int8_t depth,
+    void store(uint64_t hash, PVLine line, int score, uint16_t depth,
                Bound bound);
     size_t get_num_entries() const;
 };

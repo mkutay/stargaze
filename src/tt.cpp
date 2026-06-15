@@ -16,7 +16,7 @@ std::optional<TTEntry *> TT::probe(uint64_t hash) {
     return &it->second;
 }
 
-void TT::store(uint64_t hash, PVLine line, int score, int8_t depth,
+void TT::store(uint64_t hash, PVLine line, int score, uint16_t depth,
                Bound bound) {
     auto [it, inserted] =
         table.try_emplace(hash, line, score, depth, bound, current_age);
