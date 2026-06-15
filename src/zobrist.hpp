@@ -15,16 +15,15 @@
 namespace Zobrist {
 
 class Keys {
-  private:
-    crand::xoshiro256_starstar rng;
-
   public:
     std::array<std::array<std::array<uint64_t, 64>, 6>, 2> hash;
     std::array<uint64_t, 4> castling;
     std::array<uint64_t, 8> en_passant_file;
     uint64_t black_move;
 
-    constexpr Keys() : rng{0x9e3779b97f4a7c15ULL} {
+    constexpr Keys() {
+        crand::xoshiro256_starstar rng{0x9e3779b97f4a7c15ULL};
+
         for (auto &colour : hash)
             for (auto &piece : colour)
                 for (auto &square : piece)
