@@ -1,5 +1,5 @@
 #include "board.hpp"
-#include "zobrist_keys.hpp"
+#include "zobrist.hpp"
 
 uint64_t Board::get_hash() const { return current_hash; }
 
@@ -27,7 +27,7 @@ uint64_t Board::calculate_hash() const {
         ret_hash ^= Zobrist::black_move;
 
     if (!moves.empty() && moves.back().flags() == Move::DOUBLE_PAWN_PUSH) {
-        ret_hash ^= Zobrist::en_passant_file[moves.back().to() & 7];
+        ret_hash ^= Zobrist::en_passant_file[moves.back().to().file()];
     }
 
     return ret_hash;
