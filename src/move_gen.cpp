@@ -52,100 +52,112 @@ std::vector<Move> Board::get_moves() {
         }
     };
 
-    // These are the final "places" of pawns after these actions.
-    BitBoard pawns = get_bb(Piece::PAWN, turn), pawn_push_one = 0,
-             pawn_push_two = 0, pawn_capture_left = 0, pawn_capture_right = 0,
-             pawn_push_one_promotion = 0, pawn_capture_left_promotion = 0,
-             pawn_capture_right_promotion = 0;
+    {
+        // These are the final "places" of pawns after these actions.
+        BitBoard pawns = get_bb(Piece::PAWN, turn), pawn_push_one = 0,
+                 pawn_push_two = 0, pawn_capture_left = 0,
+                 pawn_capture_right = 0, pawn_push_one_promotion = 0,
+                 pawn_capture_left_promotion = 0,
+                 pawn_capture_right_promotion = 0;
 
-    if (turn == Colour::WHITE) {
-        pawn_push_one = pawns.north() & empty;
-        pawn_push_two =
-            ((pawns & Mask::RANK_2).north() & empty).north() & empty;
-        pawn_capture_left = pawns.north().west() & other_pieces;
-        pawn_capture_right = pawns.north().east() & other_pieces;
-        pawn_push_one_promotion = pawn_push_one & Mask::RANK_8;
-        pawn_capture_left_promotion = pawn_capture_left & Mask::RANK_8;
-        pawn_capture_right_promotion = pawn_capture_right & Mask::RANK_8;
-    } else {
-        pawn_push_one = pawns.south() & empty;
-        pawn_push_two =
-            ((pawns & Mask::RANK_7).south() & empty).south() & empty;
-        pawn_capture_left = pawns.south().east() & other_pieces;
-        pawn_capture_right = pawns.south().west() & other_pieces;
-        pawn_push_one_promotion = pawn_push_one & Mask::RANK_1;
-        pawn_capture_left_promotion = pawn_capture_left & Mask::RANK_1;
-        pawn_capture_right_promotion = pawn_capture_right & Mask::RANK_1;
-    }
-
-    if (!moves.empty() && moves.back().flags() == Move::DOUBLE_PAWN_PUSH) {
-        auto to = moves.back().to();
-        if (pawns.west() & BitBoard(to)) {
-            pseudo.emplace_back(to + 1, to + 8 * mul, Move::EN_PASSANT);
-        }
-        if (pawns.east() & BitBoard(to)) {
-            pseudo.emplace_back(to - 1, to + 8 * mul, Move::EN_PASSANT);
-        }
-    }
-
-    while (pawn_push_one) {
-        auto sq = pawn_push_one.get_square_pop();
-        auto from = sq - 8 * mul;
-        if (pawn_push_one_promotion.has_square(sq)) {
-            pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION);
-            pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION);
-            pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION);
-            pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION);
+        if (turn == Colour::WHITE) {
+            pawn_push_one = pawns.north() & empty;
+            pawn_push_two =
+                ((pawns & Mask::RANK_2).north() & empty).north() & empty;
+            pawn_capture_left = pawns.north().west() & other_pieces;
+            pawn_capture_right = pawns.north().east() & other_pieces;
+            pawn_push_one_promotion = pawn_push_one & Mask::RANK_8;
+            pawn_capture_left_promotion = pawn_capture_left & Mask::RANK_8;
+            pawn_capture_right_promotion = pawn_capture_right & Mask::RANK_8;
         } else {
-            pseudo.emplace_back(from, sq, Move::QUIET);
+            pawn_push_one = pawns.south() & empty;
+            pawn_push_two =
+                ((pawns & Mask::RANK_7).south() & empty).south() & empty;
+            pawn_capture_left = pawns.south().east() & other_pieces;
+            pawn_capture_right = pawns.south().west() & other_pieces;
+            pawn_push_one_promotion = pawn_push_one & Mask::RANK_1;
+            pawn_capture_left_promotion = pawn_capture_left & Mask::RANK_1;
+            pawn_capture_right_promotion = pawn_capture_right & Mask::RANK_1;
+        }
+
+        if (!moves.empty() && moves.back().flags() == Move::DOUBLE_PAWN_PUSH) {
+            auto to = moves.back().to();
+            if (pawns.west() & BitBoard(to)) {
+                pseudo.emplace_back(to + 1, to + 8 * mul, Move::EN_PASSANT);
+            }
+            if (pawns.east() & BitBoard(to)) {
+                pseudo.emplace_back(to - 1, to + 8 * mul, Move::EN_PASSANT);
+            }
+        }
+
+        while (pawn_push_one) {
+            auto sq = pawn_push_one.get_square_pop();
+            auto from = sq - 8 * mul;
+            if (pawn_push_one_promotion.has_square(sq)) {
+                pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION);
+                pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION);
+                pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION);
+                pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION);
+            } else {
+                pseudo.emplace_back(from, sq, Move::QUIET);
+            }
+        }
+
+        while (pawn_push_two) {
+            auto sq = pawn_push_two.get_square_pop();
+            pseudo.emplace_back(sq - 16 * mul, sq, Move::DOUBLE_PAWN_PUSH);
+        }
+
+        while (pawn_capture_left) {
+            auto sq = pawn_capture_left.get_square_pop();
+            auto from = sq - 7 * mul;
+            if (pawn_capture_left_promotion.has_square(sq)) {
+                pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION_CAPTURE);
+                pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION_CAPTURE);
+                pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION_CAPTURE);
+                pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION_CAPTURE);
+            } else {
+                pseudo.emplace_back(from, sq, Move::CAPTURE);
+            }
+        }
+
+        while (pawn_capture_right) {
+            auto sq = pawn_capture_right.get_square_pop();
+            auto from = sq - 9 * mul;
+            if (pawn_capture_right_promotion.has_square(sq)) {
+                pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION_CAPTURE);
+                pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION_CAPTURE);
+                pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION_CAPTURE);
+                pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION_CAPTURE);
+            } else {
+                pseudo.emplace_back(from, sq, Move::CAPTURE);
+            }
         }
     }
 
-    while (pawn_push_two) {
-        auto sq = pawn_push_two.get_square_pop();
-        pseudo.emplace_back(sq - 16 * mul, sq, Move::DOUBLE_PAWN_PUSH);
+    {
+        auto knights = get_bb(Piece::KNIGHT, turn);
+        generate_moves.operator()<false>(knights, Mask::KNIGHT_MOVES);
     }
 
-    while (pawn_capture_left) {
-        auto sq = pawn_capture_left.get_square_pop();
-        auto from = sq - 7 * mul;
-        if (pawn_capture_left_promotion.has_square(sq)) {
-            pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION_CAPTURE);
-            pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION_CAPTURE);
-            pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION_CAPTURE);
-            pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION_CAPTURE);
-        } else {
-            pseudo.emplace_back(from, sq, Move::CAPTURE);
-        }
+    {
+        auto bishops_and_queens =
+            get_bb(Piece::BISHOP, turn) | get_bb(Piece::QUEEN, turn);
+        generate_moves.operator()<true>(bishops_and_queens,
+                                        Mask::DIAGONAL_MOVES);
     }
 
-    while (pawn_capture_right) {
-        auto sq = pawn_capture_right.get_square_pop();
-        auto from = sq - 9 * mul;
-        if (pawn_capture_right_promotion.has_square(sq)) {
-            pseudo.emplace_back(from, sq, Move::KNIGHT_PROMOTION_CAPTURE);
-            pseudo.emplace_back(from, sq, Move::BISHOP_PROMOTION_CAPTURE);
-            pseudo.emplace_back(from, sq, Move::ROOK_PROMOTION_CAPTURE);
-            pseudo.emplace_back(from, sq, Move::QUEEN_PROMOTION_CAPTURE);
-        } else {
-            pseudo.emplace_back(from, sq, Move::CAPTURE);
-        }
+    {
+        auto rooks_and_queens =
+            get_bb(Piece::ROOK, turn) | get_bb(Piece::QUEEN, turn);
+        generate_moves.operator()<true>(rooks_and_queens, Mask::CARDINAL_MOVES);
     }
 
-    auto knights = get_bb(Piece::KNIGHT, turn);
-    generate_moves.operator()<false>(knights, Mask::KNIGHT_MOVES);
-
-    auto bishops_and_queens =
-        get_bb(Piece::BISHOP, turn) | get_bb(Piece::QUEEN, turn);
-    generate_moves.operator()<true>(bishops_and_queens, Mask::DIAGONAL_MOVES);
-
-    auto rooks_and_queens =
-        get_bb(Piece::ROOK, turn) | get_bb(Piece::QUEEN, turn);
-    generate_moves.operator()<true>(rooks_and_queens, Mask::CARDINAL_MOVES);
-
-    auto king = get_bb(Piece::KING, turn);
-    generate_moves.operator()<false>(king, Mask::CARDINAL_MOVES);
-    generate_moves.operator()<false>(king, Mask::DIAGONAL_MOVES);
+    {
+        auto king = get_bb(Piece::KING, turn);
+        generate_moves.operator()<false>(king, Mask::CARDINAL_MOVES);
+        generate_moves.operator()<false>(king, Mask::DIAGONAL_MOVES);
+    }
 
     std::vector<Move> non_pseudo_moves;
     for (Move move : pseudo) {
