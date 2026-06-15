@@ -154,7 +154,7 @@ class BitBoard {
                north().west() | south().east() | south().west();
     }
 
-    constexpr std::string to_string() {
+    constexpr std::string to_string() const {
         BitBoard copy = bb;
         std::string board_str;
         while (copy) {
@@ -323,6 +323,52 @@ static_assert(A4.lsb() == SQ::A4);
 static_assert(D4.lsb() == SQ::D4);
 static_assert(H8.lsb() == SQ::H8);
 static_assert((C3 | C4 | C5 | E3 | E4 | E5 | D3 | D5).lsb() == SQ::C3);
+static_assert(A1.has_square(SQ::A1));
+static_assert(!H8.has_square(SQ::A1));
+static_assert(A1.get_lsb_square() == SQ::A1);
+static_assert(A1.get_msb_square() == SQ::A1);
+static_assert(A4.get_lsb_square() == SQ::A4);
+static_assert(B5.get_msb_square() == SQ::B5);
+static_assert((A4 | A1).get_lsb_square() == SQ::A1);
+static_assert((B5 | H2).get_msb_square() == SQ::B5);
+static_assert(A1.lsb() == A1);
+static_assert(A1.msb() == A1);
+static_assert(A4.lsb() == A4);
+static_assert(B5.msb() == B5);
+static_assert((H8 | G3).lsb() == G3);
+static_assert((B8 | G1).msb() == B8);
+static_assert(A1.count() == 1);
+static_assert((A1 | B1).count() == 2);
+static_assert(A1.north() == A2);
+static_assert(A1.south() == BitBoard::EMPTY);
+static_assert(A1.east() == B1);
+static_assert(A1.west() == BitBoard::EMPTY);
+static_assert(E4.north() == E5);
+static_assert(E4.south() == E3);
+static_assert(E4.east() == F4);
+static_assert(E4.west() == D4);
+static_assert(E4.empty(BitBoard::EMPTY));
+static_assert(!E4.empty(E4));
+static_assert(G8.empty(E4));
+static_assert(!(G8 | E4 | C3).empty(E4 | E5));
+static_assert((G8 | E4 | C3).empty(E5));
+static_assert((G8 | E4 | C3).occupied(E4 | C3));
+static_assert(!(G8 | E4 | C3).occupied(E4 | E5));
+static_assert(B8.move(-9) == A7);
+static_assert(B8.move(-8) == B7);
+static_assert(E5.move(8) == E6);
+static_assert(A1.move(-1) == BitBoard::EMPTY);
+static_assert(A1.move(1) == B1);
+static_assert(A1.move(8) == A2);
+static_assert(H2.move(1) == BitBoard::EMPTY);
+static_assert(E4.direct_move(-1) == D4);
+static_assert(C6.move(-7) == C6.direct_move(-7));
+static_assert(A6.move(-9) != A6.direct_move(-9));
+static_assert(A6.move(-9) == BitBoard::EMPTY);
+static_assert(A1.flip(Colour::WHITE) == A1);
+static_assert(A1.flip(Colour::BLACK) == A8);
+static_assert(E4.flip(Colour::WHITE) == E4);
+static_assert(E4.flip(Colour::BLACK) == E5);
 } // namespace BB
 
 static_assert(sizeof(BitBoard) == sizeof(uint64_t));

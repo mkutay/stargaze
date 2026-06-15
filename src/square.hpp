@@ -10,7 +10,8 @@
 class Square {
   private:
     /**
-     * This layout is used to represent the chess board:
+     * This layout (LERF, little-endian rank-file mapping) is used to represent
+     * the chess board:
      *
      * 56 57 58 59 60 61 62 63
      * 48 49 50 51 52 53 54 55
@@ -70,7 +71,7 @@ class Square {
         return temp;
     }
 
-    constexpr std::string to_string() {
+    constexpr std::string to_string() const {
         char file = 'a' + (sq % 8);
         char rank = '1' + (sq / 8);
         return std::string() + file + rank;
@@ -210,6 +211,24 @@ constexpr Square E8 = Square(60);
 constexpr Square F8 = Square(61);
 constexpr Square G8 = Square(62);
 constexpr Square H8 = Square(63);
+
+static_assert(Square(0) == A1);
+static_assert(Square(3, 3) == D4);
+static_assert(Square("e4") == E4);
+static_assert(Square("h8") == H8);
+static_assert(E4.north() == E5);
+static_assert(E4.south() == E3);
+static_assert(E4.east() == F4);
+static_assert(E4.west() == D4);
+static_assert(E4.move(8) == E5);
+static_assert(E4.move(-7) == F3);
+static_assert(E4.move(7) == D5);
+static_assert(H3.move(-1) == G3);
+static_assert(H3.move(-8) == H2);
+static_assert(E8.file() == 4);
+static_assert(E8.rank() == 7);
+static_assert(E4.flip(Colour::WHITE) == E4);
+static_assert(E4.flip(Colour::BLACK) == E5);
 }; // namespace SQ
 
 static_assert(sizeof(Square) == sizeof(uint8_t));
