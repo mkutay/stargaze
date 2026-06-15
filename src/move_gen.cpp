@@ -5,11 +5,8 @@
 #include <vector>
 
 std::vector<Move> Board::get_moves() {
-    /**
-     * Pseudolegal move generation, which include moves that leave the king in
-     * check
-     */
-    std::vector<Move> pseudo;
+    std::vector<Move> pseudo; // Pseudo-legal moves, i.e., moves that may leave
+                              // the king in check.
 
     int mul = turn == Colour::WHITE ? 1 : -1;
 
