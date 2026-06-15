@@ -190,8 +190,7 @@ void Board::make_move(Move move) { apply_move<false>(move); }
 void Board::undo_move() { apply_move<true>(moves.back()); }
 
 void Board::check_state_consistency() const {
-    [[maybe_unused]] uint64_t calculated = calculate_hash();
-    assert(current_hash == calculated);
+    assert(current_hash == calculate_hash());
 
     std::array<int, 2> _mg_score, _eg_score;
     int _game_phase;
@@ -201,20 +200,17 @@ void Board::check_state_consistency() const {
     assert(eg_score == _eg_score);
     assert(game_phase == _game_phase);
 
-    // Piece bitboards must be pairwise disjoint.
+    // pairwise disjoint
     for (int i = 0; i < 6; i++)
         for (int j = i + 1; j < 6; j++)
             assert((piece_bbs[i] & piece_bbs[j]) == Mask::EMPTY);
 
-    // Colour bitboards must be disjoint.
     assert((colour_bbs[0] & colour_bbs[1]) == Mask::EMPTY);
 
-    // Union of piece bitboards must equal union of colour bitboards.
     BitBoard all_pieces = Mask::EMPTY;
     for (auto bb : piece_bbs)
         all_pieces |= bb;
-    [[maybe_unused]] BitBoard all_colours = colour_bbs[0] | colour_bbs[1];
-    assert(all_pieces == all_colours);
+    assert(all_pieces == colour_bbs[0] | colour_bbs[1]);
 }
 
 Colour Board::get_turn() const { return turn; }
