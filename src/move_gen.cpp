@@ -1,5 +1,6 @@
 #include "bitboard.hpp"
 #include "board.hpp"
+#include "enums.hpp"
 #include "mask.hpp"
 #include <array>
 #include <vector>
@@ -8,7 +9,7 @@ std::vector<Move> Board::get_moves() {
     std::vector<Move> pseudo; // Pseudo-legal moves, i.e., moves that may leave
                               // the king in check.
 
-    int mul = turn == Colour::WHITE ? 1 : -1;
+    int mul = weight(turn);
 
     BitBoard white_pieces = get_bb(Colour::WHITE);
     BitBoard black_pieces = get_bb(Colour::BLACK);
@@ -80,13 +81,14 @@ std::vector<Move> Board::get_moves() {
             pawn_capture_right_promotion = pawn_capture_right & Mask::RANK_1;
         }
 
-        if (!moves.empty() && moves.back().flags() == Move::DOUBLE_PAWN_PUSH) {
-            auto to = moves.back().to();
+        if (ep_square) {
+            auto ep = *ep_square;
+            auto to = ep - 8 * mul;
             if (pawns.west() & BitBoard(to)) {
-                pseudo.emplace_back(to + 1, to + 8 * mul, Move::EN_PASSANT);
+                pseudo.emplace_back(to + 1, ep, Move::EN_PASSANT);
             }
             if (pawns.east() & BitBoard(to)) {
-                pseudo.emplace_back(to - 1, to + 8 * mul, Move::EN_PASSANT);
+                pseudo.emplace_back(to - 1, ep, Move::EN_PASSANT);
             }
         }
 

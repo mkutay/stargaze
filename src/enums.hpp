@@ -15,6 +15,11 @@ constexpr Colour operator!(Colour c) {
     return static_cast<Colour>(1 - std::to_underlying(c));
 }
 
+/**
+ * Returns the weight of a colour, where white is +1 and black is -1.
+ */
+constexpr int weight(Colour c) { return -std::to_underlying(c) * 2 + 1; }
+
 enum class Piece : uint8_t {
     PAWN = 0,
     KNIGHT = 1,

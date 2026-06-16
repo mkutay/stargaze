@@ -26,8 +26,8 @@ uint64_t Board::calculate_hash() const {
     if (get_turn() == Colour::BLACK)
         ret_hash ^= Zobrist::black_move;
 
-    if (!moves.empty() && moves.back().flags() == Move::DOUBLE_PAWN_PUSH) {
-        ret_hash ^= Zobrist::en_passant_file[moves.back().to().file()];
+    if (ep_square) {
+        ret_hash ^= Zobrist::en_passant_file[ep_square->file()];
     }
 
     return ret_hash;

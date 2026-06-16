@@ -3,6 +3,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "bitboard.hpp"
@@ -31,10 +32,30 @@ class Board {
      */
     Colour turn;
 
+    /**
+     * The ep_square is the square that can be captured en passant, if any;
+     * i.e., the square right behind a double pawn push.
+     */
+    std::optional<Square> ep_square;
+
+    /**
+     * Number of half moves made since the last pawn move or capture, used for
+     * the fifty-move rule.
+     */
+    uint8_t halfmove_clock;
+
+    /**
+     * Number of full moves made in the game. This is incremented after Black's
+     * move.
+     */
+    uint16_t fullmove_number;
+
     struct UndoInfo {
         Piece moving_piece;
         std::optional<Piece> captured_piece;
         std::array<bool, 4> can_castle;
+        std::optional<Square> ep_square;
+        uint8_t halfmove_clock;
     };
 
     std::vector<UndoInfo> history;
@@ -160,6 +181,9 @@ class Board {
 
   public:
     Board();
+    explicit Board(std::string_view fen);
+
+    uint64_t perft(int depth);
 
     /**
      * Make a move on the board, updating the board state accordingly.

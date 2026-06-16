@@ -14,7 +14,10 @@ TARGET = $(BIN_DIR)/stargaze
 
 # Source and object files
 SOURCES = $(wildcard src/*.cpp)
-OBJECTS = $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
+CORE_SOURCES = $(filter-out src/perft.cpp, $(filter-out src/main.cpp, $(SOURCES)))
+
+MAIN_SOURCES = $(CORE_SOURCES) src/main.cpp
+OBJECTS = $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(MAIN_SOURCES))
 DEPS = $(OBJECTS:.o=.d)
 
 # Profile flags
@@ -67,4 +70,28 @@ clean:
 -include $(DEPS)
 
 # Phony targets
-.PHONY: all release debug verify run run-debug run-verify clean
+.PHONY: all release debug verify run run-debug run-verify clean perft run-perft
+
+# Perft execution defaults
+FEN ?= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+DEPTH ?= 5
+
+# Run perft
+run-perft: perft
+	./bin/perft "$(FEN)" $(DEPTH) --divide
+
+# Perft target
+PERFT_SOURCES = $(CORE_SOURCES) src/perft.cpp
+PERFT_OBJECTS = $(patsubst src/%.cpp,$(BUILD_DIR)/perft_%.o,$(PERFT_SOURCES))
+
+perft: CXXFLAGS += $(RELEASE_FLAGS)
+perft: LDFLAGS += -flto
+perft: $(BIN_DIR)/perft
+
+$(BIN_DIR)/perft: $(PERFT_OBJECTS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(PERFT_OBJECTS) -o $@ $(LDFLAGS)
+
+$(BUILD_DIR)/perft_%.o: src/%.cpp
+	@mkdir -p $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@

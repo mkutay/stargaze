@@ -1,4 +1,6 @@
 #include "board.hpp"
+#include <cctype>
+#include <charconv>
 
 #include "bitboard.hpp"
 #include "enums.hpp"
@@ -33,9 +35,134 @@ Board::Board()
               BB::H8 | BB::A7 | BB::B7 | BB::C7 | BB::D7 | BB::E7 | BB::F7 |
               BB::G7 | BB::H7, // BLACK
       },
-      can_castle{true, true, true, true}, turn{Colour::WHITE} {
+      can_castle{true, true, true, true}, turn{Colour::WHITE},
+      ep_square{std::nullopt}, halfmove_clock{0}, fullmove_number{1} {
     initialise_eval(mg_score, eg_score, game_phase);
     current_hash = calculate_hash();
+}
+
+Board::Board(std::string_view fen)
+    : piece_bbs{BitBoard(0), BitBoard(0), BitBoard(0),
+                BitBoard(0), BitBoard(0), BitBoard(0)},
+      colour_bbs{BitBoard(0), BitBoard(0)} {
+    can_castle.fill(false);
+    moves.clear();
+    history.clear();
+
+    int r = 7, f = 0;
+    size_t i = 0;
+    for (; i < fen.size() && fen[i] != ' '; ++i) {
+        char c = fen[i];
+        if (c == '/') {
+            r--;
+            f = 0;
+        } else if (std::isdigit(c)) {
+            f += c - '0';
+        } else {
+            Colour colour = std::islower(c) ? Colour::BLACK : Colour::WHITE;
+            Piece piece;
+            switch (std::tolower(c)) {
+            case 'p':
+                piece = Piece::PAWN;
+                break;
+            case 'n':
+                piece = Piece::KNIGHT;
+                break;
+            case 'b':
+                piece = Piece::BISHOP;
+                break;
+            case 'r':
+                piece = Piece::ROOK;
+                break;
+            case 'q':
+                piece = Piece::QUEEN;
+                break;
+            case 'k':
+                piece = Piece::KING;
+                break;
+            default:
+                assert(false);
+                piece = Piece::PAWN;
+            }
+            Square sq(r, f);
+            get_bb(piece) |= BitBoard(sq);
+            get_bb(colour) |= BitBoard(sq);
+            f++;
+        }
+    }
+
+    ++i;
+    turn = fen[i] == 'w' ? Colour::WHITE : Colour::BLACK;
+
+    i += 2;
+    if (fen[i] != '-') {
+        while (fen[i] != ' ') {
+            switch (fen[i]) {
+            case 'K':
+                can_castle[0] = true;
+                break;
+            case 'Q':
+                can_castle[1] = true;
+                break;
+            case 'k':
+                can_castle[2] = true;
+                break;
+            case 'q':
+                can_castle[3] = true;
+                break;
+            }
+            i++;
+        }
+    } else {
+        i++;
+    }
+
+    i++;
+    if (fen[i] != '-') {
+        ep_square = Square(std::string(fen.substr(i, 2)));
+        i += 2;
+    } else {
+        ep_square = std::nullopt;
+        i++;
+    }
+
+    if (i < fen.size()) {
+        i++;
+        size_t next_space = fen.find(' ', i);
+        if (next_space != std::string_view::npos) {
+            std::from_chars(fen.data() + i, fen.data() + next_space,
+                            halfmove_clock);
+            i = next_space + 1;
+            std::from_chars(fen.data() + i, fen.data() + fen.size(),
+                            fullmove_number);
+        } else {
+            std::from_chars(fen.data() + i, fen.data() + fen.size(),
+                            halfmove_clock);
+            fullmove_number = 1;
+        }
+    } else {
+        halfmove_clock = 0;
+        fullmove_number = 1;
+    }
+
+    initialise_eval(mg_score, eg_score, game_phase);
+    current_hash = calculate_hash();
+}
+
+uint64_t Board::perft(int depth) {
+    if (depth == 0)
+        return 1;
+
+    uint64_t nodes = 0;
+    auto legal_moves = get_moves();
+
+    for (Move move : legal_moves) {
+        make_move(move);
+        nodes += perft(depth - 1);
+        undo_move();
+    }
+
+    return nodes;
 }
 
 template <bool Undo> void Board::apply_move(Move move) {
@@ -64,20 +191,45 @@ template <bool Undo> void Board::apply_move(Move move) {
             captured_piece =
                 move.is_en_passant() ? Piece::PAWN : *get_piece(to);
         }
-        history.emplace_back(moving_piece, captured_piece, can_castle);
+        history.emplace_back(moving_piece, captured_piece, can_castle,
+                             ep_square, halfmove_clock);
     }
 
-    // Toggle en-passant hash of the previous move if it was a double pawn push.
-    // In Undo mode, moves.pop_back() has already occurred, so moves.back() is
-    // correct. In Make mode, moves.emplace_back() has not yet occurred, so
-    // moves.back() is correct.
-    if (!moves.empty() && moves.back().is_double_pawn_push()) {
-        current_hash ^= Zobrist::en_passant_file[moves.back().to().file()];
+    std::optional<Square> new_ep = std::nullopt;
+    if constexpr (Undo) {
+        new_ep = undo_info.ep_square;
+    } else {
+        int mul = weight(turn);
+        if (move.is_double_pawn_push())
+            new_ep = std::optional<Square>{to - 8 * mul};
     }
 
-    if (move.is_double_pawn_push()) {
-        current_hash ^= Zobrist::en_passant_file[to.file()];
+    if constexpr (Undo) {
+        halfmove_clock = undo_info.halfmove_clock;
+
+        // Decrement if white
+        fullmove_number -= std::to_underlying(!turn);
+    } else {
+        if (moving_piece == Piece::PAWN || move.is_capture())
+            halfmove_clock = 0;
+        else
+            halfmove_clock++;
+
+        // Increment if black.
+        fullmove_number += std::to_underlying(turn);
     }
+
+    auto ep_key = [](std::optional<Square> sq) -> uint64_t {
+        return sq
+            .transform([](Square s) -> uint64_t {
+                return Zobrist::en_passant_file[s.file()];
+            })
+            .value_or(0ULL);
+    };
+
+    // XOR out the old EP file key, update ep_square, then XOR in the new key.
+    current_hash ^= ep_key(ep_square) ^ ep_key(new_ep);
+    ep_square = new_ep;
 
     std::array<bool, 4> old_castle = can_castle;
 
