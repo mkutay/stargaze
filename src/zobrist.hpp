@@ -8,11 +8,9 @@
 
 #pragma once
 #include "crand/engines/xoshiro256_starstar_engine.hpp"
-
+#include "square.hpp"
 #include <array>
 #include <cstdint>
-
-#include "square.hpp"
 #include <utility>
 
 struct ZobristKeys {

@@ -1,15 +1,14 @@
 #pragma once
+#include "bitboard.hpp"
+#include "enums.hpp"
+#include "move.hpp"
+#include "square.hpp"
 #include <array>
 #include <cassert>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include "bitboard.hpp"
-#include "enums.hpp"
-#include "move.hpp"
-#include "square.hpp"
 
 class Board {
     // Bitboard for each piece, indexed by Piece (PAWN=0..KING=5).

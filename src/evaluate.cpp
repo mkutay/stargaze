@@ -1,5 +1,3 @@
-// inspired by https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
-
 #include "board.hpp"
 #include "enums.hpp"
 #include "eval.hpp"
