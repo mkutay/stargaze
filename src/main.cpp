@@ -25,6 +25,11 @@ int32_t main() {
                    board.get_turn() == Colour::WHITE ? "WHITE" : "BLACK");
         std::cout << board.to_string() << std::endl;
 
+        if (board.is_draw()) {
+            std::cout << "Game drawn!" << std::endl;
+            break;
+        }
+
         // Perform iterative deepening search
         SearchInfo result =
             search.iterative_deepening(MAX_DEPTH, TIME_LIMIT_MS, info);
