@@ -39,6 +39,7 @@ Board::Board()
       ep_square{std::nullopt}, halfmove_clock{0}, fullmove_number{1} {
     initialise_eval(mg_score, eg_score, game_phase);
     current_hash = calculate_hash();
+    hash_history.push_back(current_hash);
 }
 
 Board::Board(std::string_view fen)
@@ -48,6 +49,7 @@ Board::Board(std::string_view fen)
     can_castle.fill(false);
     moves.clear();
     history.clear();
+    hash_history.clear();
 
     int r = 7, f = 0;
     size_t i = 0;
@@ -147,6 +149,7 @@ Board::Board(std::string_view fen)
 
     initialise_eval(mg_score, eg_score, game_phase);
     current_hash = calculate_hash();
+    hash_history.emplace_back(current_hash);
 }
 
 uint64_t Board::perft(int depth) {
@@ -175,6 +178,7 @@ template <bool Undo> void Board::apply_move(Move move) {
         undo_info = history.back();
         history.pop_back();
         moves.pop_back();
+        hash_history.pop_back();
 
         turn = !turn;
         current_hash ^= Zobrist::black_move();
@@ -329,6 +333,7 @@ template <bool Undo> void Board::apply_move(Move move) {
         moves.emplace_back(move);
         current_hash ^= Zobrist::black_move();
         turn = opponent;
+        hash_history.emplace_back(current_hash);
     }
 
 #ifdef VERIFY_CONSISTENCY
@@ -362,6 +367,22 @@ void Board::check_state_consistency() const {
     for (auto bb : piece_bbs)
         all_pieces |= bb;
     assert(all_pieces == colour_bbs[0] | colour_bbs[1]);
+}
+
+bool Board::is_draw() const {
+    if (halfmove_clock >= 100)
+        return true;
+
+    int count = 0;
+    int limit = hash_history.size() - 1;
+    int start = std::max(0, limit - halfmove_clock);
+    for (int i = limit - 2; i >= start; i -= 2) {
+        if (hash_history[i] == current_hash) {
+            if (++count >= 2)
+                return true;
+        }
+    }
+    return false;
 }
 
 Colour Board::get_turn() const { return turn; }

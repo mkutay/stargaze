@@ -150,6 +150,9 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     if (should_stop())
         return alpha;
 
+    if (board->is_draw())
+        return 0;
+
     int original_alpha = alpha;
     bool is_pv_node = (beta - alpha) > 1;
     PVLine *tt_line = nullptr;
