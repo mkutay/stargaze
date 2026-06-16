@@ -12,16 +12,16 @@
 #include <array>
 #include <cstdint>
 
-namespace Zobrist {
+#include "square.hpp"
+#include <utility>
 
-class Keys {
-  public:
+struct ZobristKeys {
     std::array<std::array<std::array<uint64_t, 64>, 6>, 2> hash;
     std::array<uint64_t, 4> castling;
     std::array<uint64_t, 8> en_passant_file;
     uint64_t black_move;
 
-    constexpr Keys() {
+    constexpr ZobristKeys() {
         crand::xoshiro256_starstar rng{0x9e3779b97f4a7c15ULL};
 
         for (auto &colour : hash)
@@ -39,11 +39,25 @@ class Keys {
     }
 };
 
-const inline constexpr Keys keys{};
+class Zobrist {
+  private:
+    static constexpr ZobristKeys keys{};
 
-const inline constexpr auto &hash = keys.hash;
-const inline constexpr auto &castling = keys.castling;
-const inline constexpr auto &en_passant_file = keys.en_passant_file;
-const inline constexpr uint64_t black_move = keys.black_move;
+  public:
+    Zobrist() = delete;
 
-} // namespace Zobrist
+    static constexpr uint64_t piece(Colour colour, Piece piece, Square sq) {
+        return keys
+            .hash[std::to_underlying(colour)][std::to_underlying(piece)][sq];
+    }
+
+    static constexpr uint64_t castling(size_t index) {
+        return keys.castling[index];
+    }
+
+    static constexpr uint64_t en_passant(Square sq) {
+        return keys.en_passant_file[sq.file()];
+    }
+
+    static constexpr uint64_t black_move() { return keys.black_move; }
+};

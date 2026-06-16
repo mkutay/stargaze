@@ -177,7 +177,7 @@ template <bool Undo> void Board::apply_move(Move move) {
         moves.pop_back();
 
         turn = !turn;
-        current_hash ^= Zobrist::black_move;
+        current_hash ^= Zobrist::black_move();
     }
 
     Piece moving_piece;
@@ -221,9 +221,8 @@ template <bool Undo> void Board::apply_move(Move move) {
 
     auto ep_key = [](std::optional<Square> sq) -> uint64_t {
         return sq
-            .transform([](Square s) -> uint64_t {
-                return Zobrist::en_passant_file[s.file()];
-            })
+            .transform(
+                [](Square s) -> uint64_t { return Zobrist::en_passant(s); })
             .value_or(0ULL);
     };
 
@@ -253,7 +252,7 @@ template <bool Undo> void Board::apply_move(Move move) {
 
     for (size_t i = 0; i < 4; ++i) {
         if (old_castle[i] != can_castle[i]) {
-            current_hash ^= Zobrist::castling[i];
+            current_hash ^= Zobrist::castling(i);
         }
     }
 
@@ -328,7 +327,7 @@ template <bool Undo> void Board::apply_move(Move move) {
 
     if constexpr (!Undo) {
         moves.emplace_back(move);
-        current_hash ^= Zobrist::black_move;
+        current_hash ^= Zobrist::black_move();
         turn = opponent;
     }
 
@@ -426,8 +425,8 @@ void Board::move_piece(Piece piece, Colour colour, Square from, Square to) {
     auto ci = std::to_underlying(colour);
     auto pi = std::to_underlying(piece);
 
-    current_hash ^= Zobrist::hash[ci][pi][from];
-    current_hash ^= Zobrist::hash[ci][pi][to];
+    current_hash ^= Zobrist::piece(colour, piece, from);
+    current_hash ^= Zobrist::piece(colour, piece, to);
 
     mg_score[ci] -= Eval::mg_table[ci][pi][from];
     eg_score[ci] -= Eval::eg_table[ci][pi][from];
@@ -443,7 +442,7 @@ void Board::add_piece(Piece piece, Colour colour, Square sq) {
     auto ci = std::to_underlying(colour);
     auto pi = std::to_underlying(piece);
 
-    current_hash ^= Zobrist::hash[ci][pi][sq];
+    current_hash ^= Zobrist::piece(colour, piece, sq);
 
     mg_score[ci] += Eval::mg_table[ci][pi][sq];
     eg_score[ci] += Eval::eg_table[ci][pi][sq];
@@ -458,7 +457,7 @@ void Board::clear_piece(Piece piece, Colour colour, Square sq) {
     auto ci = std::to_underlying(colour);
     auto pi = std::to_underlying(piece);
 
-    current_hash ^= Zobrist::hash[ci][pi][sq];
+    current_hash ^= Zobrist::piece(colour, piece, sq);
 
     mg_score[ci] -= Eval::mg_table[ci][pi][sq];
     eg_score[ci] -= Eval::eg_table[ci][pi][sq];

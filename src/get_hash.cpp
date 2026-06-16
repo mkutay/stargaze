@@ -13,21 +13,21 @@ uint64_t Board::calculate_hash() const {
             auto piece_bb = piece_bbs[pi] & colour_bbs[ci];
             while (piece_bb) {
                 auto sq = piece_bb.get_square_pop();
-                ret_hash ^= Zobrist::hash[ci][pi][sq];
+                ret_hash ^= Zobrist::piece(c, p, sq);
             }
         }
     }
 
     for (int i = 0; i < 4; i++) {
         if (can_castle[i])
-            ret_hash ^= Zobrist::castling[i];
+            ret_hash ^= Zobrist::castling(i);
     }
 
     if (get_turn() == Colour::BLACK)
-        ret_hash ^= Zobrist::black_move;
+        ret_hash ^= Zobrist::black_move();
 
     if (ep_square) {
-        ret_hash ^= Zobrist::en_passant_file[ep_square->file()];
+        ret_hash ^= Zobrist::en_passant(*ep_square);
     }
 
     return ret_hash;
