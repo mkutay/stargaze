@@ -2,6 +2,7 @@
 #include "enums.hpp"
 #include "square.hpp"
 #include <cassert>
+#include <string>
 
 /**
  * Move encoding (16 bits):
@@ -87,6 +88,14 @@ class Move {
 
     constexpr bool operator==(const Move &other) const {
         return m_move == other.m_move;
+    }
+
+    constexpr std::string to_string() const {
+        std::string ret = from().to_string() + to().to_string();
+        if (is_promotion()) {
+            ret += piece_to_string(promotion_piece());
+        }
+        return ret;
     }
 };
 

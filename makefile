@@ -78,7 +78,7 @@ DEPTH ?= 5
 
 # Run perft
 run-perft: perft
-	./bin/perft "$(FEN)" $(DEPTH) --divide
+	./bin/perft $(FEN) $(DEPTH) --divide
 
 # Perft target
 PERFT_SOURCES = $(CORE_SOURCES) src/perft.cpp

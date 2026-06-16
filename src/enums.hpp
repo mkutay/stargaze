@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <string>
 #include <utility>
 
 enum class Colour : uint8_t {
@@ -33,3 +34,20 @@ constexpr const static std::array<Piece, 6> PIECES = {
     Piece::PAWN, Piece::KNIGHT, Piece::BISHOP,
     Piece::ROOK, Piece::QUEEN,  Piece::KING,
 };
+
+constexpr std::string piece_to_string(Piece p) {
+    switch (p) {
+    case Piece::PAWN:
+        return "p";
+    case Piece::KNIGHT:
+        return "n";
+    case Piece::BISHOP:
+        return "b";
+    case Piece::ROOK:
+        return "r";
+    case Piece::QUEEN:
+        return "q";
+    case Piece::KING:
+        return "k";
+    }
+}

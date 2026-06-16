@@ -55,11 +55,11 @@
  * Depth 5: 164075551
  */
 #include "board.hpp"
+#include <chrono>
 #include <iostream>
 #include <string>
-#include <chrono>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " <fen> <depth> [--divide]\n";
         return 1;
@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     bool divide = (argc > 3 && std::string(argv[3]) == "--divide");
 
     Board board(fen);
-    
+
     auto start = std::chrono::high_resolution_clock::now();
     uint64_t total_nodes = 0;
 
@@ -83,18 +83,8 @@ int main(int argc, char* argv[]) {
                 board.make_move(move);
                 uint64_t nodes = board.perft(depth - 1);
                 board.undo_move();
-                
-                std::string move_str = move.from().to_string() + move.to().to_string();
-                if (move.is_promotion()) {
-                    switch (move.promotion_piece()) {
-                        case Piece::KNIGHT: move_str += 'n'; break;
-                        case Piece::BISHOP: move_str += 'b'; break;
-                        case Piece::ROOK: move_str += 'r'; break;
-                        case Piece::QUEEN: move_str += 'q'; break;
-                        default: break;
-                    }
-                }
-                
+
+                std::string move_str = move.to_string();
                 std::cout << move_str << ": " << nodes << "\n";
                 total_nodes += nodes;
             }
@@ -104,12 +94,15 @@ int main(int argc, char* argv[]) {
     }
 
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+            .count();
 
     std::cout << "\nTotal time (ms) : " << duration << "\n";
     std::cout << "Nodes searched  : " << total_nodes << "\n";
     if (duration > 0) {
-        std::cout << "Nodes/sec       : " << (total_nodes * 1000) / duration << "\n";
+        std::cout << "Nodes/sec       : " << (total_nodes * 1000) / duration
+                  << "\n";
     }
 
     return 0;
