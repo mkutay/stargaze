@@ -2,6 +2,7 @@
 #include "enums.hpp"
 #include "square.hpp"
 #include <array>
+#include <utility>
 
 // clang-format off
 
@@ -193,11 +194,33 @@ constexpr int calculate_gamephase_sum(const std::array<int, 6> &inc) {
     return sum;
 }
 
-namespace Eval {
-constexpr const std::array<std::array<std::array<int, 64>, 6>, 2> mg_table =
-    calculate_table(mg_pesto_table, mg_value);
-constexpr const std::array<std::array<std::array<int, 64>, 6>, 2> eg_table =
-    calculate_table(eg_pesto_table, eg_value);
-constexpr const std::array<int, 6> gamephase_inc = {0, 155, 305, 405, 1050, 0};
-constexpr const int gamephase_sum = calculate_gamephase_sum(gamephase_inc);
-} // namespace Eval
+class Eval {
+  private:
+    static constexpr std::array<std::array<std::array<int, 64>, 6>, 2>
+        mg_table = calculate_table(mg_pesto_table, mg_value);
+    static constexpr std::array<std::array<std::array<int, 64>, 6>, 2>
+        eg_table = calculate_table(eg_pesto_table, eg_value);
+    static constexpr std::array<int, 6> gamephase_inc_values = {0,   155,  305,
+                                                                405, 1050, 0};
+    static constexpr int gamephase_sum_value =
+        calculate_gamephase_sum(gamephase_inc_values);
+
+  public:
+    Eval() = delete;
+
+    static constexpr int mg_value(Colour colour, Piece piece, Square sq) {
+        return mg_table[std::to_underlying(colour)][std::to_underlying(piece)]
+                       [sq];
+    }
+
+    static constexpr int eg_value(Colour colour, Piece piece, Square sq) {
+        return eg_table[std::to_underlying(colour)][std::to_underlying(piece)]
+                       [sq];
+    }
+
+    static constexpr int gamephase_inc(Piece piece) {
+        return gamephase_inc_values[std::to_underlying(piece)];
+    }
+
+    static constexpr int gamephase_sum() { return gamephase_sum_value; }
+};

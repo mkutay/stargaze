@@ -2,9 +2,8 @@
 
 #include "board.hpp"
 #include "enums.hpp"
+#include "eval.hpp"
 #include <array>
-
-#include "eval_tables.hpp"
 
 void Board::initialise_eval(std::array<int, 2> &_mg_score,
                             std::array<int, 2> &_eg_score,
@@ -20,9 +19,9 @@ void Board::initialise_eval(std::array<int, 2> &_mg_score,
             auto bb = piece_bbs[pi] & colour_bbs[ci];
             while (bb) {
                 auto sq = bb.get_square_pop();
-                _mg_score[ci] += Eval::mg_table[ci][pi][sq];
-                _eg_score[ci] += Eval::eg_table[ci][pi][sq];
-                _game_phase += Eval::gamephase_inc[pi];
+                _mg_score[ci] += Eval::mg_value(c, p, sq);
+                _eg_score[ci] += Eval::eg_value(c, p, sq);
+                _game_phase += Eval::gamephase_inc(p);
             }
         }
     }
@@ -34,9 +33,9 @@ int Board::evaluate() const {
     int mg_diff = mg_score[ti] - mg_score[nti];
     int eg_diff = eg_score[ti] - eg_score[nti];
     int mg_phase = game_phase;
-    if (mg_phase > Eval::gamephase_sum)
-        mg_phase = Eval::gamephase_sum; // in case of early promotion
-    int eg_phase = Eval::gamephase_sum - mg_phase;
+    if (mg_phase > Eval::gamephase_sum())
+        mg_phase = Eval::gamephase_sum(); // in case of early promotion
+    int eg_phase = Eval::gamephase_sum() - mg_phase;
 
-    return (mg_diff * mg_phase + eg_diff * eg_phase) / Eval::gamephase_sum;
+    return (mg_diff * mg_phase + eg_diff * eg_phase) / Eval::gamephase_sum();
 }

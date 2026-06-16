@@ -1,16 +1,16 @@
 #include "board.hpp"
-#include <cctype>
-#include <charconv>
 
 #include "bitboard.hpp"
 #include "enums.hpp"
-#include "eval_tables.hpp"
+#include "eval.hpp"
 #include "mask.hpp"
 #include "move.hpp"
 #include "square.hpp"
 #include "zobrist.hpp"
 #include <algorithm>
 #include <array>
+#include <cctype>
+#include <charconv>
 #include <sys/types.h>
 #include <unordered_map>
 #include <utility>
@@ -423,15 +423,14 @@ bool Board::has_piece_at(BitBoard bb, Piece type, Colour colour) const {
 
 void Board::move_piece(Piece piece, Colour colour, Square from, Square to) {
     auto ci = std::to_underlying(colour);
-    auto pi = std::to_underlying(piece);
 
     current_hash ^= Zobrist::piece(colour, piece, from);
     current_hash ^= Zobrist::piece(colour, piece, to);
 
-    mg_score[ci] -= Eval::mg_table[ci][pi][from];
-    eg_score[ci] -= Eval::eg_table[ci][pi][from];
-    mg_score[ci] += Eval::mg_table[ci][pi][to];
-    eg_score[ci] += Eval::eg_table[ci][pi][to];
+    mg_score[ci] -= Eval::mg_value(colour, piece, from);
+    eg_score[ci] -= Eval::eg_value(colour, piece, from);
+    mg_score[ci] += Eval::mg_value(colour, piece, to);
+    eg_score[ci] += Eval::eg_value(colour, piece, to);
 
     BitBoard mask = BitBoard(from) | BitBoard(to);
     get_bb(piece) ^= mask;
@@ -440,13 +439,12 @@ void Board::move_piece(Piece piece, Colour colour, Square from, Square to) {
 
 void Board::add_piece(Piece piece, Colour colour, Square sq) {
     auto ci = std::to_underlying(colour);
-    auto pi = std::to_underlying(piece);
 
     current_hash ^= Zobrist::piece(colour, piece, sq);
 
-    mg_score[ci] += Eval::mg_table[ci][pi][sq];
-    eg_score[ci] += Eval::eg_table[ci][pi][sq];
-    game_phase += Eval::gamephase_inc[pi];
+    mg_score[ci] += Eval::mg_value(colour, piece, sq);
+    eg_score[ci] += Eval::eg_value(colour, piece, sq);
+    game_phase += Eval::gamephase_inc(piece);
 
     BitBoard mask = BitBoard(sq);
     get_bb(piece) |= mask;
@@ -455,13 +453,12 @@ void Board::add_piece(Piece piece, Colour colour, Square sq) {
 
 void Board::clear_piece(Piece piece, Colour colour, Square sq) {
     auto ci = std::to_underlying(colour);
-    auto pi = std::to_underlying(piece);
 
     current_hash ^= Zobrist::piece(colour, piece, sq);
 
-    mg_score[ci] -= Eval::mg_table[ci][pi][sq];
-    eg_score[ci] -= Eval::eg_table[ci][pi][sq];
-    game_phase -= Eval::gamephase_inc[pi];
+    mg_score[ci] -= Eval::mg_value(colour, piece, sq);
+    eg_score[ci] -= Eval::eg_value(colour, piece, sq);
+    game_phase -= Eval::gamephase_inc(piece);
 
     BitBoard mask = ~BitBoard(sq);
     get_bb(piece) &= mask;
