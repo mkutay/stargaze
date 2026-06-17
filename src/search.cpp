@@ -18,7 +18,7 @@ const int ASPIRATION_WINDOW = 23; // ~0.25 pawn
 // deepening to set alpha/beta with a narrow window basically, get pvline of
 // previous move here
 
-SearchInfo Search::iterative_deepening(int max_depth, long long time_limit,
+SearchInfo Search::iterative_deepening(uint16_t max_depth, uint32_t time_limit,
                                        std::optional<SearchInfo> last_info) {
     SearchInfo search_info(max_depth);
     time_limit_ms = time_limit;
@@ -36,7 +36,7 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit,
                          ? -last_info->score + aspiration * 4
                          : BETA_START;
 
-    for (int depth = 1; depth <= max_depth && !should_stop(); depth++) {
+    for (uint16_t depth = 1; depth <= max_depth && !should_stop(); depth++) {
         PVLine pv_line(depth);
         int score;
         int alpha, beta;
@@ -88,17 +88,15 @@ SearchInfo Search::iterative_deepening(int max_depth, long long time_limit,
 inline bool Search::should_stop() {
     if (time_up)
         return true;
-    if ((nodes_searched & 0x3FFF) == 0) { // check every 16384 nodes
-        auto current_time = std::chrono::high_resolution_clock::now();
-        long long elapsed =
-            std::chrono::duration_cast<std::chrono::milliseconds>(current_time -
-                                                                  start_time)
-                .count();
 
-        if (elapsed >= time_limit_ms) {
-            time_up = true;
-            return true;
-        }
+    if (!(nodes_searched & 0x3FFF)) { // check every 16384 nodes
+        auto current_time = std::chrono::high_resolution_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           current_time - start_time)
+                           .count();
+
+        if (elapsed >= time_limit_ms)
+            return time_up = true;
     }
 
     return false;
@@ -145,7 +143,8 @@ void Search::order_moves(std::vector<Move> &moves, const PVLine *pv_line,
     });
 }
 
-int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
+int Search::alpha_beta(int alpha, int beta, uint16_t depth_left,
+                       PVLine *pline) {
     nodes_searched++;
     if (should_stop())
         return alpha;
@@ -157,7 +156,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     bool is_pv_node = (beta - alpha) > 1;
     PVLine *tt_line = nullptr;
 
-    uint64_t hash = board->get_hash();
+    auto hash = board->get_hash();
     auto result = tt.probe(hash);
 
     if (result != std::nullopt) {
@@ -228,7 +227,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
             found_pv = true;
 
             pline->moves.clear();
-            pline->moves.push_back(move);
+            pline->moves.emplace_back(move);
             pline->moves.insert(pline->moves.end(), line.moves.begin(),
                                 line.moves.end());
         }
@@ -272,7 +271,7 @@ int Search::alpha_beta(int alpha, int beta, int depth_left, PVLine *pline) {
     return alpha;
 }
 
-int Search::quiescence(int alpha, int beta, int depth) {
+int Search::quiescence(int alpha, int beta, uint16_t depth) {
     nodes_searched++;
 
     int stand_pat = board->evaluate();

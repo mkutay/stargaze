@@ -8,40 +8,59 @@
 #include <vector>
 
 struct SearchInfo {
-    int depth;
-    int score;
-    int nodes;
-    long long time_ms;
     bool stopped;
+    uint16_t depth;
+    uint32_t nodes;
+    uint32_t time_ms;
+    int score;
     PVLine pv;
     SearchInfo(int max_depth)
-        : depth(0), score(0), nodes(0), time_ms(0), stopped(false),
+        : stopped(false), depth(0), nodes(0), time_ms(0), score(0),
           pv(max_depth) {}
 };
 
 class Search {
   private:
-    Board *board;
-    TT tt;
-    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
-    long long time_limit_ms;
-    int nodes_searched;
     bool time_up;
+    uint32_t time_limit_ms;
+    uint32_t nodes_searched;
+    Board *board;
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    TT tt;
 
-    int quiescence(int alpha, int beta, int depth);
+    /**
+     * Perform quiescence search with the given alpha, beta, and depth. This is
+     * used to search only capture moves and avoid the horizon effect.
+     */
+    int quiescence(int alpha, int beta, uint16_t depth);
+
+    /**
+     * Check if the search should stop due to time limit or other conditions.
+     * Used for iterative deepening and alpha-beta search to terminate early if
+     * needed.
+     */
     bool should_stop();
+
+    /**
+     * Order the moves to improve alpha-beta pruning efficiency.
+     */
     void order_moves(std::vector<Move> &moves, const PVLine *pv_line,
                      const PVLine *tt_line);
 
   public:
-    Search(Board *board)
-        : board(board), time_limit_ms(5000), nodes_searched(0), time_up(false) {
-    }
+    Search(Board *board) : board(board) {}
 
-    int alpha_beta(int alpha, int beta, int depth_left, PVLine *pline);
-    SearchInfo
-    iterative_deepening(int max_depth, long long time_limit = 5000,
-                        std::optional<SearchInfo> last_info = std::nullopt);
-    void set_time_limit(long long ms) { time_limit_ms = ms; }
-    const TT *get_tt() const { return &tt; }
+    /**
+     * Perform alpha-beta search with the given alpha, beta, and depth left. The
+     * PV line is updated with the best moves found during the search.
+     */
+    int alpha_beta(int alpha, int beta, uint16_t depth_left, PVLine *pline);
+
+    /**
+     * Perform iterative deepening search up to the given maximum depth and time
+     * limit. The last search info can be provided to continue from a previous
+     * search.
+     */
+    SearchInfo iterative_deepening(uint16_t max_depth, uint32_t time_limit,
+                                   std::optional<SearchInfo> last_info);
 };
