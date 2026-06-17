@@ -557,3 +557,6 @@ BitBoard Board::get_bb(Colour colour) const {
 BitBoard Board::get_bb(Piece type, Colour colour) const {
     return get_bb(type) & get_bb(colour);
 }
+
+template void Board::null_move<true>();
+template void Board::null_move<false>();

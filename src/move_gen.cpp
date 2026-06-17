@@ -260,3 +260,6 @@ bool Board::is_attacked(Colour by_colour, BitBoard bb) const {
 
     return false;
 }
+
+template std::vector<Move> Board::get_moves<true>();
+template std::vector<Move> Board::get_moves<false>();
