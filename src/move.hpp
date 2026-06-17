@@ -51,7 +51,7 @@ class Move {
         return is_capture << 2;
     }
 
-    constexpr Move() = delete;
+    constexpr Move() : m_move(0) {}
     constexpr Move(uint16_t move) : m_move(move) {}
     constexpr Move(Square from, Square to, int flags)
         : m_move(from | (to << 6) | (flags << 12)) {}

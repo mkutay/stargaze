@@ -1,47 +1,41 @@
 #pragma once
-#include "pv.hpp"
+#include "move.hpp"
 #include <cstdint>
-#include <cstring>
-#include <optional>
-#include <unordered_map>
+#include <vector>
 
 enum class Bound : uint8_t {
-    NONE = 0,
+    NONE = 0,  // entry is empty/invalid
     EXACT = 1, // PV-node (exact score)
     LOWER = 2, // all-node (failed high, beta cutoff)
     UPPER = 3  // cut-node (failed low, no move improved alpha)
 };
 
 struct TTEntry {
-    Bound bound;    // bound type (BOUND_EXACT, BOUND_LOWER, BOUND_UPPER)
-    uint16_t depth; // search depth
-    uint16_t age;   // age counter for replacement strategy
-    int score;      // score (evaluation)
-    PVLine line;
+    uint64_t hash;
+    int16_t score;
+    Move best_move;
+    uint8_t depth;
+    Bound bound;
+    uint16_t age;
 
-    TTEntry() : bound(Bound::NONE), depth(0), age(0), score(0), line() {}
-    TTEntry(PVLine line_, int score_, uint16_t depth_, Bound bound_,
-            uint16_t age_)
-        : bound(bound_), depth(depth_), age(age_), score(score_), line(line_) {}
+    TTEntry()
+        : hash(0), score(0), best_move(0), depth(0), bound(Bound::NONE),
+          age(0) {}
 };
 
 class TT {
-    std::unordered_map<uint64_t, TTEntry> table;
-
-    /**
-     * Age counter for the transposition table. This is incremented at the start
-     * of each search, and is used to determine whether an entry is "old" and
-     * should be replaced. Maximum it could get is the number of half-moves in a
-     * game.
-     */
+  private:
+    std::vector<TTEntry> table;
+    size_t table_size;
     uint16_t current_age;
 
+    bool should_replace(TTEntry *entry, uint8_t depth) const;
+
   public:
-    TT() : current_age(0) {}
+    TT(size_t exp_size = 24);
     void clear();
     void new_search();
-    std::optional<TTEntry *> probe(uint64_t hash);
-    void store(uint64_t hash, PVLine line, int score, uint16_t depth,
+    TTEntry *probe(uint64_t hash);
+    void store(uint64_t hash, Move best_move, int16_t score, uint8_t depth,
                Bound bound);
-    size_t get_num_entries() const;
 };

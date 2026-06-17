@@ -1,5 +1,10 @@
 #include "tt.hpp"
 
+TT::TT(size_t exp_size) : current_age(0) {
+    table_size = 1uz << exp_size;
+    table.resize(table_size);
+}
+
 void TT::clear() {
     table.clear();
     current_age = 0;
@@ -7,37 +12,30 @@ void TT::clear() {
 
 void TT::new_search() { current_age++; }
 
-std::optional<TTEntry *> TT::probe(uint64_t hash) {
-    auto it = table.find(hash);
-    if (it == table.end()) {
-        return std::nullopt;
+TTEntry *TT::probe(uint64_t hash) {
+    size_t index = hash & (table_size - 1);
+    if (table[index].bound != Bound::NONE && table[index].hash == hash) {
+        return &table[index];
     }
-
-    return &it->second;
+    return nullptr;
 }
 
-void TT::store(uint64_t hash, PVLine line, int score, uint16_t depth,
+bool TT::should_replace(TTEntry *entry, uint8_t depth) const {
+    return entry->bound == Bound::NONE || depth >= entry->depth ||
+           (current_age - entry->age) > 2;
+}
+
+void TT::store(uint64_t hash, Move best_move, int16_t score, uint8_t depth,
                Bound bound) {
-    auto [it, inserted] =
-        table.try_emplace(hash, line, score, depth, bound, current_age);
+    size_t index = hash & (table_size - 1);
+    TTEntry *entry = &table[index];
 
-    if (inserted) {
-        return;
-    }
-
-    TTEntry *entry = &it->second;
-
-    bool should_replace = entry->bound == Bound::NONE ||
-                          depth >= entry->depth ||
-                          (current_age - entry->age) > 2; // old search
-
-    if (should_replace) {
-        entry->line = line;
+    if (should_replace(entry, depth)) {
+        entry->hash = hash;
+        entry->best_move = best_move;
         entry->score = score;
         entry->depth = depth;
         entry->bound = bound;
         entry->age = current_age;
     }
 }
-
-size_t TT::get_num_entries() const { return table.size(); }
