@@ -1,6 +1,7 @@
 #pragma once
 #include "board.hpp"
 #include "move.hpp"
+#include "pv.hpp"
 #include "tt.hpp"
 #include <chrono>
 #include <optional>

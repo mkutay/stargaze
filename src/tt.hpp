@@ -1,16 +1,9 @@
 #pragma once
-#include "move.hpp"
+#include "pv.hpp"
 #include <cstdint>
 #include <cstring>
 #include <optional>
 #include <unordered_map>
-#include <vector>
-
-struct PVLine {
-    std::vector<Move> moves;
-    PVLine(int max_depth) { moves.reserve(max_depth); }
-    PVLine() {}
-};
 
 enum class Bound : uint8_t {
     NONE = 0,
