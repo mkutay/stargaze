@@ -105,17 +105,6 @@ class Board {
     void clear_piece(Piece piece, Colour colour, Square sq);
 
     /**
-     * Return the piece type occupying sq, or nullopt if the square is
-     * empty.
-     */
-    std::optional<Piece> get_piece(Square sq) const;
-
-    /**
-     * Return the colour occupying sq, or nullopt if the square is empty.
-     */
-    std::optional<Colour> get_colour(Square sq) const;
-
-    /**
      * Return true if the piece of the given type and colour occupies the
      * square.
      *
@@ -183,6 +172,17 @@ class Board {
     Board();
     explicit Board(std::string_view fen);
 
+    /**
+     * Return the piece type occupying sq, or nullopt if the square is
+     * empty.
+     */
+    std::optional<Piece> get_piece(Square sq) const;
+
+    /**
+     * Return the colour occupying sq, or nullopt if the square is empty.
+     */
+    std::optional<Colour> get_colour(Square sq) const;
+
     uint64_t perft(int depth);
 
     /**
@@ -196,8 +196,20 @@ class Board {
     void undo_move();
 
     /**
+     * Apply or undo a null move (toggle side to move, clear/restore ep square).
+     */
+    template <bool Undo>
+    void null_move();
+
+    /**
+     * Check if the given colour has any non-pawn, non-king material.
+     */
+    bool has_non_pawn_material(Colour colour) const;
+
+    /**
      * Return a vector of all legal moves for the current player.
      */
+    template <bool CapturesOnly = false>
     std::vector<Move> get_moves();
 
     /**

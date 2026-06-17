@@ -5,7 +5,7 @@
 #include <array>
 #include <vector>
 
-std::vector<Move> Board::get_moves() {
+template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     std::vector<Move> pseudo; // Pseudo-legal moves, i.e., moves that may leave
                               // the king in check.
 
@@ -24,7 +24,11 @@ std::vector<Move> Board::get_moves() {
         bb = bb.direct_move(move);
 
         auto captures = bb & other_pieces;
-        bb = (bb & empty) | captures;
+        if constexpr (CapturesOnly) {
+            bb = captures;
+        } else {
+            bb = (bb & empty) | captures;
+        }
 
         auto temp = bb;
         while (temp) {
@@ -99,14 +103,16 @@ std::vector<Move> Board::get_moves() {
                 for (auto promotion_piece : Move::PROMOTION_PIECES) {
                     pseudo.emplace_back(from, sq, promotion_piece);
                 }
-            } else {
+            } else if constexpr (!CapturesOnly) {
                 pseudo.emplace_back(from, sq, Move::QUIET);
             }
         }
 
-        while (pawn_push_two) {
-            auto sq = pawn_push_two.get_square_pop();
-            pseudo.emplace_back(sq - 16 * mul, sq, Move::DOUBLE_PAWN_PUSH);
+        if constexpr (!CapturesOnly) {
+            while (pawn_push_two) {
+                auto sq = pawn_push_two.get_square_pop();
+                pseudo.emplace_back(sq - 16 * mul, sq, Move::DOUBLE_PAWN_PUSH);
+            }
         }
 
         while (pawn_capture_left) {
@@ -136,26 +142,27 @@ std::vector<Move> Board::get_moves() {
 
     {
         auto knights = get_bb(Piece::KNIGHT, turn);
-        generate_moves.operator()<false>(knights, Mask::KNIGHT_MOVES);
+        generate_moves.template operator()<false>(knights, Mask::KNIGHT_MOVES);
     }
 
     {
         auto bishops_and_queens =
             get_bb(Piece::BISHOP, turn) | get_bb(Piece::QUEEN, turn);
-        generate_moves.operator()<true>(bishops_and_queens,
-                                        Mask::DIAGONAL_MOVES);
+        generate_moves.template operator()<true>(bishops_and_queens,
+                                                 Mask::DIAGONAL_MOVES);
     }
 
     {
         auto rooks_and_queens =
             get_bb(Piece::ROOK, turn) | get_bb(Piece::QUEEN, turn);
-        generate_moves.operator()<true>(rooks_and_queens, Mask::CARDINAL_MOVES);
+        generate_moves.template operator()<true>(rooks_and_queens,
+                                                 Mask::CARDINAL_MOVES);
     }
 
     {
         auto king = get_bb(Piece::KING, turn);
-        generate_moves.operator()<false>(king, Mask::CARDINAL_MOVES);
-        generate_moves.operator()<false>(king, Mask::DIAGONAL_MOVES);
+        generate_moves.template operator()<false>(king, Mask::CARDINAL_MOVES);
+        generate_moves.template operator()<false>(king, Mask::DIAGONAL_MOVES);
     }
 
     std::vector<Move> non_pseudo_moves;
@@ -167,7 +174,7 @@ std::vector<Move> Board::get_moves() {
         undo_move();
     }
 
-    {
+    if constexpr (!CapturesOnly) {
         auto turn_index = std::to_underlying(turn);
         auto SQE1 = SQ::E1.flip(turn), SQF1 = SQ::F1.flip(turn),
              SQG1 = SQ::G1.flip(turn), SQD1 = SQ::D1.flip(turn),

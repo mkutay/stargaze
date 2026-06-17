@@ -345,6 +345,53 @@ void Board::make_move(Move move) { apply_move<false>(move); }
 
 void Board::undo_move() { apply_move<true>(moves.back()); }
 
+template <bool Undo> void Board::null_move() {
+    if constexpr (!Undo) {
+        history.emplace_back(Piece::PAWN, std::nullopt, can_castle, ep_square,
+                             halfmove_clock);
+
+        if (ep_square.has_value()) {
+            current_hash ^= Zobrist::en_passant(ep_square.value());
+        }
+
+        current_hash ^= Zobrist::black_move();
+        turn = !turn;
+        ep_square = std::nullopt;
+        halfmove_clock++;
+
+        if (turn == Colour::WHITE) {
+            fullmove_number++;
+        }
+
+        hash_history.emplace_back(current_hash);
+    } else {
+        UndoInfo undo_info = history.back();
+        history.pop_back();
+        hash_history.pop_back();
+
+        turn = !turn;
+        current_hash ^= Zobrist::black_move();
+
+        if (turn == Colour::BLACK) {
+            fullmove_number--;
+        }
+
+        can_castle = undo_info.can_castle;
+        ep_square = undo_info.ep_square;
+        halfmove_clock = undo_info.halfmove_clock;
+        current_hash = hash_history.back();
+    }
+
+#ifdef VERIFY_CONSISTENCY
+    check_state_consistency();
+#endif
+}
+
+bool Board::has_non_pawn_material(Colour colour) const {
+    return (get_bb(colour) & ~get_bb(Piece::PAWN) & ~get_bb(Piece::KING)) !=
+           Mask::EMPTY;
+}
+
 void Board::check_state_consistency() const {
     assert(current_hash == calculate_hash());
 
