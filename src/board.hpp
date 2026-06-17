@@ -198,8 +198,7 @@ class Board {
     /**
      * Apply or undo a null move (toggle side to move, clear/restore ep square).
      */
-    template <bool Undo>
-    void null_move();
+    template <bool Undo> void null_move();
 
     /**
      * Check if the given colour has any non-pawn, non-king material.
@@ -209,8 +208,7 @@ class Board {
     /**
      * Return a vector of all legal moves for the current player.
      */
-    template <bool CapturesOnly = false>
-    std::vector<Move> get_moves();
+    template <bool CapturesOnly = false> std::vector<Move> get_moves();
 
     /**
      * Return the Zobrist hash of the current board state.
