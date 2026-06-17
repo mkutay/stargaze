@@ -212,4 +212,12 @@ class Eval {
     }
 
     static constexpr int gamephase_sum() { return gamephase_sum_value; }
+
+    /**
+     * Return the value of a piece.
+     */
+    static constexpr int value(Piece piece) {
+        auto pi = std::to_underlying(piece);
+        return mg_piece_values[pi] + eg_piece_values[pi];
+    }
 };
