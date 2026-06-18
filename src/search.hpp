@@ -67,7 +67,6 @@ class Search {
      */
     int score_move(Move move, Move tt_move, uint16_t ply);
     int score_move(Move move);
-    int get_capture_value(Move move) const;
 
     /**
      * Order the moves to improve alpha-beta pruning efficiency.

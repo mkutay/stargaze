@@ -128,8 +128,11 @@ int Search::score_move(Move move) {
         return PROMOTION_SCORE;
 
     if (move.is_capture()) {
-        auto victim_val = get_capture_value(move);
-        auto aggressor_val = Eval::value(*board->get_piece(move.from()));
+        auto to = *board->get_piece(move.to());
+        auto from = *board->get_piece(move.from());
+        auto victim_val =
+            move.is_en_passant() ? Eval::value(Piece::PAWN) : Eval::value(to);
+        auto aggressor_val = Eval::value(from);
         return CAPTURE_SCORE_BASE + 10 * victim_val - aggressor_val;
     }
 
@@ -137,11 +140,6 @@ int Search::score_move(Move move) {
         return CASTLE_SCORE;
 
     return 0;
-}
-
-int Search::get_capture_value(Move move) const {
-    return move.is_en_passant() ? Eval::value(Piece::PAWN)
-                                : Eval::value(*board->get_piece(move.to()));
 }
 
 void Search::order_moves(std::vector<Move> &moves, Move tt_move, uint16_t ply) {
@@ -330,7 +328,9 @@ int Search::quiescence(int alpha, int beta) {
     for (auto move : moves) {
         // Delta Pruning
         if (!in_check && !move.is_promotion()) {
-            int gain = get_capture_value(move);
+            auto to = *board->get_piece(move.to());
+            int gain = move.is_en_passant() ? Eval::value(Piece::PAWN)
+                                            : Eval::value(to);
             if (stand_pat + gain + 200 < alpha)
                 continue;
         }
