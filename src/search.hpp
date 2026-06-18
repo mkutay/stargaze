@@ -41,8 +41,7 @@ class Search {
     constexpr static const int PROMOTION_SCORE = 90000;
     constexpr static const int CAPTURE_SCORE_BASE = 70000;
     constexpr static const int CASTLE_SCORE = 60000;
-    constexpr static const int KILLER_SCORE_1 = 50000;
-    constexpr static const int KILLER_SCORE_2 = 40000;
+    constexpr static const std::array<int, 2> KILLER_SCORES = {50000, 40000};
 
     bool time_up;
     uint32_t time_limit_ms;
@@ -51,10 +50,13 @@ class Search {
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     TT tt;
 
-    // Killers are a heuristic to improve move ordering in alpha-beta search.
-    // The idea is that if a move causes a beta cutoff at a certain depth, it is
-    // likely to be a good move in similar positions. We store the two most
-    // recent killer moves for each ply (depth) of the search.
+    /**
+     * Killers are a heuristic to improve move ordering in alpha-beta search.
+     * The idea is that if a move causes a beta cutoff at a certain depth, it is
+     * likely to be a good move in similar positions. We store the two most
+     * recent killer moves for each ply (depth) of the search. Index 0 is the
+     * most recent killer move, and index 1 is the second most recent.
+     */
     std::vector<std::array<Move, 2>> killers;
 
     int quiescence(int alpha, int beta);

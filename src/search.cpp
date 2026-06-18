@@ -114,10 +114,11 @@ int Search::score_move(Move move, Move tt_move, uint16_t ply) {
         return base_score;
 
     if (ply < killers.size()) {
-        if (move == killers[ply][0])
-            return KILLER_SCORE_1;
-        if (move == killers[ply][1])
-            return KILLER_SCORE_2;
+        auto &k_moves = killers[ply];
+        for (size_t i = 0; i < k_moves.size(); i++) {
+            if (move == k_moves[i])
+                return KILLER_SCORES[i];
+        }
     }
 
     return 0;
