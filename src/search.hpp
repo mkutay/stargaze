@@ -10,7 +10,7 @@
 struct SearchInfo {
     bool stopped;
     uint16_t depth;
-    uint32_t nodes;
+    uint64_t nodes;
     uint32_t time_ms;
     int score;
     PVLine pv;
@@ -32,9 +32,17 @@ class Search {
     constexpr static const int DELTA_MAX =
         ASPIRATION_WINDOW * 4 * 5; // ~5 pawns
 
+    // Named constants for move scoring
+    constexpr static const int TT_MOVE_SCORE = 100000;
+    constexpr static const int PROMOTION_SCORE = 90000;
+    constexpr static const int CAPTURE_SCORE_BASE = 70000;
+    constexpr static const int CASTLE_SCORE = 60000;
+    constexpr static const int KILLER_SCORE_1 = 50000;
+    constexpr static const int KILLER_SCORE_2 = 40000;
+
     bool time_up;
     uint32_t time_limit_ms;
-    uint32_t nodes_searched;
+    uint64_t nodes_searched;
     Board *board;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     TT tt;
@@ -53,14 +61,15 @@ class Search {
     /**
      * Score a move to improve alpha-beta pruning efficiency.
      */
-    int score_move(Move move, std::optional<Move> tt_move,
-                   std::optional<uint16_t> ply);
+    int score_move(Move move, Move tt_move, uint16_t ply);
+    int score_move(Move move);
+    int get_capture_value(Move move) const;
 
     /**
      * Order the moves to improve alpha-beta pruning efficiency.
      */
-    void order_moves(std::vector<Move> &moves, std::optional<Move> tt_move,
-                     std::optional<uint16_t> ply);
+    void order_moves(std::vector<Move> &moves, Move tt_move, uint16_t ply);
+    void order_moves(std::vector<Move> &moves);
 
     /**
      * Perform alpha-beta search with the given alpha, beta, depth left, and

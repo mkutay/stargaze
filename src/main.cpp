@@ -11,7 +11,7 @@
 #endif
 
 const int MAX_DEPTH = 30;
-const long long TIME_LIMIT_MS = 10000;
+const long long TIME_LIMIT_MS = 5000;
 
 int32_t main() {
     Board board;
