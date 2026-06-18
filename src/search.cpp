@@ -201,15 +201,14 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     // Null Move Pruning
     if (depth_left >= 3 && !is_pv_node && !in_check &&
         board->has_non_pawn_material(board->get_turn())) {
-        int R = 2 + depth_left / 6;
-        int next_depth = static_cast<int>(depth_left) - 1 - R;
-        next_depth = std::max(0, next_depth);
+        int R = 2 + depth_left / 4;
+        int next_depth = std::max(0, static_cast<int>(depth_left) - 1 - R);
 
-        board->null_move<false>();
+        board->make_null_move();
         PVLine null_line(next_depth);
         auto nmp_score =
             -alpha_beta(-beta, -beta + 1, next_depth, ply + 1, &null_line);
-        board->null_move<true>();
+        board->undo_null_move();
 
         if (nmp_score >= beta && nmp_score < BETA_START)
             return beta;
