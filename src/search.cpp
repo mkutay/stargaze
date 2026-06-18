@@ -331,7 +331,7 @@ int Search::quiescence(int alpha, int beta) {
             auto to = *board->get_piece(move.to());
             int gain = move.is_en_passant() ? Eval::value(Piece::PAWN)
                                             : Eval::value(to);
-            if (stand_pat + gain + 200 < alpha)
+            if (stand_pat + gain + DELTA_PRUNING < alpha)
                 continue;
         }
 
