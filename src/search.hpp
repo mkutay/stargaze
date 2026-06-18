@@ -1,5 +1,6 @@
 #pragma once
 #include "board.hpp"
+#include "eval.hpp"
 #include "move.hpp"
 #include "pv.hpp"
 #include "tt.hpp"
@@ -21,18 +22,21 @@ struct SearchInfo {
 
 class Search {
   private:
+    constexpr static const int PAWN_VALUE = Eval::value(Piece::PAWN);
+
     constexpr static const int ALPHA_START = -100000;
     constexpr static const int BETA_START = 100000;
     constexpr static const int CHECKMATE_SCORE = -200000;
-    constexpr static const int ASPIRATION_WINDOW = 23; // ~0.25 pawn
+    constexpr static const int ASPIRATION_WINDOW = PAWN_VALUE / 4;
 
     // If the delta becomes too large in iterative deepening, reset alpha/beta
     // to the initial starting value to avoid searching too far below the
     // expected score.
-    constexpr static const int DELTA_MAX =
-        ASPIRATION_WINDOW * 4 * 5; // ~5 pawns
+    constexpr static const int DELTA_MAX = PAWN_VALUE * 5;
 
-    // Named constants for move scoring
+    constexpr static const int DELTA_PRUNING = PAWN_VALUE * 2;
+
+    // Named constants for move scoring.
     constexpr static const int TT_MOVE_SCORE = 100000;
     constexpr static const int PROMOTION_SCORE = 90000;
     constexpr static const int CAPTURE_SCORE_BASE = 70000;

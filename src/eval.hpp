@@ -218,6 +218,6 @@ class Eval {
      */
     static constexpr int value(Piece piece) {
         auto pi = std::to_underlying(piece);
-        return mg_piece_values[pi] + eg_piece_values[pi];
+        return (mg_piece_values[pi] + eg_piece_values[pi]) / 2;
     }
 };
