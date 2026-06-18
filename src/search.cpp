@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <chrono>
 #include <optional>
-#include <utility>
 
 #ifdef DEBUG
 #include "debug.hpp"
@@ -19,7 +18,7 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
     start_time = std::chrono::high_resolution_clock::now();
     nodes_searched = 0;
     time_up = false;
-    killers = {};
+    killers.assign(max_depth + 2, std::array<Move, 2>{});
 
     tt.new_search();
 
@@ -89,7 +88,7 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
     return search_info;
 }
 
-inline bool Search::should_stop() {
+bool Search::should_stop() {
     if (time_up)
         return true;
 
@@ -106,52 +105,56 @@ inline bool Search::should_stop() {
     return false;
 }
 
-int Search::score_move(Move move, std::optional<Move> tt_move,
-                       std::optional<uint16_t> ply) {
-    if (move == tt_move) {
-        return 100000;
-    }
+int Search::score_move(Move move, Move tt_move, uint16_t ply) {
+    if (move == tt_move)
+        return TT_MOVE_SCORE;
 
-    if (move.is_promotion()) {
-        return 90000;
-    }
+    int base_score = score_move(move);
+    if (base_score > 0)
+        return base_score;
 
-    if (move.is_capture()) {
-        auto victim_val = move.is_en_passant()
-                              ? Eval::value(Piece::PAWN)
-                              : Eval::value(*board->get_piece(move.to()));
-        auto aggressor_val = Eval::value(*board->get_piece(move.from()));
-        return 70000 + 10 * victim_val - aggressor_val;
-    }
-
-    if (move.is_castle()) {
-        return 60000;
-    }
-
-    if (ply.has_value() && ply.value() < killers.size()) {
-        auto p = ply.value();
-        if (move == killers[p][0])
-            return 50000;
-        if (move == killers[p][1])
-            return 40000;
+    if (ply < killers.size()) {
+        if (move == killers[ply][0])
+            return KILLER_SCORE_1;
+        if (move == killers[ply][1])
+            return KILLER_SCORE_2;
     }
 
     return 0;
 }
 
-void Search::order_moves(std::vector<Move> &moves, std::optional<Move> tt_move,
-                         std::optional<uint16_t> ply) {
-    std::vector<std::pair<int, Move>> scored_moves;
-    scored_moves.reserve(moves.size());
-    for (const auto &move : moves)
-        scored_moves.emplace_back(score_move(move, tt_move, ply), move);
+int Search::score_move(Move move) {
+    if (move.is_promotion())
+        return PROMOTION_SCORE;
 
+    if (move.is_capture()) {
+        auto victim_val = get_capture_value(move);
+        auto aggressor_val = Eval::value(*board->get_piece(move.from()));
+        return CAPTURE_SCORE_BASE + 10 * victim_val - aggressor_val;
+    }
+
+    if (move.is_castle())
+        return CASTLE_SCORE;
+
+    return 0;
+}
+
+int Search::get_capture_value(Move move) const {
+    return move.is_en_passant() ? Eval::value(Piece::PAWN)
+                                : Eval::value(*board->get_piece(move.to()));
+}
+
+void Search::order_moves(std::vector<Move> &moves, Move tt_move, uint16_t ply) {
     std::stable_sort(
-        scored_moves.begin(), scored_moves.end(),
-        [](const auto &a, const auto &b) { return a.first > b.first; });
+        moves.begin(), moves.end(), [this, tt_move, ply](Move a, Move b) {
+            return score_move(a, tt_move, ply) > score_move(b, tt_move, ply);
+        });
+}
 
-    for (size_t i = 0; i < moves.size(); i++)
-        moves[i] = scored_moves[i].second;
+void Search::order_moves(std::vector<Move> &moves) {
+    std::stable_sort(moves.begin(), moves.end(), [this](Move a, Move b) {
+        return score_move(a) > score_move(b);
+    });
 }
 
 int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
@@ -167,7 +170,6 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     if (in_check)
         depth_left++;
 
-    int original_alpha = alpha;
     bool is_pv_node = (beta - alpha) > 1;
     Move tt_move;
 
@@ -210,16 +212,16 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     if (depth_left >= 3 && !is_pv_node && !in_check &&
         board->has_non_pawn_material(board->get_turn())) {
         int R = 2 + depth_left / 6;
-        int next_depth = (int) depth_left - 1 - R;
+        int next_depth = static_cast<int>(depth_left) - 1 - R;
         next_depth = std::max(0, next_depth);
 
         board->null_move<false>();
         PVLine null_line(next_depth);
-        auto score =
+        auto nmp_score =
             -alpha_beta(-beta, -beta + 1, next_depth, ply + 1, &null_line);
         board->null_move<true>();
 
-        if (score >= beta && score < BETA_START)
+        if (nmp_score >= beta && nmp_score < BETA_START)
             return beta;
     }
 
@@ -229,6 +231,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     order_moves(moves, tt_move, ply);
 
     bool found_pv = false;
+    Bound bound = Bound::UPPER;
 
     for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
         Move move = moves[i];
@@ -236,45 +239,47 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
 
         board->make_move(move);
         bool gives_check = board->is_in_check(board->get_turn());
-        int score;
+        int move_score;
 
         if (!found_pv) {
             // full window search for first move
-            score = -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1, &line);
+            move_score =
+                -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1, &line);
         } else {
             // Late Move Reductions (LMR)
             if (depth_left >= 3 && i >= 3 && is_quiet && !in_check &&
                 !gives_check) {
                 int R = 1 + (i > 6) + (depth_left > 6);
-                int reduced_depth = (int) depth_left - 1 - R;
+                int reduced_depth = static_cast<int>(depth_left) - 1 - R;
                 reduced_depth = std::max(0, reduced_depth);
 
-                score = -alpha_beta(-alpha - 1, -alpha, reduced_depth, ply + 1,
-                                    &line);
+                move_score = -alpha_beta(-alpha - 1, -alpha, reduced_depth,
+                                         ply + 1, &line);
 
-                if (score > alpha) {
-                    // Re-search at full depth with narrow window
-                    score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1,
-                                        ply + 1, &line);
+                if (move_score > alpha) {
+                    // re-search at full depth with narrow window
+                    move_score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1,
+                                             ply + 1, &line);
                 }
             } else {
-                // Regular null window search
-                score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1, ply + 1,
-                                    &line);
+                // regular null window search
+                move_score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1,
+                                         ply + 1, &line);
             }
 
             // re-search with full window if the move is genuinely better
-            if (score > alpha && score < beta) {
-                score =
+            if (move_score > alpha && move_score < beta) {
+                move_score =
                     -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1, &line);
             }
         }
 
         board->undo_move();
 
-        if (score > alpha) {
-            alpha = score;
+        if (move_score > alpha) {
+            alpha = move_score;
             found_pv = true;
+            bound = Bound::EXACT;
 
             pline->moves.clear();
             pline->moves.emplace_back(move);
@@ -282,11 +287,11 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
                                 line.moves.end());
         }
 
-        if (score >= beta) {
-            // Update killers
+        if (move_score >= beta) {
+            bound = Bound::LOWER;
             if (is_quiet) {
                 if (ply >= killers.size()) {
-                    killers.resize(ply + 1);
+                    killers.resize(ply + 2);
                 }
                 if (killers[ply][0] != move) {
                     killers[ply][1] = killers[ply][0];
@@ -295,19 +300,6 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
             }
             break;
         }
-    }
-
-    Bound bound = Bound::NONE;
-    if (alpha >= beta) {
-        bound = Bound::LOWER; // beta cutoff (failed high)
-        // denotes that the score is at least as high as beta
-    } else if (alpha > original_alpha) {
-        bound = Bound::EXACT; // exact score (PV node)
-        // this is an exact score, and shouldn't change if you change alpha or
-        // beta
-    } else {
-        bound = Bound::UPPER; // failed low (all moves failed to raise alpha)
-        // the score cannot be greater than alpha
     }
 
     // store best move (or first legal move if no improvement)
@@ -322,7 +314,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
 
     // no legal moves now, so: checkmate or stalemate
 
-    if (board->is_in_check(board->get_turn())) {
+    if (in_check) {
         alpha = CHECKMATE_SCORE + ply;
     } else {
         alpha = 0;
@@ -334,15 +326,30 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
 int Search::quiescence(int alpha, int beta) {
     nodes_searched++;
 
+    const bool in_check = board->is_in_check(board->get_turn());
+
     int stand_pat = board->evaluate();
-    if (stand_pat >= beta)
-        return stand_pat;
-    alpha = std::max(alpha, stand_pat);
+    if (!in_check) {
+        if (stand_pat >= beta)
+            return stand_pat;
+        alpha = std::max(alpha, stand_pat);
+    }
 
     std::vector<Move> moves = board->get_moves<true>();
-    order_moves(moves, std::nullopt, std::nullopt);
 
-    for (Move move : moves) {
+    order_moves(moves);
+
+    for (size_t i = 0; i < moves.size(); i++) {
+        Move move = moves[i];
+
+        // delta pruning
+        if (!in_check && !move.is_promotion()) {
+            int gain = get_capture_value(move);
+            if (stand_pat + gain + 200 < alpha) {
+                continue;
+            }
+        }
+
         board->make_move(move);
         int score = -quiescence(-beta, -alpha);
         board->undo_move();
