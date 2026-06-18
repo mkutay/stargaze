@@ -124,19 +124,17 @@ int Search::score_move(Move move, std::optional<Move> pv_move,
         return PROMOTION_SCORE;
 
     if (move.is_capture()) {
-        auto to = *board->get_piece(move.to());
-        auto from = *board->get_piece(move.from());
-        auto victim_val =
-            move.is_en_passant() ? Eval::value(Piece::PAWN) : Eval::value(to);
-        auto aggressor_val = Eval::value(from);
+        auto victim_val = move.is_en_passant()
+                              ? Eval::value(Piece::PAWN)
+                              : Eval::value(*board->get_piece(move.to()));
+        auto aggressor_val = Eval::value(*board->get_piece(move.from()));
         return CAPTURE_SCORE_BASE + 10 * victim_val - aggressor_val;
     }
 
     if (move.is_castle())
         return CASTLE_SCORE;
 
-    if (ply.has_value()) {
-        assert(*ply < killers.size());
+    if (ply.has_value() && *ply < killers.size()) {
         auto &k_moves = killers[*ply];
         for (size_t i = 0; i < k_moves.size(); i++) {
             if (move == k_moves[i])
@@ -285,7 +283,8 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         if (move_score >= beta) {
             bound = Bound::LOWER;
             if (is_quiet) {
-                assert(ply < killers.size());
+                if (ply >= killers.size())
+                    killers.resize(ply + 1, std::array<Move, 2>{});
                 if (killers[ply][0] != move) {
                     killers[ply][1] = killers[ply][0];
                     killers[ply][0] = move;
@@ -334,9 +333,9 @@ int Search::quiescence(int alpha, int beta) {
     for (auto move : moves) {
         // Delta Pruning
         if (!in_check && !move.is_promotion()) {
-            auto to = *board->get_piece(move.to());
-            int gain = move.is_en_passant() ? Eval::value(Piece::PAWN)
-                                            : Eval::value(to);
+            int gain = move.is_en_passant()
+                           ? Eval::value(Piece::PAWN)
+                           : Eval::value(*board->get_piece(move.to()));
             if (stand_pat + gain + DELTA_PRUNING < alpha)
                 continue;
         }
