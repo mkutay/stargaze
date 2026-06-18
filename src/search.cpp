@@ -179,12 +179,12 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     if (tt_entry != nullptr) {
         tt_move = Move(tt_entry->best_move);
 
-        // use TT score if depth is sufficient and not a PV node, as PV nodes
-        // require a full search to find the best move
+        // Use TT score if depth is sufficient and not a PV node, as PV nodes
+        // require a full search to find the best move.
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
 
-            // copy TT line to PV line if the TT entry is valid for this node
+            // Copy TT line to PV line if the TT entry is valid for this node.
             if ((tt_entry->bound == Bound::EXACT) ||
                 (tt_entry->bound == Bound::LOWER && tt_score >= beta) ||
                 (tt_entry->bound == Bound::UPPER && tt_score <= alpha)) {
@@ -201,8 +201,9 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     // Null Move Pruning
     if (depth_left >= 3 && !is_pv_node && !in_check &&
         board->has_non_pawn_material(board->get_turn())) {
-        int R = 2 + depth_left / 4;
-        int next_depth = std::max(0, static_cast<int>(depth_left) - 1 - R);
+        int reduction = depth_left / 6;
+        int next_depth =
+            std::max(0, static_cast<int>(depth_left) - 3 - reduction);
 
         board->make_null_move();
         PVLine null_line(next_depth);
@@ -210,6 +211,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
             -alpha_beta(-beta, -beta + 1, next_depth, ply + 1, &null_line);
         board->undo_null_move();
 
+        // If the null move search fails high, we can prune this branch.
         if (nmp_score >= beta && nmp_score < BETA_START)
             return beta;
     }
@@ -224,39 +226,39 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
 
     for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
         Move move = moves[i];
-        bool is_quiet = !move.is_capture() && !move.is_promotion();
-
         board->make_move(move);
+        bool is_quiet = move.is_quiet();
         bool gives_check = board->is_in_check(board->get_turn());
         int move_score;
 
         if (!found_pv) {
-            // full window search for first move
+            // Full window search for first move.
             move_score =
                 -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1, &line);
         } else {
             // Late Move Reductions (LMR)
             if (depth_left >= 3 && i >= 3 && is_quiet && !in_check &&
                 !gives_check) {
-                int R = 1 + (i > 6) + (depth_left > 6);
-                int reduced_depth = static_cast<int>(depth_left) - 1 - R;
-                reduced_depth = std::max(0, reduced_depth);
+                int reduction = 2 + (i > 6) + (depth_left > 6);
+                int reduced_depth = std::max(0, depth_left - reduction);
 
                 move_score = -alpha_beta(-alpha - 1, -alpha, reduced_depth,
                                          ply + 1, &line);
 
                 if (move_score > alpha) {
-                    // re-search at full depth with narrow window
+                    // Re-search at full depth with narrow window when the
+                    // reduced search fails high.
                     move_score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1,
                                              ply + 1, &line);
                 }
             } else {
-                // regular null window search
+                // Regular null window search when the move is not reduced.
                 move_score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1,
                                          ply + 1, &line);
             }
 
-            // re-search with full window if the move is genuinely better
+            // Re-search with full window if the move is actually better; i.e.,
+            // PV node.
             if (move_score > alpha && move_score < beta) {
                 move_score =
                     -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1, &line);
@@ -279,9 +281,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         if (move_score >= beta) {
             bound = Bound::LOWER;
             if (is_quiet) {
-                if (ply >= killers.size()) {
-                    killers.resize(ply + 2);
-                }
+                assert(ply < killers.size());
                 if (killers[ply][0] != move) {
                     killers[ply][1] = killers[ply][0];
                     killers[ply][0] = move;
@@ -291,17 +291,17 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         }
     }
 
-    // store best move (or first legal move if no improvement)
+    // Store best move (or first legal move if no improvement).
     if (pline->moves.empty() && !moves.empty()) {
-        pline->moves.emplace_back(moves[0]);
+        pline->moves.emplace_back(moves.front());
     }
 
     if (!pline->moves.empty()) {
-        tt.store(hash, pline->moves[0], alpha, depth_left, bound);
+        tt.store(hash, pline->moves.front(), alpha, depth_left, bound);
         return alpha;
     }
 
-    // no legal moves now, so: checkmate or stalemate
+    // No legal moves now, so: checkmate or stalemate.
 
     if (in_check) {
         alpha = CHECKMATE_SCORE + ply;
@@ -325,18 +325,14 @@ int Search::quiescence(int alpha, int beta) {
     }
 
     std::vector<Move> moves = board->get_moves<true>();
-
     order_moves(moves);
 
-    for (size_t i = 0; i < moves.size(); i++) {
-        Move move = moves[i];
-
-        // delta pruning
+    for (auto move : moves) {
+        // Delta Pruning
         if (!in_check && !move.is_promotion()) {
             int gain = get_capture_value(move);
-            if (stand_pat + gain + 200 < alpha) {
+            if (stand_pat + gain + 200 < alpha)
                 continue;
-            }
         }
 
         board->make_move(move);
@@ -345,8 +341,8 @@ int Search::quiescence(int alpha, int beta) {
 
         if (score >= beta)
             return score;
-        if (score > alpha)
-            alpha = score;
+
+        alpha = std::max(alpha, score);
     }
 
     return alpha;
