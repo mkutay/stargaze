@@ -168,6 +168,11 @@ class Board {
      */
     template <bool Undo> void apply_move(Move move);
 
+    /**
+     * Apply or undo a null move (toggle side to move, clear/restore ep square).
+     */
+    template <bool Undo> void null_move();
+
   public:
     Board();
     explicit Board(std::string_view fen);
@@ -195,10 +200,8 @@ class Board {
      */
     void undo_move();
 
-    /**
-     * Apply or undo a null move (toggle side to move, clear/restore ep square).
-     */
-    template <bool Undo> void null_move();
+    void make_null_move();
+    void undo_null_move();
 
     /**
      * Check if the given colour has any non-pawn, non-king material.
