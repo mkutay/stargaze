@@ -105,26 +105,11 @@ bool Search::should_stop() {
     return false;
 }
 
-int Search::score_move(Move move, Move tt_move, uint16_t ply) {
+int Search::score_move(Move move, std::optional<Move> tt_move,
+                       std::optional<uint16_t> ply) const {
     if (move == tt_move)
         return TT_MOVE_SCORE;
 
-    int base_score = score_move(move);
-    if (base_score > 0)
-        return base_score;
-
-    if (ply < killers.size()) {
-        auto &k_moves = killers[ply];
-        for (size_t i = 0; i < k_moves.size(); i++) {
-            if (move == k_moves[i])
-                return KILLER_SCORES[i];
-        }
-    }
-
-    return 0;
-}
-
-int Search::score_move(Move move) {
     if (move.is_promotion())
         return PROMOTION_SCORE;
 
@@ -140,20 +125,24 @@ int Search::score_move(Move move) {
     if (move.is_castle())
         return CASTLE_SCORE;
 
+    if (ply.has_value()) {
+        assert(*ply < killers.size());
+        auto &k_moves = killers[*ply];
+        for (size_t i = 0; i < k_moves.size(); i++) {
+            if (move == k_moves[i])
+                return KILLER_SCORES[i];
+        }
+    }
+
     return 0;
 }
 
-void Search::order_moves(std::vector<Move> &moves, Move tt_move, uint16_t ply) {
+void Search::order_moves(std::vector<Move> &moves, std::optional<Move> tt_move,
+                         std::optional<uint16_t> ply) {
     std::stable_sort(
         moves.begin(), moves.end(), [this, tt_move, ply](Move a, Move b) {
             return score_move(a, tt_move, ply) > score_move(b, tt_move, ply);
         });
-}
-
-void Search::order_moves(std::vector<Move> &moves) {
-    std::stable_sort(moves.begin(), moves.end(), [this](Move a, Move b) {
-        return score_move(a) > score_move(b);
-    });
 }
 
 int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,

@@ -69,16 +69,17 @@ class Search {
     bool should_stop();
 
     /**
-     * Score a move to improve alpha-beta pruning efficiency.
+     * Static move scoring to prioritise moves during ordering.
      */
-    int score_move(Move move, Move tt_move, uint16_t ply);
-    int score_move(Move move);
+    int score_move(Move move, std::optional<Move> tt_move = std::nullopt,
+                   std::optional<uint16_t> ply = std::nullopt) const;
 
     /**
      * Order the moves to improve alpha-beta pruning efficiency.
      */
-    void order_moves(std::vector<Move> &moves, Move tt_move, uint16_t ply);
-    void order_moves(std::vector<Move> &moves);
+    void order_moves(std::vector<Move> &moves,
+                     std::optional<Move> tt_move = std::nullopt,
+                     std::optional<uint16_t> ply = std::nullopt);
 
     /**
      * Perform alpha-beta search with the given alpha, beta, depth left, and
