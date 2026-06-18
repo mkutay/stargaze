@@ -12,13 +12,13 @@
 #endif
 
 SearchInfo Search::iterative_deepening(uint16_t max_depth,
-                                       uint32_t time_limit) {
+                                       uint32_t _time_limit_ms) {
     SearchInfo search_info(max_depth);
-    time_limit_ms = time_limit;
+    time_limit_ms = _time_limit_ms;
     start_time = std::chrono::high_resolution_clock::now();
     nodes_searched = 0;
     time_up = false;
-    killers.assign(max_depth + 2, std::array<Move, 2>{});
+    killers.assign(max_depth, std::array<Move, 2>{});
 
     tt.new_search();
 
@@ -177,29 +177,19 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     TTEntry *tt_entry = tt.probe(hash);
 
     if (tt_entry != nullptr) {
-        if (tt_entry->best_move != 0) {
-            tt_move = Move(tt_entry->best_move);
-        }
+        tt_move = Move(tt_entry->best_move);
 
-        // use TT score if depth is sufficient and not a PV node
+        // use TT score if depth is sufficient and not a PV node, as PV nodes
+        // require a full search to find the best move
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
 
-            auto copy_tt_line = [&]() {
+            // copy TT line to PV line if the TT entry is valid for this node
+            if ((tt_entry->bound == Bound::EXACT) ||
+                (tt_entry->bound == Bound::LOWER && tt_score >= beta) ||
+                (tt_entry->bound == Bound::UPPER && tt_score <= alpha)) {
                 pline->moves.clear();
-                if (tt_entry->best_move != 0) {
-                    pline->moves.emplace_back(tt_entry->best_move);
-                }
-            };
-
-            if (tt_entry->bound == Bound::EXACT) {
-                copy_tt_line();
-                return tt_score;
-            } else if (tt_entry->bound == Bound::LOWER && tt_score >= beta) {
-                copy_tt_line();
-                return tt_score;
-            } else if (tt_entry->bound == Bound::UPPER && tt_score <= alpha) {
-                copy_tt_line();
+                pline->moves.emplace_back(tt_entry->best_move);
                 return tt_score;
             }
         }
