@@ -12,7 +12,7 @@ enum class Bound : uint8_t {
 
 struct TTEntry {
     uint64_t hash;
-    int16_t score;
+    int32_t score;
     Move best_move;
     uint8_t depth;
     Bound bound;
@@ -36,6 +36,6 @@ class TT {
     void clear();
     void new_search();
     TTEntry *probe(uint64_t hash);
-    void store(uint64_t hash, Move best_move, int16_t score, uint8_t depth,
+    void store(uint64_t hash, Move best_move, int score, uint8_t depth,
                Bound bound);
 };

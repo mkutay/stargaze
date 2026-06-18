@@ -25,7 +25,7 @@ bool TT::should_replace(TTEntry *entry, uint8_t depth) const {
            (current_age - entry->age) > 2;
 }
 
-void TT::store(uint64_t hash, Move best_move, int16_t score, uint8_t depth,
+void TT::store(uint64_t hash, Move best_move, int score, uint8_t depth,
                Bound bound) {
     size_t index = hash & (table_size - 1);
     TTEntry *entry = &table[index];
