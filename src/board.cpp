@@ -345,42 +345,46 @@ void Board::make_move(Move move) { apply_move<false>(move); }
 
 void Board::undo_move() { apply_move<true>(moves.back()); }
 
-template <bool Undo> void Board::null_move() {
-    if constexpr (!Undo) {
-        history.emplace_back(Piece::PAWN, std::nullopt, can_castle, ep_square,
-                             halfmove_clock);
+void Board::make_null_move() {
+    history.emplace_back(Piece::PAWN, std::nullopt, can_castle, ep_square,
+                         halfmove_clock);
 
-        if (ep_square.has_value()) {
-            current_hash ^= Zobrist::en_passant(ep_square.value());
-        }
-
-        current_hash ^= Zobrist::black_move();
-        turn = !turn;
-        ep_square = std::nullopt;
-        halfmove_clock++;
-
-        if (turn == Colour::WHITE) {
-            fullmove_number++;
-        }
-
-        hash_history.emplace_back(current_hash);
-    } else {
-        UndoInfo undo_info = history.back();
-        history.pop_back();
-        hash_history.pop_back();
-
-        turn = !turn;
-        current_hash ^= Zobrist::black_move();
-
-        if (turn == Colour::BLACK) {
-            fullmove_number--;
-        }
-
-        can_castle = undo_info.can_castle;
-        ep_square = undo_info.ep_square;
-        halfmove_clock = undo_info.halfmove_clock;
-        current_hash = hash_history.back();
+    if (ep_square.has_value()) {
+        current_hash ^= Zobrist::en_passant(ep_square.value());
     }
+
+    current_hash ^= Zobrist::black_move();
+    turn = !turn;
+    ep_square = std::nullopt;
+    halfmove_clock++;
+
+    if (turn == Colour::WHITE) {
+        fullmove_number++;
+    }
+
+    hash_history.emplace_back(current_hash);
+
+#ifdef VERIFY_CONSISTENCY
+    check_state_consistency();
+#endif
+}
+
+void Board::undo_null_move() {
+    UndoInfo undo_info = history.back();
+    history.pop_back();
+    hash_history.pop_back();
+
+    turn = !turn;
+    current_hash ^= Zobrist::black_move();
+
+    if (turn == Colour::BLACK) {
+        fullmove_number--;
+    }
+
+    can_castle = undo_info.can_castle;
+    ep_square = undo_info.ep_square;
+    halfmove_clock = undo_info.halfmove_clock;
+    current_hash = hash_history.back();
 
 #ifdef VERIFY_CONSISTENCY
     check_state_consistency();
@@ -557,6 +561,3 @@ BitBoard Board::get_bb(Colour colour) const {
 BitBoard Board::get_bb(Piece type, Colour colour) const {
     return get_bb(type) & get_bb(colour);
 }
-
-void Board::make_null_move() { null_move<false>(); }
-void Board::undo_null_move() { null_move<true>(); }
