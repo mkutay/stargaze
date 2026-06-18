@@ -1,4 +1,5 @@
 #include "tt.hpp"
+#include <algorithm>
 
 TT::TT(size_t exp_size) : current_age(0) {
     table_size = 1uz << exp_size;
@@ -6,7 +7,7 @@ TT::TT(size_t exp_size) : current_age(0) {
 }
 
 void TT::clear() {
-    table.clear();
+    std::fill(table.begin(), table.end(), TTEntry());
     current_age = 0;
 }
 
