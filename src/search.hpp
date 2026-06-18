@@ -47,6 +47,10 @@ class Search {
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     TT tt;
 
+    // Killers are a heuristic to improve move ordering in alpha-beta search.
+    // The idea is that if a move causes a beta cutoff at a certain depth, it is
+    // likely to be a good move in similar positions. We store the two most
+    // recent killer moves for each ply (depth) of the search.
     std::vector<std::array<Move, 2>> killers;
 
     int quiescence(int alpha, int beta);

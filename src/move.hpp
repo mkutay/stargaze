@@ -67,6 +67,7 @@ class Move {
     constexpr bool is_castle() const {
         return flags() == KING_SIDE_CASTLE || flags() == QUEEN_SIDE_CASTLE;
     }
+    constexpr bool is_quiet() const { return (flags() & 0b1100) == 0; }
 
     /**
      * Return the piece type that a pawn is promoted to in this move. Only valid
