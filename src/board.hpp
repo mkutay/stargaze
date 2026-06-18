@@ -168,11 +168,6 @@ class Board {
      */
     template <bool Undo> void apply_move(Move move);
 
-    /**
-     * Apply or undo a null move (toggle side to move, clear/restore ep square).
-     */
-    template <bool Undo> void null_move();
-
   public:
     Board();
     explicit Board(std::string_view fen);
@@ -200,6 +195,10 @@ class Board {
      */
     void undo_move();
 
+    /**
+     * Make/undo a null move, which is a special move that passes the turn to
+     * the opponent.
+     */
     void make_null_move();
     void undo_null_move();
 
