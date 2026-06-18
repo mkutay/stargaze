@@ -86,5 +86,5 @@ class Search {
      * limit. The last search info can be provided to continue from a previous
      * search.
      */
-    SearchInfo iterative_deepening(uint16_t max_depth, uint32_t time_limit);
+    SearchInfo iterative_deepening(uint16_t max_depth, uint32_t _time_limit_ms);
 };
