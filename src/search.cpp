@@ -19,6 +19,7 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
     nodes_searched = 0;
     time_up = false;
     killers.assign(max_depth, std::array<Move, 2>{});
+    last_pv = PVLine(max_depth);
 
     tt.new_search();
 
@@ -33,7 +34,7 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
         int beta = BETA_START;
 
         if (depth <= 2) {
-            score = alpha_beta(alpha, beta, depth, 0, &pv_line);
+            score = alpha_beta(alpha, beta, depth, 0, &pv_line, true);
         } else {
             auto delta = ASPIRATION_WINDOW;
             alpha = prev_score - delta;
@@ -45,17 +46,21 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
                 alpha = std::max(alpha, ALPHA_START);
                 beta = std::min(beta, BETA_START);
 
-                score = alpha_beta(alpha, beta, depth, 0, &pv_line);
+                score = alpha_beta(alpha, beta, depth, 0, &pv_line, true);
 
                 if (should_stop())
                     break;
 
                 if (score <= alpha) { // failed low
+                    if (alpha == ALPHA_START)
+                        break;
                     alpha -= delta;
                     delta *= 2;
                     if (delta > DELTA_MAX)
                         alpha = ALPHA_START;
                 } else if (score >= beta) { // failed high
+                    if (beta == BETA_START)
+                        break;
                     beta += delta;
                     delta *= 2;
                     if (delta > DELTA_MAX)
@@ -79,6 +84,7 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
                 std::chrono::high_resolution_clock::now() - start_time)
                 .count();
         search_info.pv = pv_line;
+        last_pv = pv_line;
 
         debug(depth, alpha, score, beta, nodes_searched, pv_line.moves,
               board->get_castling_rights());
@@ -105,8 +111,12 @@ bool Search::should_stop() {
     return false;
 }
 
-int Search::score_move(Move move, std::optional<Move> tt_move,
+int Search::score_move(Move move, std::optional<Move> pv_move,
+                       std::optional<Move> tt_move,
                        std::optional<uint16_t> ply) const {
+    if (move == pv_move)
+        return PV_MOVE_SCORE;
+
     if (move == tt_move)
         return TT_MOVE_SCORE;
 
@@ -137,16 +147,18 @@ int Search::score_move(Move move, std::optional<Move> tt_move,
     return 0;
 }
 
-void Search::order_moves(std::vector<Move> &moves, std::optional<Move> tt_move,
+void Search::order_moves(std::vector<Move> &moves, std::optional<Move> pv_move,
+                         std::optional<Move> tt_move,
                          std::optional<uint16_t> ply) {
-    std::stable_sort(
-        moves.begin(), moves.end(), [this, tt_move, ply](Move a, Move b) {
-            return score_move(a, tt_move, ply) > score_move(b, tt_move, ply);
-        });
+    std::stable_sort(moves.begin(), moves.end(),
+                     [this, pv_move, tt_move, ply](Move a, Move b) {
+                         return score_move(a, pv_move, tt_move, ply) >
+                                score_move(b, pv_move, tt_move, ply);
+                     });
 }
 
 int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
-                       PVLine *pline) {
+                       PVLine *pline, bool follow_pv) {
     nodes_searched++;
     if (should_stop())
         return alpha;
@@ -172,12 +184,9 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
 
-            // Copy TT line to PV line if the TT entry is valid for this node.
             if ((tt_entry->bound == Bound::EXACT) ||
                 (tt_entry->bound == Bound::LOWER && tt_score >= beta) ||
                 (tt_entry->bound == Bound::UPPER && tt_score <= alpha)) {
-                pline->moves.clear();
-                pline->moves.emplace_back(tt_entry->best_move);
                 return tt_score;
             }
         }
@@ -195,8 +204,8 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
 
         board->make_null_move();
         PVLine null_line(next_depth);
-        auto nmp_score =
-            -alpha_beta(-beta, -beta + 1, next_depth, ply + 1, &null_line);
+        auto nmp_score = -alpha_beta(-beta, -beta + 1, next_depth, ply + 1,
+                                     &null_line, false);
         board->undo_null_move();
 
         // If the null move search fails high, we can prune this branch.
@@ -204,10 +213,15 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
             return beta;
     }
 
+    std::optional<Move> pv_move = std::nullopt;
+    if (follow_pv && ply < last_pv.moves.size()) {
+        pv_move = last_pv.moves[ply];
+    }
+
     PVLine line(depth_left - 1);
     std::vector<Move> moves = board->get_moves<false>();
 
-    order_moves(moves, tt_move, ply);
+    order_moves(moves, pv_move, tt_move, ply);
 
     bool found_pv = false;
     Bound bound = Bound::UPPER;
@@ -219,10 +233,12 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         bool gives_check = board->is_in_check(board->get_turn());
         int move_score;
 
+        bool next_follow_pv = follow_pv && move == pv_move;
+
         if (!found_pv) {
             // Full window search for first move.
-            move_score =
-                -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1, &line);
+            move_score = -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1,
+                                     &line, next_follow_pv);
         } else {
             // Late Move Reductions (LMR)
             if (depth_left >= 3 && i >= 3 && is_quiet && !in_check &&
@@ -231,25 +247,25 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
                 int reduced_depth = std::max(0, depth_left - reduction);
 
                 move_score = -alpha_beta(-alpha - 1, -alpha, reduced_depth,
-                                         ply + 1, &line);
+                                         ply + 1, &line, next_follow_pv);
 
                 if (move_score > alpha) {
                     // Re-search at full depth with narrow window when the
                     // reduced search fails high.
                     move_score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1,
-                                             ply + 1, &line);
+                                             ply + 1, &line, next_follow_pv);
                 }
             } else {
                 // Regular null window search when the move is not reduced.
                 move_score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1,
-                                         ply + 1, &line);
+                                         ply + 1, &line, next_follow_pv);
             }
 
             // Re-search with full window if the move is actually better; i.e.,
             // PV node.
             if (move_score > alpha && move_score < beta) {
-                move_score =
-                    -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1, &line);
+                move_score = -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1,
+                                         &line, next_follow_pv);
             }
         }
 

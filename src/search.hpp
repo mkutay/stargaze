@@ -37,6 +37,7 @@ class Search {
     constexpr static const int DELTA_PRUNING = PAWN_VALUE * 2;
 
     // Named constants for move scoring.
+    constexpr static const int PV_MOVE_SCORE = 200000;
     constexpr static const int TT_MOVE_SCORE = 100000;
     constexpr static const int PROMOTION_SCORE = 90000;
     constexpr static const int CAPTURE_SCORE_BASE = 70000;
@@ -49,6 +50,8 @@ class Search {
     Board *board;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
     TT tt;
+
+    PVLine last_pv;
 
     /**
      * Killers are a heuristic to improve move ordering in alpha-beta search.
@@ -71,13 +74,15 @@ class Search {
     /**
      * Static move scoring to prioritise moves during ordering.
      */
-    int score_move(Move move, std::optional<Move> tt_move = std::nullopt,
+    int score_move(Move move, std::optional<Move> pv_move = std::nullopt,
+                   std::optional<Move> tt_move = std::nullopt,
                    std::optional<uint16_t> ply = std::nullopt) const;
 
     /**
      * Order the moves to improve alpha-beta pruning efficiency.
      */
     void order_moves(std::vector<Move> &moves,
+                     std::optional<Move> pv_move = std::nullopt,
                      std::optional<Move> tt_move = std::nullopt,
                      std::optional<uint16_t> ply = std::nullopt);
 
@@ -86,7 +91,7 @@ class Search {
      * ply. The PV line is updated with the best moves found during the search.
      */
     int alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
-                   PVLine *pline);
+                   PVLine *pline, bool follow_pv);
 
   public:
     Search(Board *board) : board(board) {}
