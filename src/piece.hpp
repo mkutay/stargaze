@@ -2,6 +2,7 @@
 #include "colour.hpp"
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -20,8 +21,12 @@ class Piece {
 
     constexpr Piece() : piece(PAWN) {}
     constexpr Piece(int _piece) : piece(_piece) {}
+
+    /**
+     * Colour be capital or not, returns the piece accordingly.
+     */
     constexpr Piece(char c) {
-        switch (c) {
+        switch (std::tolower(c)) {
         case 'p':
             piece = Piece::PAWN;
             break;
@@ -41,7 +46,7 @@ class Piece {
             piece = Piece::KING;
             break;
         default:
-            assert(false);
+            std::unreachable();
         }
     }
 

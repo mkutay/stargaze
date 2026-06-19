@@ -15,30 +15,7 @@
 #include <vector>
 
 Board::Board()
-    : piece_bbs{
-          BB::A2 | BB::B2 | BB::C2 | BB::D2 | BB::E2 | BB::F2 | BB::G2 |
-              BB::H2 | BB::A7 | BB::B7 | BB::C7 | BB::D7 | BB::E7 | BB::F7 |
-              BB::G7 | BB::H7,               // PAWN
-          BB::B1 | BB::G1 | BB::B8 | BB::G8, // KNIGHT
-          BB::C1 | BB::F1 | BB::C8 | BB::F8, // BISHOP
-          BB::A1 | BB::H1 | BB::A8 | BB::H8, // ROOK
-          BB::D1 | BB::D8,                   // QUEEN
-          BB::E1 | BB::E8,                   // KING
-      },
-      colour_bbs{
-          BB::A1 | BB::B1 | BB::C1 | BB::D1 | BB::E1 | BB::F1 | BB::G1 |
-              BB::H1 | BB::A2 | BB::B2 | BB::C2 | BB::D2 | BB::E2 | BB::F2 |
-              BB::G2 | BB::H2, // WHITE
-          BB::A8 | BB::B8 | BB::C8 | BB::D8 | BB::E8 | BB::F8 | BB::G8 |
-              BB::H8 | BB::A7 | BB::B7 | BB::C7 | BB::D7 | BB::E7 | BB::F7 |
-              BB::G7 | BB::H7, // BLACK
-      },
-      can_castle{true, true, true, true}, turn{CC::WHITE},
-      ep_square{std::nullopt}, halfmove_clock{0}, fullmove_number{1} {
-    initialise_eval(mg_score, eg_score, game_phase);
-    current_hash = calculate_hash();
-    hash_history.push_back(current_hash);
-}
+    : Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {}
 
 Board::Board(std::string_view fen)
     : piece_bbs{BitBoard(0), BitBoard(0), BitBoard(0),
@@ -60,7 +37,7 @@ Board::Board(std::string_view fen)
             f += c - '0';
         } else {
             Colour colour = std::islower(c) ? CC::BLACK : CC::WHITE;
-            Piece piece{std::tolower(c)};
+            Piece piece{c};
             Square sq(r, f);
             get_bb(piece) |= BitBoard(sq);
             get_bb(colour) |= BitBoard(sq);
