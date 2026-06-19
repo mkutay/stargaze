@@ -107,7 +107,8 @@ class Search {
      */
     std::atomic<bool> stop_flag{false};
 
-    Search(Board *board) : board(board) { assert(board != nullptr); }
+    Search() = delete;
+    explicit Search(Board *board) : board(board) { assert(board != nullptr); }
 
     void clear_tt() { tt.clear(); }
 
