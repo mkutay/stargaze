@@ -12,14 +12,12 @@ This project uses a standard `Makefile`.
   Builds the engine with aggressive optimisations.
 - **Debug**: `make debug`
   Builds the engine with debug symbols and sanitisers.
-- **Perft**: `make perft`
-  Builds the standalone perft testing executable (`bin/perft`).
 
 ### Other Commands
 
 - `make run`: Builds the release version and runs the engine.
 - `make run-debug`: Builds the debug version and runs the engine.
-- `make run-perft`: Builds and runs a perft performance test. By default, it tests the starting position at depth 5. You can customise the test position and depth:
+- `make run-perft`: Runs a perft performance test. By default, it builds the release version and tests the starting position at depth 5 by piping UCI commands into the engine. You can customise the test position and depth:
     ```bash
     make run-perft FEN="r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1" DEPTH=4
     ```
@@ -40,6 +38,14 @@ Simply load the compiled binary `./bin/stargaze` into your chess GUI of choice.
 ```bash
 ./bin/stargaze --selfplay
 ```
+
+### Custom UCI Commands
+
+In addition to standard UCI commands, Stargaze supports:
+
+- `perft <depth>`: Runs a perft performance test from the current position to the specified depth (with move division).
+- `go perft <depth>`: Alternative UCI-compatible syntax to run a perft test.
+- `d` or `print`: Prints the current board state as text.
 
 ### Playing the Engine Against Itself with `c-chess-cli`
 

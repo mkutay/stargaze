@@ -3,6 +3,7 @@
 #include "search.hpp"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cstdio>
 #include <iostream>
 #include <print>
@@ -116,6 +117,37 @@ GoParams parse_go(const std::string &cmd, Colour turn, uint32_t moves_played) {
     return params;
 }
 
+void run_perft(Board &board, int depth) {
+    auto start = std::chrono::high_resolution_clock::now();
+    uint64_t total_nodes = 0;
+
+    if (depth == 0) {
+        total_nodes = 1;
+    } else {
+        auto moves = board.get_moves();
+        for (Move move : moves) {
+            board.make_move(move);
+            uint64_t nodes = board.perft(depth - 1);
+            board.undo_move();
+
+            std::string move_str = move.to_string();
+            std::println("{}: {}", move_str, nodes);
+            total_nodes += nodes;
+        }
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration =
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+            .count();
+
+    std::println("\nTotal time (ms) : {}", duration);
+    std::println("Nodes searched  : {}", total_nodes);
+    if (duration > 0) {
+        std::println("Nodes/sec       : {}", (total_nodes * 1000) / duration);
+    }
+}
+
 void run_uci_loop() {
     // Disable buffering on stdout so every write is immediately visible.
     std::setbuf(stdout, nullptr);
@@ -176,19 +208,39 @@ void run_uci_loop() {
         } else if (command == "go") {
             stop_and_wait_for_search(search, search_thread);
 
-            const auto moves_played = board.get_move_history().size() / 2;
-            const auto params = parse_go(line, board.get_turn(), moves_played);
-
-            search.stop_flag.store(false, std::memory_order_relaxed);
-            search_thread = std::thread([&search, params]() {
-                const SearchInfo result = search.iterative_deepening<true>(
-                    params.max_depth, params.time_limit);
-                if (!result.pv.moves.empty()) {
-                    std::println("bestmove {}", result.pv.moves[0].to_string());
+            std::string token;
+            if (iss >> token && token == "perft") {
+                int depth;
+                if (iss >> depth) {
+                    run_perft(board, depth);
                 } else {
-                    std::println("bestmove 0000");
+                    std::println("Error: depth missing for perft");
                 }
-            });
+            } else {
+                const auto moves_played = board.get_move_history().size() / 2;
+                const auto params =
+                    parse_go(line, board.get_turn(), moves_played);
+
+                search.stop_flag.store(false, std::memory_order_relaxed);
+                search_thread = std::thread([&search, params]() {
+                    const SearchInfo result = search.iterative_deepening<true>(
+                        params.max_depth, params.time_limit);
+                    if (!result.pv.moves.empty()) {
+                        std::println("bestmove {}",
+                                     result.pv.moves.front().to_string());
+                    } else {
+                        std::println("bestmove 0000");
+                    }
+                });
+            }
+        } else if (command == "perft") {
+            stop_and_wait_for_search(search, search_thread);
+            int depth = 1;
+            if (iss >> depth) {
+                run_perft(board, depth);
+            } else {
+                std::println("Error: depth missing for perft");
+            }
         } else if (command == "stop") {
             stop_and_wait_for_search(search, search_thread);
         } else if (command == "d" || command == "print") {
