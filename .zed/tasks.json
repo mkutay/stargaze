@@ -9,4 +9,14 @@
         "command": "make debug",
         "reveal": "always",
     },
+    {
+        "label": "test",
+        "command": "make test",
+        "reveal": "always",
+    },
+    {
+        "label": "test unit",
+        "command": "make test-unit",
+        "reveal": "always",
+    },
 ]

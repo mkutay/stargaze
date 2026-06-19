@@ -71,8 +71,8 @@ template <bool Undo> void Board::apply_move(Move move) {
     if constexpr (Undo) {
         halfmove_clock = undo_info.halfmove_clock;
 
-        // Decrement if white
-        fullmove_number -= !turn;
+        // Decrement if black
+        fullmove_number -= turn;
     } else {
         if (moving_piece == PP::PAWN || move.is_capture())
             halfmove_clock = 0;

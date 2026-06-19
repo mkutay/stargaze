@@ -63,11 +63,50 @@ run-verify: verify
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
+# --- Testing ---
+TEST_DIR        = tests
+TEST_BUILD_DIR  = build/tests
+TEST_BIN        = $(BIN_DIR)/stargaze_tests
+
+ENGINE_SOURCES  = $(filter-out src/main.cpp,$(SOURCES))
+TEST_SOURCES    = $(wildcard tests/*.cpp tests/unit/*.cpp tests/integration/*.cpp)
+
+# Engine + test objects, both compiled with sanitizers, into build/tests
+TEST_OBJECTS    = $(patsubst src/%.cpp,$(TEST_BUILD_DIR)/src/%.o,$(ENGINE_SOURCES)) \
+                  $(patsubst tests/%.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SOURCES))
+TEST_DEPS       = $(TEST_OBJECTS:.o=.d)
+
+TEST_FLAGS      = $(DEBUG_FLAGS) -DVERIFY_CONSISTENCY -Itests
+
+$(TEST_BUILD_DIR)/src/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(TEST_FLAGS) $(DEPFLAGS) -c $< -o $@
+
+$(TEST_BUILD_DIR)/%.o: tests/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(TEST_FLAGS) $(DEPFLAGS) -c $< -o $@
+
+$(TEST_BIN): $(TEST_OBJECTS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(TEST_FLAGS) $(TEST_OBJECTS) -o $@
+
+# Build the engine binary first so UCI integration tests can spawn it
+test: debug $(TEST_BIN)
+	./$(TEST_BIN)
+
+test-unit: $(TEST_BIN)
+	./$(TEST_BIN) --test-suite-exclude=integration
+
+# Generate compilation database for language server (clangd)
+compdb:
+	python3 tools/gen_compile_commands.py
+
 # Include dependency files if they exist
 -include $(DEPS)
+-include $(TEST_DEPS)
 
 # Phony targets
-.PHONY: all release debug verify run run-debug run-verify clean run-perft
+.PHONY: all release debug verify run run-debug run-verify clean run-perft test test-unit compdb
 
 # Perft execution defaults
 FEN ?= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -76,3 +115,4 @@ DEPTH ?= 5
 # Run perft
 run-perft: release
 	@(echo "position fen $(FEN)"; echo "go perft $(DEPTH)"; echo "quit") | ./$(TARGET)
+
