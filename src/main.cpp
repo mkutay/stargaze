@@ -244,7 +244,7 @@ void run_uci_loop() {
         } else if (command == "stop") {
             stop_and_wait_for_search(search, search_thread);
         } else if (command == "d" || command == "print") {
-            std::println("{}", board.to_string());
+            std::println("{}", board.nice());
         } else if (command == "quit") {
             stop_and_wait_for_search(search, search_thread);
             break;
@@ -268,7 +268,7 @@ void run_self_play() {
         std::cout << "\n===============\n"
                   << "Move " << move_number << ": " << side << '\n'
                   << "===============\n"
-                  << board.to_string() << '\n';
+                  << board.nice() << '\n';
 
         if (board.is_draw()) {
             std::cout << "Game drawn!\n";

@@ -234,6 +234,7 @@ class Board {
     Colour get_turn() const;
     const std::vector<Move> get_move_history() const;
     const std::array<bool, 4> get_castling_rights() const;
-    std::string to_string() const;
+    std::string nice() const;
+    std::string fen() const;
     bool is_draw() const;
 };

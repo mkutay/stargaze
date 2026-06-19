@@ -12,6 +12,7 @@
 #include <array>
 #include <cctype>
 #include <charconv>
+#include <format>
 #include <vector>
 
 Board::Board()
@@ -387,7 +388,63 @@ bool Board::is_draw() const {
 
 Colour Board::get_turn() const { return turn; }
 
-std::string Board::to_string() const {
+std::string Board::fen() const {
+    std::string fen_str;
+
+    for (int r = 7; r >= 0; --r) {
+        int empty_count = 0;
+        for (int f = 0; f < 8; ++f) {
+            Square sq(r, f);
+            if (auto piece = get_piece(sq)) {
+                if (empty_count > 0) {
+                    fen_str += std::to_string(empty_count);
+                    empty_count = 0;
+                }
+                auto colour = get_colour(sq);
+                char p_char = piece->to_string()[0];
+                if (colour == CC::WHITE) {
+                    p_char = std::toupper(p_char);
+                }
+                fen_str += p_char;
+            } else {
+                empty_count++;
+            }
+        }
+        if (empty_count > 0) {
+            fen_str += std::to_string(empty_count);
+        }
+        if (r > 0) {
+            fen_str += "/";
+        }
+    }
+
+    fen_str += std::format(" {}", turn == CC::WHITE ? "w" : "b");
+
+    // castling rights
+    fen_str += " ";
+    std::string castling;
+    if (can_castle[0])
+        castling += 'K';
+    if (can_castle[1])
+        castling += 'Q';
+    if (can_castle[2])
+        castling += 'k';
+    if (can_castle[3])
+        castling += 'q';
+    if (castling.empty())
+        castling = "-";
+    fen_str += castling;
+
+    // ep target square
+    fen_str += std::format(" {}", ep_square ? ep_square->to_string() : "-");
+
+    fen_str += std::format(" {}", halfmove_clock);
+    fen_str += std::format(" {}", fullmove_number);
+
+    return fen_str;
+}
+
+std::string Board::nice() const {
     std::vector<std::string> result;
     std::string temp = "";
     for (int i = 0; i < 64; i++) {
