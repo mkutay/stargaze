@@ -23,11 +23,6 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
     killers.assign(max_depth, std::array<Move, 2>{});
     last_pv = PVLine(max_depth);
 
-    // std::vector<Move> fallback_moves = board->get_moves();
-    // if (!fallback_moves.empty()) {
-    //     search_info.pv.moves = {fallback_moves[0]};
-    // }
-
     tt.new_search();
 
     // The previous score is used for aspiration window search, which will be
@@ -96,8 +91,7 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
         if constexpr (UCI)
             print_uci_info(depth, score, search_info, pv_line);
         else
-            debug(depth, alpha, score, beta, nodes_searched, pv_line.moves,
-                  board->get_castling_rights());
+            debug(depth, alpha, score, beta, pv_line.moves);
     }
 
     search_info.stopped = time_up;
