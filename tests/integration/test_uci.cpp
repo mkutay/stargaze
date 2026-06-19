@@ -12,6 +12,8 @@ class StargazeProcess {
     int read_fd = -1;
 
   public:
+    pid_t get_pid() const { return pid; }
+
     StargazeProcess() {
         int parent_to_child[2];
         int child_to_parent[2];
@@ -138,6 +140,60 @@ TEST_SUITE("integration") {
         log.clear();
         std::string bestmove_line = proc.read_until("bestmove", log);
         CHECK(bestmove_line.find("bestmove") != std::string::npos);
+
+        proc.write_line("quit");
+    }
+
+    TEST_CASE("UCI Crashing FEN check") {
+        StargazeProcess proc;
+
+        // Illegal position where Black is in check but it's White's turn.
+        // It should crash/terminate because this state is unreachable in legal
+        // play.
+        proc.write_line(
+            "position fen 4R3/8/P1N4P/8/8/3pk1K1/ppr2R2/6Q1 w - - 0 1");
+        proc.write_line("go depth 4");
+
+        // We expect the process to crash, so reading from it will eventually
+        // return std::nullopt.
+        std::vector<std::string> log;
+        while (auto line = proc.read_line()) {
+            log.push_back(*line);
+        }
+
+        // Now check the process status to ensure it crashed / exited with
+        // error.
+        int status = 0;
+        pid_t wait_result = waitpid(proc.get_pid(), &status, 0);
+        REQUIRE(wait_result == proc.get_pid());
+
+        bool exited_with_error = WIFEXITED(status) && WEXITSTATUS(status) != 0;
+        bool terminated_by_signal = WIFSIGNALED(status);
+        bool crashed = exited_with_error || terminated_by_signal;
+        CHECK(crashed);
+    }
+
+    TEST_CASE("UCI Mate Score Reporting") {
+        StargazeProcess proc;
+        std::vector<std::string> log;
+
+        // Scholar's Mate setup, White to move, mate in 1.
+        proc.write_line("position fen "
+                        "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR "
+                        "w KQkq - 4 4");
+        proc.write_line("go depth 4");
+        log.clear();
+        proc.read_until("bestmove", log);
+
+        // Check if there is an info line with "score mate 1" or "score mate"
+        bool found_mate_score = false;
+        for (const auto &line : log) {
+            if (line.find("score mate 1") != std::string::npos) {
+                found_mate_score = true;
+                break;
+            }
+        }
+        CHECK(found_mate_score);
 
         proc.write_line("quit");
     }
