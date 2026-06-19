@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/clangd.json
 CompileFlags:
-    Add: [-std=c++23, -Isrc, -Wall, -Wextra, -DDEBUG]
+    Add: [-std=c++23, -Isrc, -Itests, -Wall, -Wextra, -DDEBUG]
 Diagnostics:
     UnusedIncludes: Strict

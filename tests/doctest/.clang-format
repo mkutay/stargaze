@@ -1,0 +1,4 @@
+# Third-party vendored library (doctest).
+# Do not reformat: keep it identical to upstream.
+DisableFormat: true
+SortIncludes: false

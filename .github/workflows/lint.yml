@@ -21,7 +21,7 @@ jobs:
 
             - name: clang-format
               # Only first-party sources; src/crand is vendored third-party code.
-              run: clang-format --dry-run --Werror src/*.cpp src/*.hpp
+              run: clang-format --dry-run --Werror src/*.cpp src/*.hpp tests/*.cpp tests/unit/*.cpp tests/integration/*.cpp
 
     build:
         runs-on: ubuntu-latest
@@ -36,3 +36,17 @@ jobs:
 
             - name: Build
               run: make release CXX=clang++
+
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install clang
+              run: |
+                  sudo apt-get update -q
+                  sudo apt-get install -y clang
+
+            - name: Run tests
+              run: make test CXX=clang++

@@ -33,4 +33,18 @@
         "request": "attach",
         "pid": "${command:pickProcess}",
     },
+    {
+        // Build the tests binary then debug under CodeLLDB
+        "label": "Build & Debug Tests (stargaze_tests)",
+        "adapter": "CodeLLDB",
+        "request": "launch",
+        "program": "$ZED_WORKTREE_ROOT/bin/stargaze_tests",
+        "cwd": "$ZED_WORKTREE_ROOT",
+        "terminal": "integrated",
+        "build": {
+            "command": "make",
+            "args": ["bin/stargaze_tests"],
+            "cwd": "$ZED_WORKTREE_ROOT",
+        },
+    },
 ]

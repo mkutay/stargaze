@@ -25,6 +25,28 @@ This project uses a standard `Makefile`.
 
 The build process uses dependency tracking (`.d` files) and object compilation (`.o` files) so only modified files are recompiled.
 
+## Testing
+
+Stargaze has a comprehensive test suite built on the **doctest** framework. It includes unit tests and integration tests.
+
+- **Run all tests**:
+    ```bash
+    make test
+    ```
+- **Run unit tests only** (skip integration tests like perft and process spawning):
+    ```bash
+    make test-unit
+    ```
+- **Filter specific tests** (using doctest command-line arguments):
+
+    ```bash
+    # Run only perft validation tests
+    ./bin/stargaze_tests --test-case="*perft*"
+
+    # Run only unit tests
+    ./bin/stargaze_tests --test-suite="unit"
+    ```
+
 ## UCI Protocol & Testing
 
 The engine supports the Universal Chess Interface (UCI) protocol, which allows playing against it via chess GUIs (like Arena or Cute Chess) or setting up matches against other engines.
