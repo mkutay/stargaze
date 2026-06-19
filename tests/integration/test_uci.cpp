@@ -1,4 +1,5 @@
 #include "doctest/doctest.h"
+#include <optional>
 #include <string>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -65,13 +66,18 @@ class StargazeProcess {
         REQUIRE(bytes_written == static_cast<ssize_t>(full_line.size()));
     }
 
-    std::string read_line() {
+    std::optional<std::string> read_line() {
         std::string line;
         char c;
+        bool has_chars = false;
         while (true) {
             ssize_t bytes_read = read(read_fd, &c, 1);
-            if (bytes_read <= 0)
+            if (bytes_read <= 0) {
+                if (!has_chars)
+                    return std::nullopt;
                 break;
+            }
+            has_chars = true;
             if (c == '\n')
                 break;
             line += c;
@@ -82,7 +88,11 @@ class StargazeProcess {
     std::string read_until(const std::string &target,
                            std::vector<std::string> &log) {
         while (true) {
-            std::string line = read_line();
+            auto opt_line = read_line();
+            if (!opt_line) {
+                FAIL("Child process terminated prematurely (EOF reached)");
+            }
+            std::string line = *opt_line;
             log.push_back(line);
             if (line.find(target) != std::string::npos) {
                 return line;

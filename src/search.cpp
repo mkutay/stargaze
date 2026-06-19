@@ -116,7 +116,7 @@ void Search::print_uci_info(int depth, int score, const SearchInfo &info,
         std::print(" score cp {}", score);
     }
     std::print(" nodes {} time {} nps {} pv", nodes_searched, info.time_ms,
-               nodes_searched * 1000 / info.time_ms);
+               info.time_ms > 0 ? (nodes_searched * 1000 / info.time_ms) : 0);
     for (auto m : pv_line.moves) {
         std::print(" {}", m.to_string());
     }
