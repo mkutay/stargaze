@@ -5,6 +5,7 @@
 #include "pv.hpp"
 #include "tt.hpp"
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <vector>
 
@@ -24,8 +25,8 @@ class Search {
   private:
     constexpr static const int PAWN_VALUE = Eval::value(Piece::PAWN);
 
-    constexpr static const int ALPHA_START = -100000;
-    constexpr static const int BETA_START = 100000;
+    constexpr static const int ALPHA_START = -300000;
+    constexpr static const int BETA_START = 300000;
     constexpr static const int CHECKMATE_SCORE = -200000;
     constexpr static const int ASPIRATION_WINDOW = PAWN_VALUE / 4;
 
@@ -35,6 +36,9 @@ class Search {
     constexpr static const int DELTA_MAX = PAWN_VALUE * 5;
 
     constexpr static const int DELTA_PRUNING = PAWN_VALUE * 2;
+
+    // The score used to check for checkmate in the search.
+    constexpr static const int CHECKMATE_COMPARE = 150000;
 
     // Named constants for move scoring.
     constexpr static const int PV_MOVE_SCORE = 200000;
@@ -93,13 +97,24 @@ class Search {
     int alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
                    PVLine *pline, bool follow_pv);
 
+    void print_uci_info(int depth, int score, const SearchInfo &info,
+                        const PVLine &pv_line) const;
+
   public:
+    /**
+     * Variable to communicate with main thread to stop the search.
+     */
+    std::atomic<bool> stop_flag{false};
+
     Search(Board *board) : board(board) {}
+
+    void clear_tt() { tt.clear(); }
 
     /**
      * Perform iterative deepening search up to the given maximum depth and time
      * limit. The last search info can be provided to continue from a previous
      * search.
      */
+    template <bool UCI>
     SearchInfo iterative_deepening(uint16_t max_depth, uint32_t _time_limit_ms);
 };
