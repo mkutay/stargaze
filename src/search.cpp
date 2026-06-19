@@ -106,7 +106,8 @@ template SearchInfo Search::iterative_deepening<false>(uint16_t max_depth,
 void Search::print_uci_info(int depth, int score, const SearchInfo &info,
                             const PVLine &pv_line) const {
     std::print("info depth {}", depth);
-    if (std::abs(score) >= CHECKMATE_COMPARE) {
+    if (std::abs(score) >= CHECKMATE_COMPARE &&
+        std::abs(score) <= -CHECKMATE_SCORE) {
         auto mate_plies = (score > 0) ? (-CHECKMATE_SCORE - score)
                                       : (score - CHECKMATE_SCORE);
         auto mate_moves =
@@ -215,9 +216,10 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
 
-            if (tt_score > CHECKMATE_COMPARE) {
+            if (tt_score > CHECKMATE_COMPARE && tt_score <= -CHECKMATE_SCORE) {
                 tt_score -= ply;
-            } else if (tt_score < -CHECKMATE_COMPARE) {
+            } else if (tt_score < -CHECKMATE_COMPARE &&
+                       tt_score >= CHECKMATE_SCORE) {
                 tt_score += ply;
             }
 
@@ -342,13 +344,16 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     }
 
     if (!pline->moves.empty()) {
-        int tt_score = alpha;
-        if (tt_score > CHECKMATE_COMPARE) {
-            tt_score += ply;
-        } else if (tt_score < -CHECKMATE_COMPARE) {
-            tt_score -= ply;
+        if (!should_stop()) {
+            int tt_score = alpha;
+            if (tt_score > CHECKMATE_COMPARE && tt_score <= -CHECKMATE_SCORE) {
+                tt_score += ply;
+            } else if (tt_score < -CHECKMATE_COMPARE &&
+                       tt_score >= CHECKMATE_SCORE) {
+                tt_score -= ply;
+            }
+            tt.store(hash, pline->moves.front(), tt_score, depth_left, bound);
         }
-        tt.store(hash, pline->moves.front(), tt_score, depth_left, bound);
         return alpha;
     }
 
