@@ -1,6 +1,7 @@
 #include "board.hpp"
-#include "enums.hpp"
+#include "colour.hpp"
 #include "eval.hpp"
+#include "piece.hpp"
 #include <array>
 
 void Board::initialise_eval(std::array<int, 2> &_mg_score,
@@ -12,13 +13,11 @@ void Board::initialise_eval(std::array<int, 2> &_mg_score,
 
     for (Colour c : COLOURS) {
         for (Piece p : PIECES) {
-            auto ci = std::to_underlying(c);
-            auto pi = std::to_underlying(p);
-            auto bb = piece_bbs[pi] & colour_bbs[ci];
+            auto bb = piece_bbs[p] & colour_bbs[c];
             while (bb) {
                 auto sq = bb.get_square_pop();
-                _mg_score[ci] += Eval::mg_value(c, p, sq);
-                _eg_score[ci] += Eval::eg_value(c, p, sq);
+                _mg_score[c] += Eval::mg_value(c, p, sq);
+                _eg_score[c] += Eval::eg_value(c, p, sq);
                 _game_phase += Eval::gamephase_inc(p);
             }
         }
@@ -26,10 +25,8 @@ void Board::initialise_eval(std::array<int, 2> &_mg_score,
 }
 
 int Board::evaluate() const {
-    auto ti = std::to_underlying(turn);
-    auto nti = std::to_underlying(!turn);
-    int mg_diff = mg_score[ti] - mg_score[nti];
-    int eg_diff = eg_score[ti] - eg_score[nti];
+    int mg_diff = mg_score[turn] - mg_score[!turn];
+    int eg_diff = eg_score[turn] - eg_score[!turn];
     int mg_phase = game_phase;
     if (mg_phase > Eval::gamephase_sum())
         mg_phase = Eval::gamephase_sum(); // in case of early promotion

@@ -1,8 +1,8 @@
 #pragma once
-#include "enums.hpp"
+#include "colour.hpp"
+#include "piece.hpp"
 #include "square.hpp"
 #include <array>
-#include <utility>
 
 class Eval {
   private:
@@ -162,11 +162,9 @@ class Eval {
         std::array<std::array<std::array<int, 64>, 6>, 2> table{};
         for (Colour c : COLOURS) {
             for (Piece p : PIECES) {
-                auto ci = std::to_underlying(c);
-                auto pi = std::to_underlying(p);
                 for (Square sq = 0; sq < 64; sq++) {
                     auto pesto = c == Colour::WHITE ? (sq ^ 56) : sq;
-                    table[ci][pi][sq] = value[pi] + pesto_table[pi][pesto];
+                    table[c][p][sq] = value[p] + pesto_table[p][pesto];
                 }
             }
         }
@@ -185,8 +183,7 @@ class Eval {
         const std::array<int, 6> piece_counts = {8, 2, 2, 2, 1, 1};
         int sum = 0;
         for (Piece p : PIECES) {
-            auto pi = std::to_underlying(p);
-            sum += inc[pi] * piece_counts[pi] * 2; // factor 2 for both colours
+            sum += inc[p] * piece_counts[p] * 2; // factor 2 for both colours
         }
         return sum;
     };
@@ -198,17 +195,15 @@ class Eval {
     Eval() = delete;
 
     static constexpr int mg_value(Colour colour, Piece piece, Square sq) {
-        return mg_table[std::to_underlying(colour)][std::to_underlying(piece)]
-                       [sq];
+        return mg_table[colour][piece][sq];
     }
 
     static constexpr int eg_value(Colour colour, Piece piece, Square sq) {
-        return eg_table[std::to_underlying(colour)][std::to_underlying(piece)]
-                       [sq];
+        return eg_table[colour][piece][sq];
     }
 
     static constexpr int gamephase_inc(Piece piece) {
-        return gamephase_inc_values[std::to_underlying(piece)];
+        return gamephase_inc_values[piece];
     }
 
     static constexpr int gamephase_sum() { return gamephase_sum_value; }
@@ -217,7 +212,6 @@ class Eval {
      * Return the value of a piece.
      */
     static constexpr int value(Piece piece) {
-        auto pi = std::to_underlying(piece);
-        return (mg_piece_values[pi] + eg_piece_values[pi]) / 2;
+        return (mg_piece_values[piece] + eg_piece_values[piece]) / 2;
     }
 };

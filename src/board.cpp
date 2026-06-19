@@ -1,19 +1,17 @@
 #include "board.hpp"
 
 #include "bitboard.hpp"
-#include "enums.hpp"
+#include "colour.hpp"
 #include "eval.hpp"
 #include "mask.hpp"
 #include "move.hpp"
+#include "piece.hpp"
 #include "square.hpp"
 #include "zobrist.hpp"
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <charconv>
-#include <sys/types.h>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
 Board::Board()
@@ -35,7 +33,7 @@ Board::Board()
               BB::H8 | BB::A7 | BB::B7 | BB::C7 | BB::D7 | BB::E7 | BB::F7 |
               BB::G7 | BB::H7, // BLACK
       },
-      can_castle{true, true, true, true}, turn{Colour::WHITE},
+      can_castle{true, true, true, true}, turn{CC::WHITE},
       ep_square{std::nullopt}, halfmove_clock{0}, fullmove_number{1} {
     initialise_eval(mg_score, eg_score, game_phase);
     current_hash = calculate_hash();
@@ -61,31 +59,8 @@ Board::Board(std::string_view fen)
         } else if (std::isdigit(c)) {
             f += c - '0';
         } else {
-            Colour colour = std::islower(c) ? Colour::BLACK : Colour::WHITE;
-            Piece piece;
-            switch (std::tolower(c)) {
-            case 'p':
-                piece = Piece::PAWN;
-                break;
-            case 'n':
-                piece = Piece::KNIGHT;
-                break;
-            case 'b':
-                piece = Piece::BISHOP;
-                break;
-            case 'r':
-                piece = Piece::ROOK;
-                break;
-            case 'q':
-                piece = Piece::QUEEN;
-                break;
-            case 'k':
-                piece = Piece::KING;
-                break;
-            default:
-                assert(false);
-                piece = Piece::PAWN;
-            }
+            Colour colour = std::islower(c) ? CC::BLACK : CC::WHITE;
+            Piece piece{std::tolower(c)};
             Square sq(r, f);
             get_bb(piece) |= BitBoard(sq);
             get_bb(colour) |= BitBoard(sq);
@@ -93,8 +68,8 @@ Board::Board(std::string_view fen)
         }
     }
 
-    ++i;
-    turn = fen[i] == 'w' ? Colour::WHITE : Colour::BLACK;
+    i++;
+    turn = fen[i] == 'w' ? CC::WHITE : CC::BLACK;
 
     i += 2;
     if (fen[i] != '-') {
@@ -192,8 +167,7 @@ template <bool Undo> void Board::apply_move(Move move) {
     } else {
         moving_piece = *get_piece(from);
         if (move.is_capture()) {
-            captured_piece =
-                move.is_en_passant() ? Piece::PAWN : *get_piece(to);
+            captured_piece = move.is_en_passant() ? PP::PAWN : *get_piece(to);
         }
         history.emplace_back(moving_piece, captured_piece, can_castle,
                              ep_square, halfmove_clock);
@@ -203,7 +177,7 @@ template <bool Undo> void Board::apply_move(Move move) {
     if constexpr (Undo) {
         new_ep = undo_info.ep_square;
     } else {
-        int mul = weight(turn);
+        int mul = turn.weight();
         if (move.is_double_pawn_push())
             new_ep = std::optional<Square>{to - 8 * mul};
     }
@@ -212,15 +186,15 @@ template <bool Undo> void Board::apply_move(Move move) {
         halfmove_clock = undo_info.halfmove_clock;
 
         // Decrement if white
-        fullmove_number -= std::to_underlying(!turn);
+        fullmove_number -= !turn;
     } else {
-        if (moving_piece == Piece::PAWN || move.is_capture())
+        if (moving_piece == PP::PAWN || move.is_capture())
             halfmove_clock = 0;
         else
             halfmove_clock++;
 
         // Increment if black.
-        fullmove_number += std::to_underlying(turn);
+        fullmove_number += turn;
     }
 
     auto ep_key = [](std::optional<Square> sq) -> uint64_t {
@@ -239,9 +213,8 @@ template <bool Undo> void Board::apply_move(Move move) {
     if constexpr (Undo) {
         can_castle = undo_info.can_castle;
     } else {
-        if (moving_piece == Piece::KING) {
-            auto turn_index = std::to_underlying(turn);
-            can_castle[turn_index * 2] = can_castle[turn_index * 2 + 1] = false;
+        if (moving_piece == PP::KING) {
+            can_castle[turn * 2] = can_castle[turn * 2 + 1] = false;
         }
 
         if (from == SQ::A1 || to == SQ::A1)
@@ -270,13 +243,13 @@ template <bool Undo> void Board::apply_move(Move move) {
         move_piece(moving_piece, turn, src, dst);
         break;
     case Move::KING_SIDE_CASTLE:
-        move_piece(Piece::KING, turn, src, dst);
-        move_piece(Piece::ROOK, turn, Undo ? to - 1 : to + 1,
+        move_piece(PP::KING, turn, src, dst);
+        move_piece(PP::ROOK, turn, Undo ? to - 1 : to + 1,
                    Undo ? to + 1 : to - 1);
         break;
     case Move::QUEEN_SIDE_CASTLE:
-        move_piece(Piece::KING, turn, src, dst);
-        move_piece(Piece::ROOK, turn, Undo ? to + 1 : to - 2,
+        move_piece(PP::KING, turn, src, dst);
+        move_piece(PP::ROOK, turn, Undo ? to + 1 : to - 2,
                    Undo ? to - 2 : to + 1);
         break;
     case Move::CAPTURE:
@@ -289,15 +262,14 @@ template <bool Undo> void Board::apply_move(Move move) {
         }
         break;
     case Move::EN_PASSANT: {
-        auto turn_underlying = std::to_underlying(turn);
-        auto addition = turn_underlying * 16 - 8;
+        auto addition = turn * 16 - 8;
         Square captured_sq = to + addition;
         if constexpr (!Undo) {
-            clear_piece(Piece::PAWN, opponent, captured_sq);
+            clear_piece(PP::PAWN, opponent, captured_sq);
         }
-        move_piece(Piece::PAWN, turn, src, dst);
+        move_piece(PP::PAWN, turn, src, dst);
         if constexpr (Undo) {
-            add_piece(Piece::PAWN, opponent, captured_sq);
+            add_piece(PP::PAWN, opponent, captured_sq);
         }
         break;
     }
@@ -307,12 +279,12 @@ template <bool Undo> void Board::apply_move(Move move) {
     case Move::QUEEN_PROMOTION_CAPTURE:
         if constexpr (!Undo) {
             clear_piece(*captured_piece, opponent, to);
-            clear_piece(Piece::PAWN, turn, from);
+            clear_piece(PP::PAWN, turn, from);
             add_piece(move.promotion_piece(), turn, to);
         } else {
             clear_piece(move.promotion_piece(), turn, to);
             add_piece(*captured_piece, opponent, to);
-            add_piece(Piece::PAWN, turn, from);
+            add_piece(PP::PAWN, turn, from);
         }
         break;
     case Move::KNIGHT_PROMOTION:
@@ -320,11 +292,11 @@ template <bool Undo> void Board::apply_move(Move move) {
     case Move::ROOK_PROMOTION:
     case Move::QUEEN_PROMOTION:
         if constexpr (!Undo) {
-            clear_piece(Piece::PAWN, turn, from);
+            clear_piece(PP::PAWN, turn, from);
             add_piece(move.promotion_piece(), turn, to);
         } else {
             clear_piece(move.promotion_piece(), turn, to);
-            add_piece(Piece::PAWN, turn, from);
+            add_piece(PP::PAWN, turn, from);
         }
         break;
     }
@@ -346,7 +318,7 @@ void Board::make_move(Move move) { apply_move<false>(move); }
 void Board::undo_move() { apply_move<true>(moves.back()); }
 
 void Board::make_null_move() {
-    history.emplace_back(Piece::PAWN, std::nullopt, can_castle, ep_square,
+    history.emplace_back(PP::PAWN, std::nullopt, can_castle, ep_square,
                          halfmove_clock);
 
     if (ep_square.has_value()) {
@@ -358,7 +330,7 @@ void Board::make_null_move() {
     ep_square = std::nullopt;
     halfmove_clock++;
 
-    if (turn == Colour::WHITE) {
+    if (turn == CC::WHITE) {
         fullmove_number++;
     }
 
@@ -377,7 +349,7 @@ void Board::undo_null_move() {
     turn = !turn;
     current_hash ^= Zobrist::black_move();
 
-    if (turn == Colour::BLACK) {
+    if (turn == CC::BLACK) {
         fullmove_number--;
     }
 
@@ -392,7 +364,7 @@ void Board::undo_null_move() {
 }
 
 bool Board::has_non_pawn_material(Colour colour) const {
-    return (get_bb(colour) & ~get_bb(Piece::PAWN) & ~get_bb(Piece::KING)) !=
+    return (get_bb(colour) & ~get_bb(PP::PAWN) & ~get_bb(PP::KING)) !=
            Mask::EMPTY;
 }
 
@@ -439,13 +411,6 @@ bool Board::is_draw() const {
 Colour Board::get_turn() const { return turn; }
 
 std::string Board::to_string() const {
-    const static std::unordered_map<Piece, std::array<std::string, 2>>
-        piece_string = {
-            {Piece::PAWN, {"♟", "♙"}},   {Piece::KNIGHT, {"♞", "♘"}},
-            {Piece::BISHOP, {"♝", "♗"}}, {Piece::ROOK, {"♜", "♖"}},
-            {Piece::QUEEN, {"♛", "♕"}},  {Piece::KING, {"♚", "♔"}},
-        };
-
     std::vector<std::string> result;
     std::string temp = "";
     for (int i = 0; i < 64; i++) {
@@ -455,8 +420,7 @@ std::string Board::to_string() const {
         auto piece = get_piece(Square(i));
         auto colour = get_colour(Square(i));
         if (piece && colour) {
-            temp +=
-                piece_string.at(*piece).at(std::to_underlying(*colour)) + " ";
+            temp += (*piece).nice(*colour) + " ";
         } else {
             temp += ". ";
         }
@@ -494,15 +458,13 @@ bool Board::has_piece_at(BitBoard bb, Piece type, Colour colour) const {
 }
 
 void Board::move_piece(Piece piece, Colour colour, Square from, Square to) {
-    auto ci = std::to_underlying(colour);
-
     current_hash ^= Zobrist::piece(colour, piece, from);
     current_hash ^= Zobrist::piece(colour, piece, to);
 
-    mg_score[ci] -= Eval::mg_value(colour, piece, from);
-    eg_score[ci] -= Eval::eg_value(colour, piece, from);
-    mg_score[ci] += Eval::mg_value(colour, piece, to);
-    eg_score[ci] += Eval::eg_value(colour, piece, to);
+    mg_score[colour] -= Eval::mg_value(colour, piece, from);
+    eg_score[colour] -= Eval::eg_value(colour, piece, from);
+    mg_score[colour] += Eval::mg_value(colour, piece, to);
+    eg_score[colour] += Eval::eg_value(colour, piece, to);
 
     BitBoard mask = BitBoard(from) | BitBoard(to);
     get_bb(piece) ^= mask;
@@ -510,12 +472,10 @@ void Board::move_piece(Piece piece, Colour colour, Square from, Square to) {
 }
 
 void Board::add_piece(Piece piece, Colour colour, Square sq) {
-    auto ci = std::to_underlying(colour);
-
     current_hash ^= Zobrist::piece(colour, piece, sq);
 
-    mg_score[ci] += Eval::mg_value(colour, piece, sq);
-    eg_score[ci] += Eval::eg_value(colour, piece, sq);
+    mg_score[colour] += Eval::mg_value(colour, piece, sq);
+    eg_score[colour] += Eval::eg_value(colour, piece, sq);
     game_phase += Eval::gamephase_inc(piece);
 
     BitBoard mask = BitBoard(sq);
@@ -524,12 +484,10 @@ void Board::add_piece(Piece piece, Colour colour, Square sq) {
 }
 
 void Board::clear_piece(Piece piece, Colour colour, Square sq) {
-    auto ci = std::to_underlying(colour);
-
     current_hash ^= Zobrist::piece(colour, piece, sq);
 
-    mg_score[ci] -= Eval::mg_value(colour, piece, sq);
-    eg_score[ci] -= Eval::eg_value(colour, piece, sq);
+    mg_score[colour] -= Eval::mg_value(colour, piece, sq);
+    eg_score[colour] -= Eval::eg_value(colour, piece, sq);
     game_phase -= Eval::gamephase_inc(piece);
 
     BitBoard mask = ~BitBoard(sq);
@@ -542,22 +500,10 @@ const std::array<bool, 4> Board::get_castling_rights() const {
     return can_castle;
 }
 
-BitBoard &Board::get_bb(Piece type) {
-    return piece_bbs[std::to_underlying(type)];
-}
-
-BitBoard Board::get_bb(Piece type) const {
-    return piece_bbs[std::to_underlying(type)];
-}
-
-BitBoard &Board::get_bb(Colour colour) {
-    return colour_bbs[std::to_underlying(colour)];
-}
-
-BitBoard Board::get_bb(Colour colour) const {
-    return colour_bbs[std::to_underlying(colour)];
-}
-
+BitBoard &Board::get_bb(Piece type) { return piece_bbs[type]; }
+BitBoard Board::get_bb(Piece type) const { return piece_bbs[type]; }
+BitBoard &Board::get_bb(Colour colour) { return colour_bbs[colour]; }
+BitBoard Board::get_bb(Colour colour) const { return colour_bbs[colour]; }
 BitBoard Board::get_bb(Piece type, Colour colour) const {
     return get_bb(type) & get_bb(colour);
 }

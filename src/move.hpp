@@ -1,5 +1,5 @@
 #pragma once
-#include "enums.hpp"
+#include "piece.hpp"
 #include "square.hpp"
 #include <cassert>
 #include <string>
@@ -79,12 +79,12 @@ class Move {
 
         int specials = flags() & 0b0011;
         if (specials == 0)
-            return Piece::KNIGHT;
+            return PP::KNIGHT;
         if (specials == 1)
-            return Piece::BISHOP;
+            return PP::BISHOP;
         if (specials == 2)
-            return Piece::ROOK;
-        return Piece::QUEEN;
+            return PP::ROOK;
+        return PP::QUEEN;
     }
 
     constexpr bool operator==(const Move &other) const {
@@ -94,7 +94,7 @@ class Move {
     constexpr std::string to_string() const {
         std::string ret = from().to_string() + to().to_string();
         if (is_promotion()) {
-            ret += piece_to_string(promotion_piece());
+            ret += promotion_piece().to_string();
         }
         return ret;
     }

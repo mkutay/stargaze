@@ -1,6 +1,7 @@
 #pragma once
-#include "enums.hpp"
+#include "colour.hpp"
 #include "move.hpp"
+#include "piece.hpp"
 #include "search.hpp"
 #include <bitset>
 #include <iostream>

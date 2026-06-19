@@ -1,5 +1,5 @@
 #pragma once
-#include "enums.hpp"
+#include "colour.hpp"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -141,9 +141,7 @@ class Square {
      * same square; for black, it returns the square mirrored across the
      * horizontal axis.
      */
-    constexpr Square flip(Colour turn) const {
-        return sq ^ (std::to_underlying(turn) * 56);
-    }
+    constexpr Square flip(Colour turn) const { return sq ^ (turn * 56); }
 };
 
 namespace SQ {

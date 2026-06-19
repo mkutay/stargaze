@@ -7,11 +7,12 @@
  */
 
 #pragma once
+#include "colour.hpp"
 #include "crand/engines/xoshiro256_starstar_engine.hpp"
+#include "piece.hpp"
 #include "square.hpp"
 #include <array>
 #include <cstdint>
-#include <utility>
 
 struct ZobristKeys {
     std::array<std::array<std::array<uint64_t, 64>, 6>, 2> hash;
@@ -45,8 +46,7 @@ class Zobrist {
     Zobrist() = delete;
 
     static constexpr uint64_t piece(Colour colour, Piece piece, Square sq) {
-        return keys
-            .hash[std::to_underlying(colour)][std::to_underlying(piece)][sq];
+        return keys.hash[colour][piece][sq];
     }
 
     static constexpr uint64_t castling(size_t index) {

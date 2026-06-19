@@ -1,7 +1,8 @@
 #pragma once
 #include "bitboard.hpp"
-#include "enums.hpp"
+#include "colour.hpp"
 #include "move.hpp"
+#include "piece.hpp"
 #include "square.hpp"
 #include <array>
 #include <cassert>
