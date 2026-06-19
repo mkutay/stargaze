@@ -29,6 +29,13 @@ class Colour {
 namespace CC {
 constexpr auto WHITE = Colour(Colour::WHITE);
 constexpr auto BLACK = Colour(Colour::BLACK);
+
+static_assert(WHITE.weight() == 1);
+static_assert(BLACK.weight() == -1);
+static_assert(!WHITE == BLACK);
+static_assert(WHITE == !BLACK);
 } // namespace CC
 
 constexpr const static std::array<Colour, 2> COLOURS = {CC::WHITE, CC::BLACK};
+
+static_assert(sizeof(Colour) == sizeof(uint8_t));

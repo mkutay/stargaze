@@ -130,8 +130,34 @@ constexpr auto BISHOP = Piece(Piece::BISHOP);
 constexpr auto ROOK = Piece(Piece::ROOK);
 constexpr auto QUEEN = Piece(Piece::QUEEN);
 constexpr auto KING = Piece(Piece::KING);
+
+static_assert(PAWN < KNIGHT);
+static_assert(KNIGHT < BISHOP);
+static_assert(BISHOP < ROOK);
+static_assert(ROOK < QUEEN);
+static_assert(QUEEN < KING);
+static_assert(PAWN.nice(CC::WHITE) == "♟");
+static_assert(PAWN.nice(CC::BLACK) == "♙");
+static_assert(KNIGHT.nice(CC::WHITE) == "♞");
+static_assert(KNIGHT.nice(CC::BLACK) == "♘");
+static_assert(BISHOP.nice(CC::WHITE) == "♝");
+static_assert(BISHOP.nice(CC::BLACK) == "♗");
+static_assert(ROOK.nice(CC::WHITE) == "♜");
+static_assert(ROOK.nice(CC::BLACK) == "♖");
+static_assert(QUEEN.nice(CC::WHITE) == "♛");
+static_assert(QUEEN.nice(CC::BLACK) == "♕");
+static_assert(KING.nice(CC::WHITE) == "♚");
+static_assert(KING.nice(CC::BLACK) == "♔");
+static_assert(PAWN.to_string() == "p");
+static_assert(KNIGHT.to_string() == "n");
+static_assert(BISHOP.to_string() == "b");
+static_assert(ROOK.to_string() == "r");
+static_assert(QUEEN.to_string() == "q");
+static_assert(KING.to_string() == "k");
 } // namespace PP
 
 constexpr const static std::array<Piece, 6> PIECES = {
     PP::PAWN, PP::KNIGHT, PP::BISHOP, PP::ROOK, PP::QUEEN, PP::KING,
 };
+
+static_assert(sizeof(Piece) == sizeof(uint8_t));
