@@ -19,7 +19,7 @@ DEPS = $(OBJECTS:.o=.d)
 
 # Profile flags
 RELEASE_FLAGS = -O3 -flto -march=native -DNDEBUG
-DEBUG_FLAGS = -g -fsanitize=address -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
+DEBUG_FLAGS = -O2 -g -fsanitize=address -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
 
 # Default profile is release
 all: release
