@@ -69,24 +69,12 @@ In addition to standard UCI commands, Stargaze supports:
 - `go perft <depth>`: Alternative UCI-compatible syntax to run a perft test.
 - `d` or `print`: Prints the current board state as text.
 
-### Playing the Engine Against Itself with `c-chess-cli`
+### Playing the Engine Against Itself with `cutechess-cli`
 
-Use `c-chess-cli` or `cutechess-cli` to test the engine's performance by playing it against itself or other engines.
-
-#### 1. Build `c-chess-cli`
-
-Clone the `c-chess-cli` repository and build it:
-
-```bash
-git clone https://github.com/lucasart/c-chess-cli tools/c-chess-cli
-cd tools/c-chess-cli
-python3 make.py
-```
-
-#### 2. Run a Match
+You can use [cutechess-cli](https://github.com/cutechess/cutechess/) to test the engine's performance by playing it against itself or other engines.
 
 To play a 10-game match between Stargaze and itself with 10 seconds of time control:
 
 ```bash
-./tools/c-chess-cli/c-chess-cli -each cmd=./bin/stargaze tc=10 -engine name=Stargaze_1 -engine name=Stargaze_2 -games 10
+cutechess-cli -engine cmd=./bin/stargaze name=Stargaze_1 -engine cmd=./bin/stargaze name=Stargaze_2 -each proto=uci tc=10 -games 10 -repeat
 ```
