@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <optional>
+#include <print>
 
 #ifdef DEBUG
 #include "debug.hpp"
@@ -11,6 +12,7 @@
 #define debug(...) void(38)
 #endif
 
+template <bool UCI>
 SearchInfo Search::iterative_deepening(uint16_t max_depth,
                                        uint32_t _time_limit_ms) {
     SearchInfo search_info(max_depth);
@@ -20,6 +22,11 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
     time_up = false;
     killers.assign(max_depth, std::array<Move, 2>{});
     last_pv = PVLine(max_depth);
+
+    // std::vector<Move> fallback_moves = board->get_moves();
+    // if (!fallback_moves.empty()) {
+    //     search_info.pv.moves = {fallback_moves[0]};
+    // }
 
     tt.new_search();
 
@@ -86,19 +93,51 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
         search_info.pv = pv_line;
         last_pv = pv_line;
 
-        debug(depth, alpha, score, beta, nodes_searched, pv_line.moves,
-              board->get_castling_rights());
+        if constexpr (UCI)
+            print_uci_info(depth, score, search_info, pv_line);
+        else
+            debug(depth, alpha, score, beta, nodes_searched, pv_line.moves,
+                  board->get_castling_rights());
     }
 
     search_info.stopped = time_up;
     return search_info;
 }
 
+template SearchInfo Search::iterative_deepening<true>(uint16_t max_depth,
+                                                      uint32_t _time_limit_ms);
+template SearchInfo Search::iterative_deepening<false>(uint16_t max_depth,
+                                                       uint32_t _time_limit_ms);
+
+void Search::print_uci_info(int depth, int score, const SearchInfo &info,
+                            const PVLine &pv_line) const {
+    std::print("info depth {}", depth);
+    if (std::abs(score) >= CHECKMATE_COMPARE) {
+        auto mate_plies = (score > 0) ? (-CHECKMATE_SCORE - score)
+                                      : (score - CHECKMATE_SCORE);
+        auto mate_moves =
+            (score > 0) ? ((mate_plies + 1) / 2) : -((mate_plies + 1) / 2);
+        std::print(" score mate {}", mate_moves);
+    } else {
+        std::print(" score cp {}", score);
+    }
+    std::print(" nodes {} time {} nps {} pv", nodes_searched, info.time_ms,
+               nodes_searched * 1000 / info.time_ms);
+    for (auto m : pv_line.moves) {
+        std::print(" {}", m.to_string());
+    }
+    std::print("\n");
+}
+
 bool Search::should_stop() {
     if (time_up)
         return true;
 
-    if (!(nodes_searched & 0x3FFF)) { // check every 16384 nodes
+    if (stop_flag.load(std::memory_order_relaxed)) {
+        return time_up = true;
+    }
+
+    if (!(nodes_searched & 0x3FF)) { // check every 1024 nodes
         auto current_time = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                            current_time - start_time)
@@ -182,6 +221,12 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         if (tt_entry->depth >= depth_left && !is_pv_node) {
             int tt_score = tt_entry->score;
 
+            if (tt_score > CHECKMATE_COMPARE) {
+                tt_score -= ply;
+            } else if (tt_score < -CHECKMATE_COMPARE) {
+                tt_score += ply;
+            }
+
             if ((tt_entry->bound == Bound::EXACT) ||
                 (tt_entry->bound == Bound::LOWER && tt_score >= beta) ||
                 (tt_entry->bound == Bound::UPPER && tt_score <= alpha)) {
@@ -216,7 +261,6 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         pv_move = last_pv.moves[ply];
     }
 
-    PVLine line(depth_left - 1);
     std::vector<Move> moves = board->get_moves<false>();
 
     order_moves(moves, pv_move, tt_move, ply);
@@ -232,6 +276,8 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         int move_score;
 
         bool next_follow_pv = follow_pv && move == pv_move;
+
+        PVLine line(depth_left - 1);
 
         if (!found_pv) {
             // Full window search for first move.
@@ -250,6 +296,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
                 if (move_score > alpha) {
                     // Re-search at full depth with narrow window when the
                     // reduced search fails high.
+                    line.moves.clear();
                     move_score = -alpha_beta(-alpha - 1, -alpha, depth_left - 1,
                                              ply + 1, &line, next_follow_pv);
                 }
@@ -262,6 +309,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
             // Re-search with full window if the move is actually better; i.e.,
             // PV node.
             if (move_score > alpha && move_score < beta) {
+                line.moves.clear();
                 move_score = -alpha_beta(-beta, -alpha, depth_left - 1, ply + 1,
                                          &line, next_follow_pv);
             }
@@ -300,7 +348,13 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     }
 
     if (!pline->moves.empty()) {
-        tt.store(hash, pline->moves.front(), alpha, depth_left, bound);
+        int tt_score = alpha;
+        if (tt_score > CHECKMATE_COMPARE) {
+            tt_score += ply;
+        } else if (tt_score < -CHECKMATE_COMPARE) {
+            tt_score -= ply;
+        }
+        tt.store(hash, pline->moves.front(), tt_score, depth_left, bound);
         return alpha;
     }
 
@@ -317,6 +371,8 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
 
 int Search::quiescence(int alpha, int beta) {
     nodes_searched++;
+    if (should_stop())
+        return alpha;
 
     const bool in_check = board->is_in_check(board->get_turn());
 

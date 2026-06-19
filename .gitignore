@@ -2,3 +2,4 @@
 bin
 build
 games
+tools/c-chess-cli
