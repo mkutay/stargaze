@@ -6,6 +6,7 @@
 #include "tt.hpp"
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <vector>
 
@@ -106,7 +107,7 @@ class Search {
      */
     std::atomic<bool> stop_flag{false};
 
-    Search(Board *board) : board(board) {}
+    Search(Board *board) : board(board) { assert(board != nullptr); }
 
     void clear_tt() { tt.clear(); }
 
