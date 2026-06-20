@@ -3,6 +3,7 @@
 #include "eval.hpp"
 #include "move.hpp"
 #include "pv.hpp"
+#include "score.hpp"
 #include "tt.hpp"
 #include <array>
 #include <atomic>
@@ -15,7 +16,7 @@ struct SearchInfo {
     uint16_t depth;
     uint64_t nodes;
     uint32_t time_ms;
-    int score;
+    Score score;
     PVLine pv;
     SearchInfo(int max_depth)
         : stopped(false), depth(0), nodes(0), time_ms(0), score(0),
@@ -26,9 +27,8 @@ class Search {
   private:
     constexpr static const int PAWN_VALUE = Eval::value(Piece::PAWN);
 
-    constexpr static const int ALPHA_START = -300000;
-    constexpr static const int BETA_START = 300000;
-    constexpr static const int CHECKMATE_SCORE = -200000;
+    constexpr static const Score ALPHA_START = -Score::INFINITY_SCORE;
+    constexpr static const Score BETA_START = Score::INFINITY_SCORE;
     constexpr static const int ASPIRATION_WINDOW = PAWN_VALUE / 4;
 
     // If the delta becomes too large in iterative deepening, reset alpha/beta
@@ -37,9 +37,6 @@ class Search {
     constexpr static const int DELTA_MAX = PAWN_VALUE * 5;
 
     constexpr static const int DELTA_PRUNING = PAWN_VALUE * 2;
-
-    // The score used to check for checkmate in the search.
-    constexpr static const int CHECKMATE_COMPARE = 150000;
 
     // Named constants for move scoring.
     constexpr static const int PV_MOVE_SCORE = 200000;
@@ -67,7 +64,7 @@ class Search {
      */
     std::vector<std::array<Move, 2>> killers;
 
-    int quiescence(int alpha, int beta);
+    Score quiescence(Score alpha, Score beta);
 
     /**
      * Check if the search should stop due to time limit or other conditions.
@@ -95,10 +92,10 @@ class Search {
      * Perform alpha-beta search with the given alpha, beta, depth left, and
      * ply. The PV line is updated with the best moves found during the search.
      */
-    int alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
-                   PVLine *pline, bool follow_pv);
+    Score alpha_beta(Score alpha, Score beta, uint16_t depth_left, uint16_t ply,
+                     PVLine *pline, bool follow_pv);
 
-    void print_uci_info(int depth, int score, const SearchInfo &info,
+    void print_uci_info(int depth, Score score, const SearchInfo &info,
                         const PVLine &pv_line) const;
 
   public:

@@ -22,6 +22,7 @@ std::string to_string(const Move move);
 std::string to_string(const SearchInfo result);
 std::string to_string(const Piece piece);
 std::string to_string(const Colour colour);
+std::string to_string(const Score score);
 void debug_out([[maybe_unused]] int size, [[maybe_unused]] bool first,
                [[maybe_unused]] std::string name);
 
