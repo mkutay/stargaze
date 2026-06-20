@@ -405,7 +405,7 @@ Board Board::mirrored() const {
     }
 
     for (Colour c : COLOURS) {
-        copy.colour_bbs[c] = colour_bbs[c].flip(flip);
+        copy.colour_bbs[c] = colour_bbs[!c].flip(flip);
     }
 
     copy.can_castle[0] = can_castle[2];
