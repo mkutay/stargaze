@@ -19,16 +19,15 @@ class StargazeProcess {
         int child_to_parent[2];
 
         if (pipe(parent_to_child) != 0 || pipe(child_to_parent) != 0) {
-            FAIL("Failed to create pipes");
+            FAIL("Failed to create pipes.");
         }
 
         pid = fork();
         if (pid < 0) {
-            FAIL("Failed to fork process");
+            FAIL("Failed to fork process.");
         }
 
-        if (pid == 0) {
-            // Child process
+        if (pid == 0) { // child process
             dup2(parent_to_child[0], STDIN_FILENO);
             dup2(child_to_parent[1], STDOUT_FILENO);
 
@@ -40,8 +39,7 @@ class StargazeProcess {
             execl("./bin/stargaze", "./bin/stargaze", nullptr);
             perror("execl failed");
             exit(1);
-        } else {
-            // Parent process
+        } else { // parent process
             close(parent_to_child[0]);
             close(child_to_parent[1]);
 
@@ -92,7 +90,7 @@ class StargazeProcess {
         while (true) {
             auto opt_line = read_line();
             if (!opt_line) {
-                FAIL("Child process terminated prematurely (EOF reached)");
+                FAIL("Child process terminated prematurely (EOF reached).");
             }
             std::string line = *opt_line;
             log.push_back(line);
@@ -185,7 +183,7 @@ TEST_SUITE("integration") {
         log.clear();
         proc.read_until("bestmove", log);
 
-        // Check if there is an info line with "score mate 1" or "score mate"
+        // Check if there is an info line with "score mate 1".
         bool found_mate_score = false;
         for (const auto &line : log) {
             if (line.find("score mate 1") != std::string::npos) {
