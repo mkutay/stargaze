@@ -393,3 +393,34 @@ BitBoard Board::get_bb(Colour colour) const { return colour_bbs[colour]; }
 BitBoard Board::get_bb(Piece type, Colour colour) const {
     return get_bb(type) & get_bb(colour);
 }
+
+Board Board::mirrored() const {
+    Board copy = *this;
+    auto flip = CC::BLACK;
+
+    copy.turn = !turn;
+
+    for (Piece p : PIECES) {
+        copy.piece_bbs[p] = piece_bbs[p].flip(flip);
+    }
+
+    for (Colour c : COLOURS) {
+        copy.colour_bbs[c] = colour_bbs[c].flip(flip);
+    }
+
+    copy.can_castle[0] = can_castle[2];
+    copy.can_castle[1] = can_castle[3];
+    copy.can_castle[2] = can_castle[0];
+    copy.can_castle[3] = can_castle[1];
+
+    if (ep_square) {
+        copy.ep_square = ep_square->flip(flip);
+    } else {
+        copy.ep_square = std::nullopt;
+    }
+
+    copy.initialise_eval(copy.mg_score, copy.eg_score, copy.game_phase);
+    copy.current_hash = copy.calculate_hash();
+
+    return copy;
+}

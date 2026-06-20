@@ -231,6 +231,11 @@ class Board {
      */
     int evaluate() const;
 
+    /**
+     * Return a vertically mirrored version of the board.
+     */
+    Board mirrored() const;
+
     Colour get_turn() const;
     const std::vector<Move> get_move_history() const;
     const std::array<bool, 4> get_castling_rights() const;
