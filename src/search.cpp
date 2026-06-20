@@ -27,13 +27,13 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
 
     // The previous score is used for aspiration window search, which will be
     // centered around this score.
-    int prev_score = 0;
+    Score prev_score = 0;
 
     for (uint16_t depth = 1; depth <= max_depth && !should_stop(); depth++) {
         PVLine pv_line(depth);
-        int score = 0;
-        int alpha = ALPHA_START;
-        int beta = BETA_START;
+        Score score = 0;
+        Score alpha = ALPHA_START;
+        Score beta = BETA_START;
 
         if (depth <= 2) {
             score = alpha_beta(alpha, beta, depth, 0, &pv_line, true);
@@ -103,18 +103,13 @@ template SearchInfo Search::iterative_deepening<true>(uint16_t max_depth,
 template SearchInfo Search::iterative_deepening<false>(uint16_t max_depth,
                                                        uint32_t _time_limit_ms);
 
-void Search::print_uci_info(int depth, int score, const SearchInfo &info,
+void Search::print_uci_info(int depth, Score score, const SearchInfo &info,
                             const PVLine &pv_line) const {
     std::print("info depth {}", depth);
-    if (std::abs(score) >= CHECKMATE_COMPARE &&
-        std::abs(score) <= -CHECKMATE_SCORE) {
-        auto mate_plies = (score > 0) ? (-CHECKMATE_SCORE - score)
-                                      : (score - CHECKMATE_SCORE);
-        auto mate_moves =
-            (score > 0) ? ((mate_plies + 1) / 2) : -((mate_plies + 1) / 2);
-        std::print(" score mate {}", mate_moves);
+    if (score.is_mate()) {
+        std::print(" score mate {}", score.mate_moves());
     } else {
-        std::print(" score cp {}", score);
+        std::print(" score cp {}", score.raw());
     }
     std::print(" nodes {} time {} nps {} pv", nodes_searched, info.time_ms,
                info.time_ms > 0 ? (nodes_searched * 1000 / info.time_ms) : 0);
@@ -189,8 +184,8 @@ void Search::order_moves(std::vector<Move> &moves, std::optional<Move> pv_move,
                      });
 }
 
-int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
-                       PVLine *pline, bool follow_pv) {
+Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
+                         uint16_t ply, PVLine *pline, bool follow_pv) {
     nodes_searched++;
     if (should_stop())
         return alpha;
@@ -214,14 +209,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         // Use TT score if depth is sufficient and not a PV node, as PV nodes
         // require a full search to find the best move.
         if (tt_entry->depth >= depth_left && !is_pv_node) {
-            int tt_score = tt_entry->score;
-
-            if (tt_score > CHECKMATE_COMPARE && tt_score <= -CHECKMATE_SCORE) {
-                tt_score -= ply;
-            } else if (tt_score < -CHECKMATE_COMPARE &&
-                       tt_score >= CHECKMATE_SCORE) {
-                tt_score += ply;
-            }
+            Score tt_score = tt_entry->score.from_tt(ply);
 
             if ((tt_entry->bound == Bound::EXACT) ||
                 (tt_entry->bound == Bound::LOWER && tt_score >= beta) ||
@@ -269,7 +257,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
         board->make_move(move);
         bool is_quiet = move.is_quiet();
         bool gives_check = board->is_in_check(board->get_turn());
-        int move_score;
+        Score move_score;
 
         bool next_follow_pv = follow_pv && move == pv_move;
 
@@ -345,13 +333,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
 
     if (!pline->moves.empty()) {
         if (!should_stop()) {
-            int tt_score = alpha;
-            if (tt_score > CHECKMATE_COMPARE && tt_score <= -CHECKMATE_SCORE) {
-                tt_score += ply;
-            } else if (tt_score < -CHECKMATE_COMPARE &&
-                       tt_score >= CHECKMATE_SCORE) {
-                tt_score -= ply;
-            }
+            Score tt_score = alpha.to_tt(ply);
             tt.store(hash, pline->moves.front(), tt_score, depth_left, bound);
         }
         return alpha;
@@ -360,7 +342,7 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     // No legal moves now, so: checkmate or stalemate.
 
     if (in_check) {
-        alpha = CHECKMATE_SCORE + ply;
+        alpha = Score::mate(-ply);
     } else {
         alpha = 0;
     }
@@ -368,14 +350,14 @@ int Search::alpha_beta(int alpha, int beta, uint16_t depth_left, uint16_t ply,
     return alpha;
 }
 
-int Search::quiescence(int alpha, int beta) {
+Score Search::quiescence(Score alpha, Score beta) {
     nodes_searched++;
     if (should_stop())
         return alpha;
 
     const bool in_check = board->is_in_check(board->get_turn());
 
-    int stand_pat = board->evaluate();
+    Score stand_pat = board->evaluate();
     if (!in_check) {
         if (stand_pat >= beta)
             return stand_pat;
@@ -396,7 +378,7 @@ int Search::quiescence(int alpha, int beta) {
         }
 
         board->make_move(move);
-        int score = -quiescence(-beta, -alpha);
+        Score score = -quiescence(-beta, -alpha);
         board->undo_move();
 
         if (score >= beta)
