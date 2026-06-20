@@ -16,12 +16,11 @@ void verify_make_undo_recursive(Board &board, int depth) {
     for (Move move : moves) {
         board.make_move(move);
 
-        // Recurse to deeper levels
         verify_make_undo_recursive(board, depth - 1);
 
         board.undo_move();
 
-        // Check invariants are completely restored
+        // Check invariants are completely restored:
         CHECK(board.fen() == fen_before);
         CHECK(board.get_hash() == hash_before);
         CHECK(board.get_castling_rights() == castling_before);
@@ -31,16 +30,15 @@ void verify_make_undo_recursive(Board &board, int depth) {
 
 TEST_SUITE("unit") {
     TEST_CASE("Board make/undo invariants recursive") {
-        // Test starting position to depth 3
         Board board1;
         verify_make_undo_recursive(board1, 3);
 
-        // Test Kiwipete position to depth 2 (large branching factor)
+        // Kiwipete position to depth 2 (large branching factor).
         Board board2("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R "
                      "w KQkq - 0 1");
         verify_make_undo_recursive(board2, 2);
 
-        // Test a castling and en-passant rich position
+        // Castling and en-passant rich position.
         Board board3("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R "
                      "b Kq e3 0 1");
         verify_make_undo_recursive(board3, 2);
