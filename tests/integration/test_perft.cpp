@@ -1,5 +1,6 @@
 #include "board.hpp"
 #include "doctest/doctest.h"
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -9,7 +10,7 @@ TEST_SUITE("integration") {
     TEST_CASE("Perft suite validation") {
         std::ifstream file("tests/data/perft_suite.epd");
         REQUIRE_MESSAGE(file.is_open(),
-                        "Could not open tests/data/perft_suite.epd");
+                        "Could not open tests/data/perft_suite.epd.");
 
         std::string line;
         while (std::getline(file, line)) {
@@ -34,10 +35,11 @@ TEST_SUITE("integration") {
                 if (depth_str.size() > 1 && depth_str[0] == 'D') {
                     int depth = std::stoi(depth_str.substr(1));
                     uint64_t actual_nodes = board.perft(depth);
-                    CHECK_MESSAGE(actual_nodes == expected_nodes,
-                                  "FEN: " << fen << " at depth " << depth
-                                          << " expected " << expected_nodes
-                                          << " but got " << actual_nodes);
+                    CHECK_MESSAGE(
+                        actual_nodes == expected_nodes,
+                        std::format(
+                            "FEN: {} at depth {} expected {} but got {}.", fen,
+                            depth, expected_nodes, actual_nodes));
                 }
             }
         }
