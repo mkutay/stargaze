@@ -101,3 +101,36 @@ class Move {
 };
 
 static_assert(sizeof(Move) == sizeof(uint16_t));
+
+static_assert(Move(SQ::E2, SQ::E4, Move::DOUBLE_PAWN_PUSH).from() == SQ::E2);
+static_assert(Move(SQ::E2, SQ::E4, Move::DOUBLE_PAWN_PUSH).to() == SQ::E4);
+static_assert(Move(SQ::E2, SQ::E4, Move::DOUBLE_PAWN_PUSH).flags() ==
+              Move::DOUBLE_PAWN_PUSH);
+static_assert(
+    Move(SQ::E2, SQ::E4, Move::DOUBLE_PAWN_PUSH).is_double_pawn_push());
+static_assert(!Move(SQ::E2, SQ::E4, Move::DOUBLE_PAWN_PUSH).is_capture());
+static_assert(!Move(SQ::E2, SQ::E4, Move::DOUBLE_PAWN_PUSH).is_promotion());
+static_assert(Move(SQ::E2, SQ::E4, Move::DOUBLE_PAWN_PUSH).to_string() ==
+              "e2e4");
+
+static_assert(Move(SQ::D7, SQ::C8, Move::QUEEN_PROMOTION_CAPTURE).from() ==
+              SQ::D7);
+static_assert(Move(SQ::D7, SQ::C8, Move::QUEEN_PROMOTION_CAPTURE).to() ==
+              SQ::C8);
+static_assert(Move(SQ::D7, SQ::C8, Move::QUEEN_PROMOTION_CAPTURE).flags() ==
+              Move::QUEEN_PROMOTION_CAPTURE);
+static_assert(Move(SQ::D7, SQ::C8, Move::QUEEN_PROMOTION_CAPTURE).is_capture());
+static_assert(
+    Move(SQ::D7, SQ::C8, Move::QUEEN_PROMOTION_CAPTURE).is_promotion());
+static_assert(Move(SQ::D7, SQ::C8, Move::QUEEN_PROMOTION_CAPTURE)
+                  .promotion_piece() == PP::QUEEN);
+static_assert(Move(SQ::D7, SQ::C8, Move::QUEEN_PROMOTION_CAPTURE).to_string() ==
+              "d7c8q");
+
+static_assert(Move(SQ::E5, SQ::F6, Move::EN_PASSANT).from() == SQ::E5);
+static_assert(Move(SQ::E5, SQ::F6, Move::EN_PASSANT).to() == SQ::F6);
+static_assert(Move(SQ::E5, SQ::F6, Move::EN_PASSANT).flags() ==
+              Move::EN_PASSANT);
+static_assert(Move(SQ::E5, SQ::F6, Move::EN_PASSANT).is_capture());
+static_assert(Move(SQ::E5, SQ::F6, Move::EN_PASSANT).is_en_passant());
+static_assert(Move(SQ::E5, SQ::F6, Move::EN_PASSANT).to_string() == "e5f6");
