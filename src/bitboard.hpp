@@ -369,6 +369,18 @@ static_assert(A1.flip(Colour::WHITE) == A1);
 static_assert(A1.flip(Colour::BLACK) == A8);
 static_assert(E4.flip(Colour::WHITE) == E4);
 static_assert(E4.flip(Colour::BLACK) == E5);
+static_assert(BB::E4.north() == BB::E5);
+static_assert(BB::E4.south() == BB::E3);
+static_assert(BB::E4.east() == BB::F4);
+static_assert(BB::E4.west() == BB::D4);
+static_assert(BB::H4.east() == BitBoard::EMPTY);
+static_assert(BB::A4.west() == BitBoard::EMPTY);
+static_assert(BB::E8.north() == BitBoard::EMPTY);
+static_assert(BB::E1.south() == BitBoard::EMPTY);
+static_assert(BB::A1.flip(Colour::WHITE) == BB::A1);
+static_assert(BB::A1.flip(Colour::BLACK) == BB::A8);
+static_assert(BB::E4.flip(Colour::WHITE) == BB::E4);
+static_assert(BB::E4.flip(Colour::BLACK) == BB::E5);
 } // namespace BB
 
 static_assert(sizeof(BitBoard) == sizeof(uint64_t));

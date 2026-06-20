@@ -2,7 +2,7 @@
 #include "doctest/doctest.h"
 
 TEST_SUITE("unit") {
-    TEST_CASE("BitBoard basic operations") {
+    TEST_CASE("BitBoard basic operations (runtime)") {
         BitBoard empty_bb(BitBoard::EMPTY);
         CHECK(empty_bb.count() == 0);
 
@@ -32,24 +32,5 @@ TEST_SUITE("unit") {
         CHECK(popped == SQ::C3);
         CHECK(combined.count() == 1);
         CHECK(combined.has_square(SQ::H8));
-    }
-
-    TEST_CASE("BitBoard shifting and flipping") {
-        CHECK(BB::E4.north() == BB::E5);
-        CHECK(BB::E4.south() == BB::E3);
-        CHECK(BB::E4.east() == BB::F4);
-        CHECK(BB::E4.west() == BB::D4);
-
-        // Border shifts
-        CHECK(BB::H4.east() == BitBoard::EMPTY);
-        CHECK(BB::A4.west() == BitBoard::EMPTY);
-        CHECK(BB::E8.north() == BitBoard::EMPTY);
-        CHECK(BB::E1.south() == BitBoard::EMPTY);
-
-        // Flip vertically depending on color
-        CHECK(BB::A1.flip(Colour::WHITE) == BB::A1);
-        CHECK(BB::A1.flip(Colour::BLACK) == BB::A8);
-        CHECK(BB::E4.flip(Colour::WHITE) == BB::E4);
-        CHECK(BB::E4.flip(Colour::BLACK) == BB::E5);
     }
 }
