@@ -1,5 +1,6 @@
 #pragma once
 #include "move.hpp"
+#include "score.hpp"
 #include <cstdint>
 #include <vector>
 
@@ -12,7 +13,7 @@ enum class Bound : uint8_t {
 
 struct TTEntry {
     uint64_t hash;
-    int32_t score;
+    Score score;
     Move best_move;
     uint8_t depth;
     Bound bound;
@@ -36,6 +37,6 @@ class TT {
     void clear();
     void new_search();
     TTEntry *probe(uint64_t hash);
-    void store(uint64_t hash, Move best_move, int score, uint8_t depth,
+    void store(uint64_t hash, Move best_move, Score score, uint8_t depth,
                Bound bound);
 };

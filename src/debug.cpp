@@ -61,6 +61,8 @@ std::string to_string(const Colour colour) {
     return colour == Colour::WHITE ? "WHITE" : "BLACK";
 }
 
+std::string to_string(const Score score) { return std::format("{}", score); }
+
 void debug_out([[maybe_unused]] int size, [[maybe_unused]] bool first,
                [[maybe_unused]] std::string name) {
     std::cerr << '\n';
