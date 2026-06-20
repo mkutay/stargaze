@@ -1,4 +1,5 @@
 #include "doctest/doctest.h"
+#include "test_helpers.hpp"
 #include <optional>
 #include <string>
 #include <sys/types.h>
@@ -148,8 +149,7 @@ TEST_SUITE("integration") {
         // Illegal position where Black is in check but it's White's turn.
         // It should crash/terminate because this state is unreachable in legal
         // play.
-        proc.write_line(
-            "position fen 4R3/8/P1N4P/8/8/3pk1K1/ppr2R2/6Q1 w - - 0 1");
+        proc.write_line("position fen " + std::string(test::CRASHING_POSITION));
         proc.write_line("go depth 4");
 
         // We expect the process to crash, so reading from it will eventually
@@ -176,9 +176,7 @@ TEST_SUITE("integration") {
         std::vector<std::string> log;
 
         // Scholar's Mate setup, White to move, mate in 1.
-        proc.write_line("position fen "
-                        "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR "
-                        "w KQkq - 4 4");
+        proc.write_line("position fen " + std::string(test::SCHOLARS_MATE));
         proc.write_line("go depth 4");
         log.clear();
         proc.read_until("bestmove", log);
