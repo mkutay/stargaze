@@ -1,200 +1,339 @@
 #include "bitboard.hpp"
 #include "board.hpp"
 #include "colour.hpp"
+#include "magic.hpp"
 #include "mask.hpp"
 #include "piece.hpp"
 #include <array>
 #include <vector>
 
 template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
-    std::vector<Move> pseudo; // Pseudo-legal moves, i.e., moves that may leave
-                              // the king in check.
+    std::vector<Move> legal_moves;
 
-    int mul = turn.weight();
+    Colour us = turn;
+    Colour them = !turn;
+    BitBoard own_pieces = get_bb(us);
+    BitBoard other_pieces = get_bb(them);
+    BitBoard occupied = own_pieces | other_pieces;
 
-    BitBoard white_pieces = get_bb(CC::WHITE);
-    BitBoard black_pieces = get_bb(CC::BLACK);
-    BitBoard occupied = white_pieces | black_pieces;
-    BitBoard empty = ~occupied;
-    BitBoard other_pieces = turn == CC::WHITE ? black_pieces : white_pieces;
+    Square king_sq = get_bb(PP::KING, us).get_lsb_square();
 
-    auto process_step = [other_pieces, empty,
-                         &pseudo](BitBoard &bb, int8_t move, BitBoard mask,
-                                  int8_t from_displacement) {
-        bb &= mask;
-        bb = bb.direct_move(move);
+    // King Danger Map (squares attacked by the opponent, with king removed
+    // from occupied)
+    BitBoard occupied_no_king = occupied ^ BitBoard(king_sq);
+    BitBoard king_danger = 0;
 
-        auto captures = bb & other_pieces;
-        if constexpr (CapturesOnly) {
-            bb = captures;
-        } else {
-            bb = (bb & empty) | captures;
+    BitBoard opponent_pawns = get_bb(PP::PAWN, them);
+    if (them == CC::WHITE) {
+        king_danger |=
+            opponent_pawns.north().west() | opponent_pawns.north().east();
+    } else {
+        king_danger |=
+            opponent_pawns.south().west() | opponent_pawns.south().east();
+    }
+
+    BitBoard opponent_knights = get_bb(PP::KNIGHT, them);
+    while (opponent_knights) {
+        Square sq = opponent_knights.get_square_pop();
+        king_danger |= Mask::KNIGHT_MASKS.at(sq);
+    }
+
+    Square opponent_king_sq = get_bb(PP::KING, them).get_lsb_square();
+    king_danger |= Mask::KING_MASKS.at(opponent_king_sq);
+
+    BitBoard opponent_bishops =
+        get_bb(PP::BISHOP, them) | get_bb(PP::QUEEN, them);
+    while (opponent_bishops) {
+        Square sq = opponent_bishops.get_square_pop();
+        king_danger |= Magic::bishop_attacks(sq, occupied_no_king);
+    }
+
+    BitBoard opponent_rooks = get_bb(PP::ROOK, them) | get_bb(PP::QUEEN, them);
+    while (opponent_rooks) {
+        Square sq = opponent_rooks.get_square_pop();
+        king_danger |= Magic::rook_attacks(sq, occupied_no_king);
+    }
+
+    auto emit_moves = [&legal_moves, other_pieces](Square from,
+                                                   BitBoard targets) {
+        while (targets) {
+            Square to = targets.get_square_pop();
+            bool capture = other_pieces.has_square(to);
+            legal_moves.emplace_back(from, to, Move::create_flags(capture));
         }
-
-        auto temp = bb;
-        while (temp) {
-            auto sq = temp.get_square_pop();
-            pseudo.emplace_back(sq - from_displacement, sq,
-                                Move::create_flags(captures.has_square(sq)));
-        }
-
-        bb &= empty;
     };
 
-    auto generate_moves = [&process_step]<bool Sliding, size_t N>(
-                              BitBoard bitboard,
-                              const std::array<int8_t, N> &moves) {
-        for (auto move : moves) {
-            auto mask = Mask::moving_mask(move);
-            BitBoard bb = bitboard;
+    BitBoard king_targets =
+        Mask::KING_MASKS.at(king_sq) & ~own_pieces & ~king_danger;
+    if constexpr (CapturesOnly) {
+        king_targets &= other_pieces;
+    }
+    emit_moves(king_sq, king_targets);
 
-            if constexpr (Sliding) {
-                for (int8_t m = 0; bb; m++) {
-                    process_step(bb, move, mask, (m + 1) * move);
-                }
-            } else {
-                process_step(bb, move, mask, move);
-            }
-        }
-    };
+    // find checkers of the king
+    BitBoard checkers = 0;
+    if (us == CC::WHITE) {
+        BitBoard king_bb = get_bb(PP::KING, us);
+        checkers |= (king_bb.north().west() | king_bb.north().east()) &
+                    get_bb(PP::PAWN, them);
+    } else {
+        BitBoard king_bb = get_bb(PP::KING, us);
+        checkers |= (king_bb.south().west() | king_bb.south().east()) &
+                    get_bb(PP::PAWN, them);
+    }
+    checkers |= Mask::KNIGHT_MASKS.at(king_sq) & get_bb(PP::KNIGHT, them);
+    checkers |= Magic::bishop_attacks(king_sq, occupied) &
+                (get_bb(PP::BISHOP, them) | get_bb(PP::QUEEN, them));
+    checkers |= Magic::rook_attacks(king_sq, occupied) &
+                (get_bb(PP::ROOK, them) | get_bb(PP::QUEEN, them));
 
-    {
-        // These are the final "places" of pawns after these actions.
-        BitBoard pawns = get_bb(PP::PAWN, turn), pawn_push_one = 0,
-                 pawn_push_two = 0, pawn_capture_left = 0,
-                 pawn_capture_right = 0, pawn_push_one_promotion = 0,
-                 pawn_capture_left_promotion = 0,
-                 pawn_capture_right_promotion = 0;
+    int num_checkers = checkers.count();
 
-        if (turn == CC::WHITE) {
-            pawn_push_one = pawns.north() & empty;
-            pawn_push_two =
-                ((pawns & Mask::RANK_2).north() & empty).north() & empty;
-            pawn_capture_left = pawns.north().west() & other_pieces;
-            pawn_capture_right = pawns.north().east() & other_pieces;
-            pawn_push_one_promotion = pawn_push_one & Mask::RANK_8;
-            pawn_capture_left_promotion = pawn_capture_left & Mask::RANK_8;
-            pawn_capture_right_promotion = pawn_capture_right & Mask::RANK_8;
+    // double check: only king moves are legal
+    if (num_checkers >= 2) {
+        return legal_moves;
+    }
+
+    BitBoard check_mask = BitBoard(BitBoard::ALL_SQUARES);
+    if (num_checkers == 1) {
+        Square checker_sq = checkers.get_lsb_square();
+        Piece checker_type = *get_piece(checker_sq);
+        if (checker_type == PP::BISHOP || checker_type == PP::ROOK ||
+            checker_type == PP::QUEEN) {
+            check_mask =
+                Magic::RAY_BETWEEN[king_sq][checker_sq] | BitBoard(checker_sq);
         } else {
-            pawn_push_one = pawns.south() & empty;
-            pawn_push_two =
-                ((pawns & Mask::RANK_7).south() & empty).south() & empty;
-            pawn_capture_left = pawns.south().east() & other_pieces;
-            pawn_capture_right = pawns.south().west() & other_pieces;
-            pawn_push_one_promotion = pawn_push_one & Mask::RANK_1;
-            pawn_capture_left_promotion = pawn_capture_left & Mask::RANK_1;
-            pawn_capture_right_promotion = pawn_capture_right & Mask::RANK_1;
+            check_mask = BitBoard(checker_sq);
         }
+    }
 
-        if (ep_square) {
-            auto ep = *ep_square;
-            auto to = ep - 8 * mul;
-            if (pawns.west() & BitBoard(to)) {
-                pseudo.emplace_back(to + 1, ep, Move::EN_PASSANT);
-            }
-            if (pawns.east() & BitBoard(to)) {
-                pseudo.emplace_back(to - 1, ep, Move::EN_PASSANT);
+    // pinned pieces and pin masks
+    std::array<BitBoard, 64> pin_mask;
+    pin_mask.fill(BitBoard::ALL_SQUARES);
+
+    BitBoard pinned_pieces = 0;
+
+    BitBoard pinners = (Mask::BISHOP_MASKS.at(king_sq) &
+                        (get_bb(PP::BISHOP, them) | get_bb(PP::QUEEN, them))) |
+                       (Mask::ROOK_MASKS.at(king_sq) &
+                        (get_bb(PP::ROOK, them) | get_bb(PP::QUEEN, them)));
+
+    while (pinners) {
+        Square pinner_sq = pinners.get_square_pop();
+        BitBoard between = Magic::RAY_BETWEEN[king_sq][pinner_sq];
+        BitBoard pieces_between = between & occupied;
+        if (pieces_between.count() == 1) {
+            BitBoard own_pinned = pieces_between & own_pieces;
+            if (own_pinned) {
+                Square pinned_sq = own_pinned.get_lsb_square();
+                pin_mask[pinned_sq] = between | BitBoard(pinner_sq);
+                pinned_pieces |= own_pinned;
             }
         }
+    }
 
-        while (pawn_push_one) {
-            auto sq = pawn_push_one.get_square_pop();
-            auto from = sq - 8 * mul;
-            if (pawn_push_one_promotion.has_square(sq)) {
-                for (auto promotion_piece : Move::PROMOTION_PIECES) {
-                    pseudo.emplace_back(from, sq, promotion_piece);
+    // 7. Pinned pieces cannot move when in check
+    BitBoard active_own = own_pieces;
+    if (num_checkers > 0) {
+        active_own &= ~pinned_pieces;
+    }
+
+    int mul = us.weight();
+    BitBoard movable_mask = check_mask;
+
+    // Pawns
+    {
+        BitBoard pawns = get_bb(PP::PAWN, turn) & active_own;
+        while (pawns) {
+            Square from = pawns.get_square_pop();
+            BitBoard pin_m = pin_mask[from];
+            BitBoard target_mask = movable_mask & pin_m;
+
+            Square from_rel = from.flip(turn);
+
+            // Push one
+            Square push1_rel = from_rel + 8;
+            Square push1_to = push1_rel.flip(turn);
+            if (!occupied.has_square(push1_to) &&
+                target_mask.has_square(push1_to)) {
+                if (push1_rel.rank() == 7) { // Promotion rank
+                    for (auto promo : Move::PROMOTION_PIECES) {
+                        legal_moves.emplace_back(from, push1_to, promo);
+                    }
+                } else if constexpr (!CapturesOnly) {
+                    legal_moves.emplace_back(from, push1_to, Move::QUIET);
                 }
-            } else if constexpr (!CapturesOnly) {
-                pseudo.emplace_back(from, sq, Move::QUIET);
             }
-        }
 
-        if constexpr (!CapturesOnly) {
-            while (pawn_push_two) {
-                auto sq = pawn_push_two.get_square_pop();
-                pseudo.emplace_back(sq - 16 * mul, sq, Move::DOUBLE_PAWN_PUSH);
-            }
-        }
-
-        while (pawn_capture_left) {
-            auto sq = pawn_capture_left.get_square_pop();
-            auto from = sq - 7 * mul;
-            if (pawn_capture_left_promotion.has_square(sq)) {
-                for (auto promotion_piece : Move::PROMOTION_CAPTURE_PIECES) {
-                    pseudo.emplace_back(from, sq, promotion_piece);
+            // Push two
+            if (from_rel.rank() == 1) { // Starting rank
+                Square push2_rel = from_rel + 16;
+                Square push2_to = push2_rel.flip(turn);
+                if (!occupied.has_square(push1_to) &&
+                    !occupied.has_square(push2_to) &&
+                    target_mask.has_square(push2_to)) {
+                    if constexpr (!CapturesOnly) {
+                        legal_moves.emplace_back(from, push2_to,
+                                                 Move::DOUBLE_PAWN_PUSH);
+                    }
                 }
-            } else {
-                pseudo.emplace_back(from, sq, Move::CAPTURE);
             }
-        }
 
-        while (pawn_capture_right) {
-            auto sq = pawn_capture_right.get_square_pop();
-            auto from = sq - 9 * mul;
-            if (pawn_capture_right_promotion.has_square(sq)) {
-                for (auto promotion_piece : Move::PROMOTION_CAPTURE_PIECES) {
-                    pseudo.emplace_back(from, sq, promotion_piece);
+            // Left capture
+            if (from_rel.file() > 0) {
+                Square cap_rel = from_rel + 7;
+                Square cap_to = cap_rel.flip(turn);
+                if (other_pieces.has_square(cap_to) &&
+                    target_mask.has_square(cap_to)) {
+                    if (cap_rel.rank() == 7) {
+                        for (auto promo : Move::PROMOTION_CAPTURE_PIECES) {
+                            legal_moves.emplace_back(from, cap_to, promo);
+                        }
+                    } else {
+                        legal_moves.emplace_back(from, cap_to, Move::CAPTURE);
+                    }
                 }
-            } else {
-                pseudo.emplace_back(from, sq, Move::CAPTURE);
+            }
+
+            // Right capture
+            if (from_rel.file() < 7) {
+                Square cap_rel = from_rel + 9;
+                Square cap_to = cap_rel.flip(turn);
+                if (other_pieces.has_square(cap_to) &&
+                    target_mask.has_square(cap_to)) {
+                    if (cap_rel.rank() == 7) {
+                        for (auto promo : Move::PROMOTION_CAPTURE_PIECES) {
+                            legal_moves.emplace_back(from, cap_to, promo);
+                        }
+                    } else {
+                        legal_moves.emplace_back(from, cap_to, Move::CAPTURE);
+                    }
+                }
+            }
+
+            // En Passant
+            if (ep_square) {
+                Square ep = *ep_square;
+                Square ep_rel = ep.flip(turn);
+                Square captured_pawn_sq = ep - 8 * mul;
+
+                bool can_ep = (from_rel.file() > 0 && ep_rel == from_rel + 7) ||
+                              (from_rel.file() < 7 && ep_rel == from_rel + 9);
+
+                if (can_ep) {
+                    if (movable_mask.has_square(captured_pawn_sq) &&
+                        pin_m.has_square(ep)) {
+                        bool ep_legal = true;
+                        BitBoard occupied_after = occupied;
+                        occupied_after.erase_bit(from);
+                        occupied_after.erase_bit(captured_pawn_sq);
+                        occupied_after.set_bit(ep);
+
+                        BitBoard sliders =
+                            get_bb(PP::ROOK, !turn) | get_bb(PP::QUEEN, !turn);
+                        if (Magic::rook_attacks(king_sq, occupied_after) &
+                            sliders) {
+                            ep_legal = false;
+                        }
+                        BitBoard diag_sliders = get_bb(PP::BISHOP, !turn) |
+                                                get_bb(PP::QUEEN, !turn);
+                        if (Magic::bishop_attacks(king_sq, occupied_after) &
+                            diag_sliders) {
+                            ep_legal = false;
+                        }
+
+                        if (ep_legal) {
+                            legal_moves.emplace_back(from, ep,
+                                                     Move::EN_PASSANT);
+                        }
+                    }
+                }
             }
         }
     }
 
+    // Knights
     {
-        auto knights = get_bb(PP::KNIGHT, turn);
-        generate_moves.template operator()<false>(knights, Mask::KNIGHT_MOVES);
+        BitBoard knights = get_bb(PP::KNIGHT, turn) & active_own;
+        while (knights) {
+            Square from = knights.get_square_pop();
+            BitBoard targets = Mask::KNIGHT_MASKS.at(from) & ~own_pieces &
+                               movable_mask & pin_mask[from];
+            if constexpr (CapturesOnly) {
+                targets &= other_pieces;
+            }
+            emit_moves(from, targets);
+        }
     }
 
+    // Bishops
     {
-        auto bishops_and_queens =
-            get_bb(PP::BISHOP, turn) | get_bb(PP::QUEEN, turn);
-        generate_moves.template operator()<true>(bishops_and_queens,
-                                                 Mask::DIAGONAL_MOVES);
+        BitBoard bishops = get_bb(PP::BISHOP, turn) & active_own;
+        while (bishops) {
+            Square from = bishops.get_square_pop();
+            BitBoard targets = Magic::bishop_attacks(from, occupied) &
+                               ~own_pieces & movable_mask & pin_mask[from];
+            if constexpr (CapturesOnly) {
+                targets &= other_pieces;
+            }
+            emit_moves(from, targets);
+        }
     }
 
+    // Rooks
     {
-        auto rooks_and_queens =
-            get_bb(PP::ROOK, turn) | get_bb(PP::QUEEN, turn);
-        generate_moves.template operator()<true>(rooks_and_queens,
-                                                 Mask::CARDINAL_MOVES);
+        BitBoard rooks = get_bb(PP::ROOK, turn) & active_own;
+        while (rooks) {
+            Square from = rooks.get_square_pop();
+            BitBoard targets = Magic::rook_attacks(from, occupied) &
+                               ~own_pieces & movable_mask & pin_mask[from];
+            if constexpr (CapturesOnly) {
+                targets &= other_pieces;
+            }
+            emit_moves(from, targets);
+        }
     }
 
+    // Queens
     {
-        auto king = get_bb(PP::KING, turn);
-        generate_moves.template operator()<false>(king, Mask::CARDINAL_MOVES);
-        generate_moves.template operator()<false>(king, Mask::DIAGONAL_MOVES);
+        BitBoard queens = get_bb(PP::QUEEN, turn) & active_own;
+        while (queens) {
+            Square from = queens.get_square_pop();
+            BitBoard targets = (Magic::bishop_attacks(from, occupied) |
+                                Magic::rook_attacks(from, occupied)) &
+                               ~own_pieces & movable_mask & pin_mask[from];
+            if constexpr (CapturesOnly) {
+                targets &= other_pieces;
+            }
+            emit_moves(from, targets);
+        }
     }
 
-    std::vector<Move> non_pseudo_moves;
-    for (Move move : pseudo) {
-        Colour current_turn = turn;
-        make_move(move);
-        if (!is_in_check(current_turn))
-            non_pseudo_moves.emplace_back(move);
-        undo_move();
-    }
-
+    // Castling
     if constexpr (!CapturesOnly) {
-        auto SQE1 = SQ::E1.flip(turn), SQF1 = SQ::F1.flip(turn),
-             SQG1 = SQ::G1.flip(turn), SQD1 = SQ::D1.flip(turn),
-             SQC1 = SQ::C1.flip(turn);
-        auto BBF1 = BB::F1.flip(turn), BBG1 = BB::G1.flip(turn),
-             BBD1 = BB::D1.flip(turn), BBC1 = BB::C1.flip(turn),
-             BBB1 = BB::B1.flip(turn);
-        if (can_castle[turn * 2] && occupied.empty(BBF1 | BBG1) &&
-            !is_attacked(turn, SQE1) && !is_attacked(turn, SQF1) &&
-            !is_attacked(turn, SQG1)) {
-            non_pseudo_moves.emplace_back(SQE1, SQG1, Move::KING_SIDE_CASTLE);
-        }
-        if (can_castle[turn * 2 + 1] && occupied.empty(BBB1 | BBC1 | BBD1) &&
-            !is_attacked(turn, SQE1) && !is_attacked(turn, SQD1) &&
-            !is_attacked(turn, SQC1)) {
-            non_pseudo_moves.emplace_back(SQE1, SQC1, Move::QUEEN_SIDE_CASTLE);
+        if (num_checkers == 0) {
+            auto SQE1 = SQ::E1.flip(turn), SQG1 = SQ::G1.flip(turn),
+                 SQC1 = SQ::C1.flip(turn);
+            auto BBF1 = BB::F1.flip(turn), BBG1 = BB::G1.flip(turn),
+                 BBD1 = BB::D1.flip(turn), BBC1 = BB::C1.flip(turn),
+                 BBB1 = BB::B1.flip(turn);
+
+            // King side castling
+            if (can_castle[turn * 2] && occupied.empty(BBF1 | BBG1) &&
+                king_danger.empty(BitBoard(SQE1) | BBF1 | BitBoard(SQG1))) {
+                legal_moves.emplace_back(SQE1, SQG1, Move::KING_SIDE_CASTLE);
+            }
+
+            // Queen side castling
+            if (can_castle[turn * 2 + 1] &&
+                occupied.empty(BBB1 | BBC1 | BBD1) &&
+                king_danger.empty(BitBoard(SQE1) | BBD1 | BitBoard(SQC1))) {
+                legal_moves.emplace_back(SQE1, SQC1, Move::QUEEN_SIDE_CASTLE);
+            }
         }
     }
 
-    return non_pseudo_moves;
+    return legal_moves;
 }
 
 bool Board::is_in_check(Colour by_colour) const {
@@ -207,56 +346,29 @@ bool Board::is_attacked(Colour by_colour, BitBoard bb) const {
 
     Square sq = bb.get_lsb_square();
     Colour other = !by_colour;
-    auto other_queens = get_bb(PP::QUEEN, other);
-    auto other_rooks = get_bb(PP::ROOK, other);
-    auto other_bishops = get_bb(PP::BISHOP, other);
-    auto other_knights = get_bb(PP::KNIGHT, other);
-    auto other_king = get_bb(PP::KING, other);
-    auto other_pawns = get_bb(PP::PAWN, other);
     auto occupied = get_bb(CC::WHITE) | get_bb(CC::BLACK);
-    auto empty = ~occupied;
 
-    if (other_king & Mask::KING_MASKS.at(sq))
+    if (get_bb(PP::KING, other) & Mask::KING_MASKS.at(sq))
         return true;
 
     if (by_colour == CC::WHITE) {
-        if ((bb.north().west() | bb.north().east()) & other_pawns)
+        if ((bb.north().west() | bb.north().east()) & get_bb(PP::PAWN, other))
             return true;
     } else {
-        if ((bb.south().west() | bb.south().east()) & other_pawns)
+        if ((bb.south().west() | bb.south().east()) & get_bb(PP::PAWN, other))
             return true;
     }
 
-    if (other_knights & Mask::KNIGHT_MASKS.at(sq))
+    if (get_bb(PP::KNIGHT, other) & Mask::KNIGHT_MASKS.at(sq))
         return true;
 
-    auto diagonals = other_bishops | other_queens;
-    auto cardinals = other_rooks | other_queens;
+    if (Magic::bishop_attacks(sq, occupied) &
+        (get_bb(PP::BISHOP, other) | get_bb(PP::QUEEN, other)))
+        return true;
 
-    if ((diagonals & Mask::BISHOP_MASKS.at(sq)) ||
-        (cardinals & Mask::ROOK_MASKS.at(sq))) {
-
-        auto check_attack_sliding =
-            [empty, bb]<size_t N>(const std::array<int8_t, N> &moves,
-                                  BitBoard attacking_pieces) {
-                for (auto move : moves) {
-                    auto mask = Mask::moving_mask(move);
-                    auto temp = bb;
-                    while (temp) {
-                        temp &= mask;
-                        temp = temp.direct_move(move);
-                        if (temp & attacking_pieces)
-                            return true;
-                        temp &= empty;
-                    }
-                }
-                return false;
-            };
-
-        if (check_attack_sliding(Mask::DIAGONAL_MOVES, diagonals) ||
-            check_attack_sliding(Mask::CARDINAL_MOVES, cardinals))
-            return true;
-    }
+    if (Magic::rook_attacks(sq, occupied) &
+        (get_bb(PP::ROOK, other) | get_bb(PP::QUEEN, other)))
+        return true;
 
     return false;
 }
