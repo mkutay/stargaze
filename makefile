@@ -1,6 +1,6 @@
 # Compiler and base flags
 CXX = clang++
-CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -pedantic -Isrc
+CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -pedantic -Isrc -fconstexpr-steps=500000000
 
 # Dependency tracking flags
 DEPFLAGS = -MMD -MP
@@ -115,4 +115,3 @@ DEPTH ?= 5
 # Run perft
 run-perft: release
 	@(echo "position fen $(FEN)"; echo "go perft $(DEPTH)"; echo "quit") | ./$(TARGET)
-
