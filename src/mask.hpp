@@ -5,20 +5,6 @@
 #include <cstdlib>
 
 namespace Mask {
-
-template <typename T, size_t N, size_t M>
-constexpr std::array<T, N + M> operator+(const std::array<T, N> &a,
-                                         const std::array<T, M> &b) {
-    std::array<T, N + M> result{};
-    for (size_t i = 0; i < N; ++i) {
-        result[i] = a[i];
-    }
-    for (size_t i = 0; i < M; ++i) {
-        result[N + i] = b[i];
-    }
-    return result;
-}
-
 template <bool once, size_t N>
 constexpr std::array<BitBoard, 64>
 generate_masks(const std::array<int8_t, N> &moves) {
@@ -63,15 +49,15 @@ constexpr const static std::array<int8_t, 8> KNIGHT_MOVES = {-10, -6, -17, -15,
                                                              6,   10, 15,  17};
 constexpr const static std::array<int8_t, 4> DIAGONAL_MOVES = {-9, -7, 7, 9};
 constexpr const static std::array<int8_t, 4> CARDINAL_MOVES = {-8, -1, 1, 8};
+constexpr const static std::array<int8_t, 8> ALL_MOVES = {-8, -1, 1, 8,
+                                                          -9, -7, 7, 9};
 
 constexpr const static auto KNIGHT_MASKS = generate_masks<true>(KNIGHT_MOVES);
 constexpr const static auto BISHOP_MASKS =
     generate_masks<false>(DIAGONAL_MOVES);
 constexpr const static auto ROOK_MASKS = generate_masks<false>(CARDINAL_MOVES);
-constexpr const static auto QUEEN_MASKS =
-    generate_masks<false>(CARDINAL_MOVES + DIAGONAL_MOVES);
-constexpr const static auto KING_MASKS =
-    generate_masks<true>(CARDINAL_MOVES + DIAGONAL_MOVES);
+constexpr const static auto QUEEN_MASKS = generate_masks<false>(ALL_MOVES);
+constexpr const static auto KING_MASKS = generate_masks<true>(ALL_MOVES);
 
 constexpr const static auto MOVING_MASKS = generate_moving_masks();
 
