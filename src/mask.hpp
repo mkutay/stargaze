@@ -2,7 +2,6 @@
 #include "bitboard.hpp"
 #include "square.hpp"
 #include <array>
-#include <bit>
 #include <cstdlib>
 
 namespace Mask {
@@ -23,8 +22,7 @@ constexpr std::array<T, N + M> operator+(const std::array<T, N> &a,
 template <bool once, size_t N>
 constexpr std::array<BitBoard, 64>
 generate_masks(const std::array<int8_t, N> &moves) {
-    auto masks =
-        std::bit_cast<std::array<BitBoard, 64>>(std::array<uint64_t, 64>{});
+    std::array<BitBoard, 64> masks{};
     for (Square sq = 0; sq < 64; sq++) {
         for (auto dir : moves) {
             if constexpr (once) {
@@ -49,9 +47,7 @@ constexpr size_t moving_masks_index(int8_t move) { return move + 63; }
  * from.
  */
 constexpr std::array<BitBoard, 127> generate_moving_masks() {
-    // Zero initialise the bitboards.
-    auto masks =
-        std::bit_cast<std::array<BitBoard, 127>>(std::array<uint64_t, 127>{});
+    std::array<BitBoard, 127> masks{};
 
     for (int8_t move = -63; move <= 63; move++) {
         for (Square sq = 0; sq < 64; sq++) {
@@ -86,8 +82,7 @@ constexpr BitBoard moving_mask(int8_t move) {
 template <size_t N>
 constexpr std::array<BitBoard, N>
 moving_masks_for(const std::array<int8_t, N> &moves) {
-    std::array<BitBoard, N> result =
-        std::bit_cast<std::array<BitBoard, N>>(std::array<uint64_t, N>{});
+    std::array<BitBoard, N> result{};
     for (size_t i = 0; i < N; i++)
         result[i] = moving_mask(moves[i]);
     return result;

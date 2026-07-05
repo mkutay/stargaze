@@ -15,7 +15,7 @@ class BitBoard {
      * The default constructor is deleted to prevent accidentally creating an
      * uninitialised bitboard, preserving the variant.
      */
-    constexpr BitBoard() = delete;
+    constexpr BitBoard() : bb(0) {}
     constexpr BitBoard(uint64_t _bb) : bb(_bb) {}
     constexpr BitBoard(Square sq) : bb(1ull << sq) {
         assert(sq >= 0 && sq < 64);
