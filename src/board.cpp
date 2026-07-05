@@ -294,6 +294,17 @@ bool Board::is_draw() const {
     return false;
 }
 
+bool Board::is_repetition() const {
+    int limit = hash_history.size() - 1;
+    auto start = std::max(0, limit - halfmove_clock);
+    for (int i = limit - 2; i >= start; i -= 2) {
+        if (hash_history[i] == current_hash) {
+            return true;
+        }
+    }
+    return false;
+}
+
 Colour Board::get_turn() const { return turn; }
 
 std::string Board::nice() const {

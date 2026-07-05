@@ -171,7 +171,7 @@ int Search::score_move(Move move, std::optional<Move> pv_move,
         }
     }
 
-    return 0;
+    return history_table[move.from()][move.to()];
 }
 
 Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
@@ -180,7 +180,7 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
     if (should_stop())
         return alpha;
 
-    if (board->is_draw())
+    if (board->is_draw() || (ply > 0 && board->is_repetition()))
         return 0;
 
     bool in_check = board->is_in_check(board->get_turn());
@@ -211,6 +211,27 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
 
     if (depth_left == 0)
         return quiescence(alpha, beta);
+
+    // Static Evaluation for Pruning Heuristics
+    // Refine static_eval with TT score when available, as TT provides
+    // a better positional estimate than a raw static evaluation.
+    Score static_eval = board->evaluate();
+    if (tt_entry != nullptr) {
+        Score tt_score = tt_entry->score.from_tt(ply);
+        if ((tt_entry->bound == Bound::EXACT) ||
+            (tt_entry->bound == Bound::LOWER && tt_score > static_eval) ||
+            (tt_entry->bound == Bound::UPPER && tt_score < static_eval)) {
+            static_eval = tt_score;
+        }
+    }
+
+    // Reverse Futility Pruning (Static Null Move Pruning)
+    if (depth_left <= 3 && !is_pv_node && !in_check && !static_eval.is_mate()) {
+        int margin = depth_left * PAWN_VALUE;
+        if (static_eval - margin >= beta) {
+            return static_eval - margin;
+        }
+    }
 
     // Null Move Pruning
     if (depth_left >= 3 && !is_pv_node && !in_check &&
@@ -255,8 +276,18 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
         std::swap(scores[i], scores[best_idx]);
 
         Move move = moves[i];
-        board->make_move(move);
         bool is_quiet = move.is_quiet();
+
+        // Futility Pruning
+        if (depth_left <= 2 && is_quiet && !in_check &&
+            !static_eval.is_mate()) {
+            int fp_margin = depth_left * PAWN_VALUE * 2;
+            if (static_eval + fp_margin < alpha) {
+                continue;
+            }
+        }
+
+        board->make_move(move);
         bool gives_check = board->is_in_check(board->get_turn());
         Score move_score;
 
@@ -322,6 +353,11 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
                     killers[ply][1] = killers[ply][0];
                     killers[ply][0] = move;
                 }
+                // Update history
+                int &h = history_table[move.from()][move.to()];
+                h += depth_left * depth_left;
+                if (h >= KILLER_SCORES[0])
+                    h = KILLER_SCORES[0] - 1;
             }
             break;
         }

@@ -64,6 +64,8 @@ class Search {
      */
     std::vector<std::array<Move, 2>> killers;
 
+    std::array<std::array<int, 64>, 64> history_table;
+
     Score quiescence(Score alpha, Score beta);
 
     /**

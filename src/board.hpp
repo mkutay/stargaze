@@ -242,4 +242,5 @@ class Board {
     std::string nice() const;
     std::string fen() const;
     bool is_draw() const;
+    bool is_repetition() const;
 };
