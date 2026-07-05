@@ -81,14 +81,6 @@ class Search {
                    std::optional<uint16_t> ply = std::nullopt) const;
 
     /**
-     * Order the moves to improve alpha-beta pruning efficiency.
-     */
-    void order_moves(std::vector<Move> &moves,
-                     std::optional<Move> pv_move = std::nullopt,
-                     std::optional<Move> tt_move = std::nullopt,
-                     std::optional<uint16_t> ply = std::nullopt);
-
-    /**
      * Perform alpha-beta search with the given alpha, beta, depth left, and
      * ply. The PV line is updated with the best moves found during the search.
      */

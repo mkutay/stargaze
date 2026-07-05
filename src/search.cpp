@@ -174,16 +174,6 @@ int Search::score_move(Move move, std::optional<Move> pv_move,
     return 0;
 }
 
-void Search::order_moves(std::vector<Move> &moves, std::optional<Move> pv_move,
-                         std::optional<Move> tt_move,
-                         std::optional<uint16_t> ply) {
-    std::stable_sort(moves.begin(), moves.end(),
-                     [this, pv_move, tt_move, ply](Move a, Move b) {
-                         return score_move(a, pv_move, tt_move, ply) >
-                                score_move(b, pv_move, tt_move, ply);
-                     });
-}
-
 Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
                          uint16_t ply, PVLine *pline, bool follow_pv) {
     nodes_searched++;
@@ -246,13 +236,24 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
     }
 
     std::vector<Move> moves = board->get_moves<false>();
-
-    order_moves(moves, pv_move, tt_move, ply);
+    std::vector<int> scores(moves.size());
+    for (size_t i = 0; i < moves.size(); i++) {
+        scores[i] = score_move(moves[i], pv_move, tt_move, ply);
+    }
 
     bool found_pv = false;
     Bound bound = Bound::UPPER;
 
     for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
+        size_t best_idx = i;
+        for (size_t j = i + 1; j < moves.size(); j++) {
+            if (scores[j] > scores[best_idx]) {
+                best_idx = j;
+            }
+        }
+        std::swap(moves[i], moves[best_idx]);
+        std::swap(scores[i], scores[best_idx]);
+
         Move move = moves[i];
         board->make_move(move);
         bool is_quiet = move.is_quiet();
@@ -365,9 +366,22 @@ Score Search::quiescence(Score alpha, Score beta) {
     }
 
     std::vector<Move> moves = board->get_moves<true>();
-    order_moves(moves);
+    std::vector<int> scores(moves.size());
+    for (size_t i = 0; i < moves.size(); i++) {
+        scores[i] = score_move(moves[i]);
+    }
 
-    for (auto move : moves) {
+    for (size_t i = 0; i < moves.size(); i++) {
+        size_t best_idx = i;
+        for (size_t j = i + 1; j < moves.size(); j++) {
+            if (scores[j] > scores[best_idx]) {
+                best_idx = j;
+            }
+        }
+        std::swap(moves[i], moves[best_idx]);
+        std::swap(scores[i], scores[best_idx]);
+
+        Move move = moves[i];
         // Delta Pruning
         if (!in_check && !move.is_promotion()) {
             int gain = move.is_en_passant()
