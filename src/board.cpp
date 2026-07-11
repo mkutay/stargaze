@@ -275,6 +275,7 @@ void Board::check_state_consistency() const {
     BitBoard all_pieces = Mask::EMPTY;
     for (auto bb : piece_bbs)
         all_pieces |= bb;
+
     assert(all_pieces == colour_bbs[0] | colour_bbs[1]);
 }
 
@@ -350,22 +351,9 @@ std::optional<Colour> Board::get_colour(Square sq) const {
     return std::nullopt;
 }
 
-bool Board::has_piece_at(BitBoard bb, Piece type, Colour colour) const {
-    return get_bb(type) & get_bb(colour) & bb;
-}
-
 void Board::move_piece(Piece piece, Colour colour, Square from, Square to) {
-    current_hash ^= Zobrist::piece(colour, piece, from);
-    current_hash ^= Zobrist::piece(colour, piece, to);
-
-    mg_score[colour] -= Eval::mg_value(colour, piece, from);
-    eg_score[colour] -= Eval::eg_value(colour, piece, from);
-    mg_score[colour] += Eval::mg_value(colour, piece, to);
-    eg_score[colour] += Eval::eg_value(colour, piece, to);
-
-    BitBoard mask = BitBoard(from) | BitBoard(to);
-    get_bb(piece) ^= mask;
-    get_bb(colour) ^= mask;
+    add_piece(piece, colour, to);
+    clear_piece(piece, colour, from);
 }
 
 void Board::add_piece(Piece piece, Colour colour, Square sq) {

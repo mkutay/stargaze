@@ -106,17 +106,6 @@ class Board {
     void clear_piece(Piece piece, Colour colour, Square sq);
 
     /**
-     * Return true if the piece of the given type and colour occupies the
-     * square.
-     *
-     * The Square to BitBoard implicit conversion can be utilised here.
-     *
-     * On any square set on the bitboard, the type and the colour match, still
-     * returns true.
-     */
-    bool has_piece_at(BitBoard bb, Piece type, Colour colour) const;
-
-    /**
      * Return true if the square (a single-bit bitboard) is attacked by the
      * opponent of `by_colour`.
      */

@@ -2,7 +2,6 @@
 #include "board.hpp"
 #include "eval.hpp"
 #include "move.hpp"
-#include "pv.hpp"
 #include "score.hpp"
 #include "tt.hpp"
 #include <array>
@@ -10,6 +9,12 @@
 #include <cassert>
 #include <chrono>
 #include <vector>
+
+struct PVLine {
+    std::vector<Move> moves;
+    PVLine(int max_depth) { moves.reserve(max_depth); }
+    PVLine() {}
+};
 
 struct SearchInfo {
     bool stopped;
