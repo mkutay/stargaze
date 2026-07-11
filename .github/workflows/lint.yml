@@ -25,9 +25,6 @@ jobs:
 
     build:
         runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                compiler: [clang++]
 
         steps:
             - uses: actions/checkout@v4
@@ -35,20 +32,13 @@ jobs:
             - name: Install compiler
               run: |
                   sudo apt-get update -q
-                  if [ "${{ matrix.compiler }}" = "clang++" ]; then
-                      sudo apt-get install -y clang
-                  else
-                      sudo apt-get install -y g++
-                  fi
+                  sudo apt-get install -y clang
 
             - name: Build
-              run: make release CXX=${{ matrix.compiler }}
+              run: make release CXX=clang++
 
     test:
         runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                compiler: [clang++, g++]
 
         steps:
             - uses: actions/checkout@v4
@@ -56,11 +46,7 @@ jobs:
             - name: Install compiler
               run: |
                   sudo apt-get update -q
-                  if [ "${{ matrix.compiler }}" = "clang++" ]; then
-                      sudo apt-get install -y clang
-                  else
-                      sudo apt-get install -y g++
-                  fi
+                  sudo apt-get install -y clang
 
             - name: Run tests
-              run: make test CXX=${{ matrix.compiler }}
+              run: make test CXX=clang++
