@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <functional>
 #include <limits>
 #include <vector>
 
@@ -95,9 +96,6 @@ class Search {
     Score alpha_beta(Score alpha, Score beta, uint16_t depth_left, uint16_t ply,
                      PVLine *pline, bool follow_pv);
 
-    void print_uci_info(int depth, Score score, const SearchInfo &info,
-                        const PVLine &pv_line) const;
-
   public:
     /**
      * Variable to communicate with main thread to stop the search.
@@ -120,6 +118,7 @@ class Search {
      * limit. The last search info can be provided to continue from a previous
      * search.
      */
-    template <bool UCI>
-    SearchInfo iterative_deepening(uint16_t max_depth, uint32_t _time_limit_ms);
+    SearchInfo iterative_deepening(
+        uint16_t max_depth, uint32_t _time_limit_ms,
+        const std::function<void(const SearchInfo &)> &on_iteration = {});
 };

@@ -117,6 +117,21 @@ GoParams parse_go(const std::string &line, Board &board, const Search &search) {
     return params;
 }
 
+void print_search_info(const SearchInfo &info) {
+    std::print("info depth {}", info.depth);
+    if (info.score.is_mate())
+        std::print(" score mate {}", info.score.mate_moves());
+    else
+        std::print(" score cp {}", info.score.raw());
+
+    const uint64_t nps =
+        info.time_ms > 0 ? info.nodes * 1000 / info.time_ms : 0;
+    std::print(" nodes {} time {} nps {} pv", info.nodes, info.time_ms, nps);
+    for (Move move : info.pv.moves)
+        std::print(" {}", move.to_string());
+    std::print("\n");
+}
+
 class SearchController {
     Search &search;
     std::thread thread;
@@ -149,8 +164,8 @@ class SearchController {
             release_result = !params.wait_for_stop;
         }
         thread = std::thread([this, params]() {
-            SearchInfo current = search.iterative_deepening<true>(
-                params.max_depth, params.time_limit);
+            SearchInfo current = search.iterative_deepening(
+                params.max_depth, params.time_limit, print_search_info);
             std::unique_lock lock(mutex);
             result = std::move(current);
             result_ready = true;

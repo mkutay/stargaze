@@ -4,17 +4,10 @@
 #include <algorithm>
 #include <chrono>
 #include <optional>
-#include <print>
 
-#ifdef DEBUG
-#include "debug.hpp"
-#else
-#define debug(...) void(38)
-#endif
-
-template <bool UCI>
-SearchInfo Search::iterative_deepening(uint16_t max_depth,
-                                       uint32_t _time_limit_ms) {
+SearchInfo Search::iterative_deepening(
+    uint16_t max_depth, uint32_t _time_limit_ms,
+    const std::function<void(const SearchInfo &)> &on_iteration) {
     SearchInfo search_info(max_depth);
     time_limit_ms = _time_limit_ms;
     start_time = std::chrono::high_resolution_clock::now();
@@ -89,35 +82,12 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
         search_info.pv = pv_line;
         last_pv = pv_line;
 
-        if constexpr (UCI)
-            print_uci_info(depth, score, search_info, pv_line);
-        else
-            debug(depth, alpha, score, beta, pv_line.moves);
+        if (on_iteration)
+            on_iteration(search_info);
     }
 
     search_info.stopped = time_up;
     return search_info;
-}
-
-template SearchInfo Search::iterative_deepening<true>(uint16_t max_depth,
-                                                      uint32_t _time_limit_ms);
-template SearchInfo Search::iterative_deepening<false>(uint16_t max_depth,
-                                                       uint32_t _time_limit_ms);
-
-void Search::print_uci_info(int depth, Score score, const SearchInfo &info,
-                            const PVLine &pv_line) const {
-    std::print("info depth {}", depth);
-    if (score.is_mate()) {
-        std::print(" score mate {}", score.mate_moves());
-    } else {
-        std::print(" score cp {}", score.raw());
-    }
-    std::print(" nodes {} time {} nps {} pv", nodes_searched, info.time_ms,
-               info.time_ms > 0 ? (nodes_searched * 1000 / info.time_ms) : 0);
-    for (auto m : pv_line.moves) {
-        std::print(" {}", m.to_string());
-    }
-    std::print("\n");
 }
 
 bool Search::should_stop() {
