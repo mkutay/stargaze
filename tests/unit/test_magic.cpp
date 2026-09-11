@@ -1,5 +1,6 @@
 #include "doctest/doctest.h"
 #include "magic.hpp"
+#include "mask.hpp"
 
 TEST_SUITE("unit") {
     TEST_CASE("Magic Bitboard attacks and ray calculations") {

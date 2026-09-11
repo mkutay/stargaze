@@ -1,6 +1,6 @@
 # Compiler and base flags
 CXX = clang++
-CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -pedantic -Isrc -fconstexpr-steps=500000000
+CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -pedantic -Isrc
 
 # Dependency tracking flags
 DEPFLAGS = -MMD -MP

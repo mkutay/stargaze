@@ -8,7 +8,6 @@ CompileFlags:
             -Wall,
             -Wextra,
             -DDEBUG,
-            -fconstexpr-steps=500000000,
         ]
 Diagnostics:
     UnusedIncludes: Strict
