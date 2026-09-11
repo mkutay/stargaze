@@ -1,5 +1,6 @@
 #include "doctest/doctest.h"
 #include "test_helpers.hpp"
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <sys/types.h>

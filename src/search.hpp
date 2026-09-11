@@ -113,6 +113,7 @@ class Search {
     explicit Search(Board *board) : board(board) { assert(board != nullptr); }
 
     void clear_tt() { tt.clear(); }
+    const PVLine &get_last_pv() const { return last_pv; }
     void set_limits(uint64_t nodes = std::numeric_limits<uint64_t>::max(),
                     std::vector<Move> moves = {}) {
         node_limit = nodes;

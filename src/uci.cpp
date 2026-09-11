@@ -1,7 +1,8 @@
+#include "uci.hpp"
+
 #include "board.hpp"
 #include "search.hpp"
 #include "time_management.hpp"
-#include "uci.hpp"
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
