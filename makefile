@@ -145,6 +145,19 @@ benchmark: $(BENCHMARK_BIN)
 compdb:
 	python3 tools/gen_compile_commands.py
 
+# Run a strength match against Stockfish
+STOCKFISH ?= stockfish
+SKILL ?= 0
+GAMES ?= 48
+BASE ?= 10
+INCREMENT ?= 0.1
+PGN ?= games/stockfish-match.pgn
+
+match-stockfish: release
+	python3 tools/match_stockfish.py --stockfish "$(STOCKFISH)" --engine "./$(TARGET)" \
+		--skill "$(SKILL)" --games "$(GAMES)" --base "$(BASE)" \
+		--increment "$(INCREMENT)" --pgn "$(PGN)" $(MATCH_ARGS)
+
 # Include dependency files if they exist
 -include $(RELEASE_DEPS)
 -include $(DEBUG_DEPS)
@@ -153,7 +166,7 @@ compdb:
 -include $(BENCHMARK_DEPS)
 
 # Phony targets
-.PHONY: all release debug verify sanitize run run-debug run-verify clean run-perft test test-unit benchmark compdb
+.PHONY: all release debug verify sanitize run run-debug run-verify clean run-perft test test-unit benchmark compdb match-stockfish
 
 # Perft execution defaults
 FEN ?= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

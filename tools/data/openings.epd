@@ -1,0 +1,28 @@
+# Balanced opening positions for tools/match_stockfish.py.
+# Each position is played twice with reversed engine colours. Positions are
+# intentionally shallow and varied so the engines, rather than an opening
+# book, decide most of each game.
+r1bqkbnr/pppp1ppp/2n5/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - id "Open Game";
+rnbqk2r/pppp1ppp/5n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - id "Italian Game";
+r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - id "Three Knights";
+rnbqkbnr/pp3ppp/2pp4/4p3/4P3/2N5/PPP2PPP/R1BQKBNR w KQkq - id "Philidor Structure";
+rnbqkbnr/ppp2ppp/8/3pp3/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - id "Open Centre";
+rnbqkbnr/pp3ppp/2p5/3pp3/3P4/2P2N2/PP2PPPP/RNBQKB1R w KQkq - id "Caro-Kann";
+rnbqkbnr/pp3ppp/2p5/3pp3/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - id "Caro-Kann Two Knights";
+rnbqkbnr/pp2pppp/2pp4/8/3PP3/8/PPP2PPP/RNBQKBNR w KQkq - id "Modern Centre";
+rnbqkbnr/pp2pppp/8/2pp4/3P4/2N2N2/PPP1PPPP/R1BQKB1R w KQkq - id "Queen's Pawn";
+rnbqkbnr/pp3ppp/2p5/3pp3/3P4/2N2N2/PPP1PPPP/R1BQKB1R w KQkq - id "Slav Structure";
+rnb1k2r/pp2bppp/2p1pn2/q2p4/2PP4/2N1PN2/PP2BPPP/R1BQK2R w KQkq - id "Queen's Gambit";
+r1bqkbnr/pp2pppp/2np4/2p5/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - id "Sicilian Classical";
+rnbqkbnr/pp2pppp/3p4/8/2p1P3/5N2/PP1P1PPP/RNBQKB1R w KQkq - id "Sicilian Wing";
+rnbqkbnr/pp3ppp/4p3/2ppP3/8/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - id "French Advance";
+r1bqkbnr/ppp2ppp/2np4/4p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - id "Pirc Classical";
+rnbqk2r/ppppbppp/4pn2/8/3P4/2N2N2/PPP1PPPP/R1BQKB1R w KQkq - id "Indian Setup";
+rnbqk2r/pp2ppbp/2pp1np1/8/2PPP3/2N2N2/PP3PPP/R1BQKB1R w KQkq - id "King's Indian";
+rnbqk2r/pppp1pbp/5np1/4p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - id "Modern Defence";
+rnbqkbnr/pppp1ppp/8/4p3/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - id "Scandinavian";
+rnbqkbnr/ppp1pppp/8/8/2pP4/8/PP2PPPP/RNBQKBNR w KQkq - id "Queen's Gambit Accepted";
+rnbqkbnr/pppp1ppp/8/8/3pP3/8/PPP2PPP/RNBQKBNR w KQkq - id "Danish Structure";
+r1bqkbnr/pppp1ppp/2n5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - id "Open Development";
+rnbqkb1r/pppp1ppp/5n2/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - id "Petrov";
+rnbqkbnr/ppp1pppp/8/3p4/8/2N2N2/PPPPPPPP/R1BQKB1R w KQkq - id "Richter-Veresov";

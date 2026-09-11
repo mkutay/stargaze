@@ -53,12 +53,12 @@ cutechess-cli -engine cmd=./bin/stargaze name=Stargaze_1 -engine cmd=./bin/starg
 
 ### Estimating Strength Against Stockfish
 
-Install `python-chess`, build Stargaze, and run the match tool. It alternates colours and reports Stargaze's estimated absolute Elo from Stockfish's approximate skill-level rating.
+Install `python-chess`, build Stargaze, and run the match tool. It cycles through the checked-in `tools/data/openings.epd` suite and plays every position twice with reversed engine colours. `--games` is rounded up to a complete pair; use at least 48 games to cover every bundled position once per colour. The tool reports Stargaze's estimated absolute Elo from Stockfish's approximate skill-level rating.
 
 ```bash
 python3 -m pip install python-chess
-make release
-python3 tools/match_stockfish.py --stockfish /path/to/stockfish \
-    --skill 5 --games 100 --base 10 --increment 0.1 \
-    --pgn games/stockfish-match.pgn
+make match-stockfish STOCKFISH=/path/to/stockfish SKILL=5 GAMES=96 \
+    BASE=10 INCREMENT=0.1 PGN=games/stockfish-match.pgn
 ```
+
+Use `MATCH_ARGS="--openings path/to/suite.epd"` to pass additional options. More games and several Stockfish skill levels produce a more useful estimate; the reported confidence interval quantifies sampling uncertainty but cannot guarantee an exact Elo.
