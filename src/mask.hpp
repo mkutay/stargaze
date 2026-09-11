@@ -1,5 +1,6 @@
 #pragma once
 #include "bitboard.hpp"
+#include "piece.hpp"
 #include "square.hpp"
 #include <array>
 #include <cstdlib>
@@ -58,6 +59,19 @@ constexpr const static auto BISHOP_MASKS =
 constexpr const static auto ROOK_MASKS = generate_masks<false>(CARDINAL_MOVES);
 constexpr const static auto QUEEN_MASKS = generate_masks<false>(ALL_MOVES);
 constexpr const static auto KING_MASKS = generate_masks<true>(ALL_MOVES);
+constexpr const static std::array<std::array<BitBoard, 64>, 5> PIECE_MASKS = {
+    KNIGHT_MASKS, BISHOP_MASKS, ROOK_MASKS, QUEEN_MASKS, KING_MASKS,
+};
+
+constexpr inline BitBoard knights(Square sq) { return KNIGHT_MASKS[sq.raw()]; }
+constexpr inline BitBoard bishops(Square sq) { return BISHOP_MASKS[sq.raw()]; }
+constexpr inline BitBoard rooks(Square sq) { return ROOK_MASKS[sq.raw()]; }
+constexpr inline BitBoard queens(Square sq) { return QUEEN_MASKS[sq.raw()]; }
+constexpr inline BitBoard kings(Square sq) { return KING_MASKS[sq.raw()]; }
+constexpr inline BitBoard mask(Piece piece, Square sq) {
+    assert(piece != Piece::PAWN);
+    return PIECE_MASKS[piece.raw() - 1][sq.raw()];
+}
 
 constexpr const static auto MOVING_MASKS = generate_moving_masks();
 

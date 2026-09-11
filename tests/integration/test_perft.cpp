@@ -6,7 +6,7 @@
 
 TEST_SUITE("integration") {
     TEST_CASE("Perft suite validation") {
-        for (const auto &[fen, expected_nodes] : test::PERFT_TEST_CASES) {
+        for (const auto &[name, fen, expected_nodes] : test::PERFT_TEST_CASES) {
             Board board(fen);
             for (size_t i = 0; i < expected_nodes.size(); ++i) {
                 int depth = static_cast<int>(i + 1);
@@ -14,8 +14,8 @@ TEST_SUITE("integration") {
                 uint64_t actual = board.perft(depth);
                 CHECK_MESSAGE(
                     actual == expected,
-                    std::format("FEN: {} at depth {} expected {} but got {}.",
-                                fen, depth, expected, actual));
+                    std::format("{} ({}) at depth {} expected {} but got {}.",
+                                name, fen, depth, expected, actual));
             }
         }
     }

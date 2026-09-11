@@ -158,6 +158,37 @@ class Board {
      */
     template <bool Undo> void apply_move(Move move);
 
+    /**
+     * Returns a bitboard of all squares attacked by the given colour.
+     */
+    BitBoard attacked(Colour attacker) const;
+
+    /**
+     * Returns the pieces of the given colour attacking a square.
+     */
+    BitBoard attackers(Colour attacker, Square square) const;
+
+    /**
+     * Returns the squares that can capture or block a lone checker.
+     */
+    BitBoard check_evasion_targets(Square king, BitBoard checkers) const;
+
+    /**
+     * Returns the opposing sliders pinning the given colour to a square.
+     */
+    BitBoard pinners(Colour colour, Square square) const;
+
+    /**
+     * Returns the ray on which a pinned piece may move.
+     */
+    static BitBoard pin_ray(Square pivot, Square piece, BitBoard pinners);
+
+    /**
+     * Returns a bitboard of all squares pinned by the given colour, with the
+     * given square as the pivot.
+     */
+    BitBoard pinned(Colour colour, Square square) const;
+
   public:
     Board();
     explicit Board(std::string_view fen);

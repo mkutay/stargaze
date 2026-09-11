@@ -44,4 +44,8 @@ inline BitBoard bishop_attacks(Square sq, BitBoard occupancy) {
 
 extern const std::array<std::array<BitBoard, 64>, 64> RAY_BETWEEN;
 
+inline BitBoard ray_between(Square from, Square to) {
+    return RAY_BETWEEN[from.raw()][to.raw()];
+}
+
 } // namespace Magic
