@@ -13,10 +13,6 @@ Requires `clang++` with C++23 support and GNU Make.
 - `make sanitize`: debug build with AddressSanitizer and UndefinedBehaviorSanitizer.
 - `make verify`: debug build with internal consistency checks.
 - `make run`, `make run-debug`, `make run-verify`: build and run the selected profile.
-- `make run-perft`: Runs a perft performance test. By default, it builds the release version and tests the starting position at depth 5 by piping UCI commands into the engine. You can customise the test position and depth:
-    ```bash
-    make run-perft FEN="r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1" DEPTH=4
-    ```
 - `make clean`: Removes the `build/` and `bin/` directories.
 - `make compdb`: Regenerates `compile_commands.json` for clangd.
 - `make test`: Runs all tests.
@@ -31,8 +27,6 @@ To run with a GUI, simply load the compiled binary `./bin/stargaze` into your ch
 
 In addition to standard UCI commands, Stargaze supports:
 
-- `perft <depth>`: Runs a perft performance test from the current position to the specified depth (with move division).
-- `go perft <depth>`: Alternative UCI-compatible syntax to run a perft test.
 - `d` or `print`: Prints the current board state as text.
 
 ### Playing the Engine Against Itself with `cutechess-cli`

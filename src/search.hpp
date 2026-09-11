@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <limits>
 #include <vector>
 
 struct PVLine {
@@ -56,6 +57,7 @@ class Search {
 
     bool time_up;
     uint32_t time_limit_ms;
+    uint64_t node_limit = std::numeric_limits<uint64_t>::max();
     uint64_t nodes_searched;
     Board *board;
     std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
@@ -71,6 +73,7 @@ class Search {
      * most recent killer move, and index 1 is the second most recent.
      */
     std::vector<std::array<Move, 2>> killers;
+    std::vector<Move> root_moves;
 
     std::array<std::array<int, 64>, 64> history_table;
 
@@ -110,6 +113,11 @@ class Search {
     explicit Search(Board *board) : board(board) { assert(board != nullptr); }
 
     void clear_tt() { tt.clear(); }
+    void set_limits(uint64_t nodes = std::numeric_limits<uint64_t>::max(),
+                    std::vector<Move> moves = {}) {
+        node_limit = nodes;
+        root_moves = std::move(moves);
+    }
 
     /**
      * Perform iterative deepening search up to the given maximum depth and time

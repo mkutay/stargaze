@@ -121,7 +121,7 @@ void Search::print_uci_info(int depth, Score score, const SearchInfo &info,
 }
 
 bool Search::should_stop() {
-    if (time_up)
+    if (time_up || nodes_searched >= node_limit)
         return true;
 
     if (stop_flag.load(std::memory_order_relaxed)) {
@@ -261,6 +261,12 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
     }
 
     std::vector<Move> moves = board->get_moves<false>();
+    if (ply == 0 && !root_moves.empty()) {
+        std::erase_if(moves, [this](Move move) {
+            return std::find(root_moves.begin(), root_moves.end(), move) ==
+                   root_moves.end();
+        });
+    }
     std::vector<int> scores(moves.size());
     for (size_t i = 0; i < moves.size(); i++) {
         scores[i] = score_move(moves[i], pv_move, tt_move, ply);

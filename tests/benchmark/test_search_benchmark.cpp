@@ -38,6 +38,7 @@ TEST_SUITE("benchmark") {
         for (const Position &position : POSITIONS) {
             Board board(position.fen);
             Search search(&board);
+            search.set_limits();
             const SearchInfo result = search.iterative_deepening<false>(
                 target_depth, std::numeric_limits<uint32_t>::max());
 
@@ -53,6 +54,7 @@ TEST_SUITE("benchmark") {
         for (const Position &position : POSITIONS) {
             Board board(position.fen);
             Search search(&board);
+            search.set_limits();
             const SearchInfo result = search.iterative_deepening<false>(
                 Search::MAX_SEARCH_DEPTH, time_budget_ms);
 

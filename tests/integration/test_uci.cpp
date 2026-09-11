@@ -112,6 +112,7 @@ TEST_SUITE("integration") {
         bool found_name = false;
         bool found_author = false;
         bool found_uciok = false;
+        bool found_clear_hash = false;
         for (const auto &line : log) {
             if (line.find("id name stargaze") != std::string::npos)
                 found_name = true;
@@ -119,10 +120,14 @@ TEST_SUITE("integration") {
                 found_author = true;
             if (line.find("uciok") != std::string::npos)
                 found_uciok = true;
+            if (line.find("option name Clear Hash type button") !=
+                std::string::npos)
+                found_clear_hash = true;
         }
         CHECK(found_name);
         CHECK(found_author);
         CHECK(found_uciok);
+        CHECK(found_clear_hash);
 
         proc.write_line("isready");
         log.clear();
@@ -140,6 +145,44 @@ TEST_SUITE("integration") {
         std::string bestmove_line = proc.read_until("bestmove", log);
         CHECK(bestmove_line.find("bestmove") != std::string::npos);
 
+        proc.write_line("quit");
+    }
+
+    TEST_CASE("UCI remains responsive during infinite search") {
+        StargazeProcess proc;
+        std::vector<std::string> log;
+
+        proc.write_line("position startpos");
+        proc.write_line("go infinite");
+        proc.write_line("isready");
+        proc.read_until("readyok", log);
+
+        proc.write_line("stop");
+        CHECK(proc.read_until("bestmove", log).find("bestmove") !=
+              std::string::npos);
+        proc.write_line("quit");
+    }
+
+    TEST_CASE("UCI searchmoves restricts the root move") {
+        StargazeProcess proc;
+        std::vector<std::string> log;
+
+        proc.write_line("position startpos");
+        proc.write_line("go depth 2 searchmoves e2e4");
+        CHECK(proc.read_until("bestmove", log) == "bestmove e2e4");
+        proc.write_line("quit");
+    }
+
+    TEST_CASE("UCI debug mode reports received commands") {
+        StargazeProcess proc;
+        std::vector<std::string> log;
+
+        proc.write_line("debug on");
+        proc.write_line("isready");
+        proc.read_until("readyok", log);
+        CHECK(std::find(log.begin(), log.end(),
+                        "info string received isready") != log.end());
+        proc.write_line("debug off");
         proc.write_line("quit");
     }
 

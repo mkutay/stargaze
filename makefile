@@ -168,12 +168,4 @@ match: release
 -include $(BENCHMARK_DEPS)
 
 # Phony targets
-.PHONY: all release debug verify sanitize run run-debug run-verify clean run-perft test test-unit benchmark compdb match
-
-# Perft execution defaults
-FEN ?= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-DEPTH ?= 5
-
-# Run perft
-run-perft: release
-	@(echo "position fen $(FEN)"; echo "go perft $(DEPTH)"; echo "quit") | ./$(TARGET)
+.PHONY: all release debug verify sanitize run run-debug run-verify clean test test-unit benchmark compdb match
