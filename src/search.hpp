@@ -47,7 +47,6 @@ class Search {
 
     constexpr static const int DELTA_PRUNING = PAWN_VALUE * 2;
 
-    // Named constants for move scoring.
     constexpr static const int PV_MOVE_SCORE = 200000;
     constexpr static const int TT_MOVE_SCORE = 100000;
     constexpr static const int PROMOTION_SCORE = 90000;
@@ -65,17 +64,9 @@ class Search {
 
     PVLine last_pv;
 
-    /**
-     * Killers are a heuristic to improve move ordering in alpha-beta search.
-     * The idea is that if a move causes a beta cutoff at a certain depth, it is
-     * likely to be a good move in similar positions. We store the two most
-     * recent killer moves for each ply (depth) of the search. Index 0 is the
-     * most recent killer move, and index 1 is the second most recent.
-     */
     std::vector<std::array<Move, 2>> killers;
     std::vector<Move> root_moves;
-
-    std::array<std::array<int, 64>, 64> history_table;
+    std::array<std::array<int, 64>, 64> history_table{};
 
     Score quiescence(Score alpha, Score beta);
 
@@ -86,12 +77,16 @@ class Search {
      */
     bool should_stop();
 
-    /**
-     * Static move scoring to prioritise moves during ordering.
-     */
     int score_move(Move move, std::optional<Move> pv_move = std::nullopt,
                    std::optional<Move> tt_move = std::nullopt,
                    std::optional<uint16_t> ply = std::nullopt) const;
+    void score_moves(const std::vector<Move> &moves, std::vector<int> &scores,
+                     std::optional<Move> pv_move = std::nullopt,
+                     std::optional<Move> tt_move = std::nullopt,
+                     std::optional<uint16_t> ply = std::nullopt) const;
+    void pick_next_move(std::vector<Move> &moves, std::vector<int> &scores,
+                        size_t index) const;
+    void record_cutoff(Move move, uint16_t ply, uint16_t depth);
 
     /**
      * Perform alpha-beta search with the given alpha, beta, depth left, and

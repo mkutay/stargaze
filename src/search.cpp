@@ -141,40 +141,6 @@ bool Search::should_stop() {
     return false;
 }
 
-int Search::score_move(Move move, std::optional<Move> pv_move,
-                       std::optional<Move> tt_move,
-                       std::optional<uint16_t> ply) const {
-    if (move == pv_move)
-        return PV_MOVE_SCORE;
-
-    if (move == tt_move)
-        return TT_MOVE_SCORE;
-
-    if (move.is_promotion())
-        return PROMOTION_SCORE;
-
-    if (move.is_capture()) {
-        auto victim_val = move.is_en_passant()
-                              ? Eval::value(Piece::PAWN)
-                              : Eval::value(*board->get_piece(move.to()));
-        auto aggressor_val = Eval::value(*board->get_piece(move.from()));
-        return CAPTURE_SCORE_BASE + 10 * victim_val - aggressor_val;
-    }
-
-    if (move.is_castle())
-        return CASTLE_SCORE;
-
-    if (ply.has_value() && *ply < killers.size()) {
-        auto &k_moves = killers[*ply];
-        for (size_t i = 0; i < k_moves.size(); i++) {
-            if (move == k_moves[i])
-                return KILLER_SCORES[i];
-        }
-    }
-
-    return history_table[move.from().raw()][move.to().raw()];
-}
-
 Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
                          uint16_t ply, PVLine *pline, bool follow_pv) {
     nodes_searched++;
@@ -267,23 +233,14 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
                    root_moves.end();
         });
     }
-    std::vector<int> scores(moves.size());
-    for (size_t i = 0; i < moves.size(); i++) {
-        scores[i] = score_move(moves[i], pv_move, tt_move, ply);
-    }
+    std::vector<int> scores;
+    score_moves(moves, scores, pv_move, tt_move, ply);
 
     bool found_pv = false;
     Bound bound = Bound::UPPER;
 
     for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
-        size_t best_idx = i;
-        for (size_t j = i + 1; j < moves.size(); j++) {
-            if (scores[j] > scores[best_idx]) {
-                best_idx = j;
-            }
-        }
-        std::swap(moves[i], moves[best_idx]);
-        std::swap(scores[i], scores[best_idx]);
+        pick_next_move(moves, scores, i);
 
         Move move = moves[i];
         bool is_quiet = move.is_quiet();
@@ -356,19 +313,8 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
 
         if (move_score >= beta) {
             bound = Bound::LOWER;
-            if (is_quiet) {
-                if (ply >= killers.size())
-                    killers.resize(ply + 1, std::array<Move, 2>{});
-                if (killers[ply][0] != move) {
-                    killers[ply][1] = killers[ply][0];
-                    killers[ply][0] = move;
-                }
-                // Update history
-                int &h = history_table[move.from().raw()][move.to().raw()];
-                h += depth_left * depth_left;
-                if (h >= KILLER_SCORES[0])
-                    h = KILLER_SCORES[0] - 1;
-            }
+            if (is_quiet)
+                record_cutoff(move, ply, depth_left);
             break;
         }
     }
@@ -412,20 +358,11 @@ Score Search::quiescence(Score alpha, Score beta) {
     }
 
     std::vector<Move> moves = board->get_moves<true>();
-    std::vector<int> scores(moves.size());
-    for (size_t i = 0; i < moves.size(); i++) {
-        scores[i] = score_move(moves[i]);
-    }
+    std::vector<int> scores;
+    score_moves(moves, scores);
 
     for (size_t i = 0; i < moves.size(); i++) {
-        size_t best_idx = i;
-        for (size_t j = i + 1; j < moves.size(); j++) {
-            if (scores[j] > scores[best_idx]) {
-                best_idx = j;
-            }
-        }
-        std::swap(moves[i], moves[best_idx]);
-        std::swap(scores[i], scores[best_idx]);
+        pick_next_move(moves, scores, i);
 
         Move move = moves[i];
         // Delta Pruning
