@@ -164,8 +164,8 @@ class Eval {
             for (Piece p : PIECES) {
                 for (Square sq = 0; sq < 64; sq++) {
                     auto pesto = c == Colour::WHITE ? (sq ^ 56) : sq;
-                    table[c.raw()][p][sq.raw()] =
-                        value[p] + pesto_table[p][pesto.raw()];
+                    table[c.raw()][p.raw()][sq.raw()] =
+                        value[p.raw()] + pesto_table[p.raw()][pesto.raw()];
                 }
             }
         }
@@ -184,7 +184,8 @@ class Eval {
         const std::array<int, 6> piece_counts = {8, 2, 2, 2, 1, 1};
         int sum = 0;
         for (Piece p : PIECES) {
-            sum += inc[p] * piece_counts[p] * 2; // factor 2 for both colours
+            sum += inc[p.raw()] * piece_counts[p.raw()] *
+                   2; // factor 2 for both colours
         }
         return sum;
     };
@@ -196,15 +197,15 @@ class Eval {
     Eval() = delete;
 
     static constexpr int mg_value(Colour colour, Piece piece, Square sq) {
-        return mg_table[colour.raw()][piece][sq.raw()];
+        return mg_table[colour.raw()][piece.raw()][sq.raw()];
     }
 
     static constexpr int eg_value(Colour colour, Piece piece, Square sq) {
-        return eg_table[colour.raw()][piece][sq.raw()];
+        return eg_table[colour.raw()][piece.raw()][sq.raw()];
     }
 
     static constexpr int gamephase_inc(Piece piece) {
-        return gamephase_inc_values[piece];
+        return gamephase_inc_values[piece.raw()];
     }
 
     static constexpr int gamephase_sum() { return gamephase_sum_value; }
@@ -213,6 +214,7 @@ class Eval {
      * Return the value of a piece.
      */
     static constexpr int value(Piece piece) {
-        return (mg_piece_values[piece] + eg_piece_values[piece]) / 2;
+        return (mg_piece_values[piece.raw()] + eg_piece_values[piece.raw()]) /
+               2;
     }
 };

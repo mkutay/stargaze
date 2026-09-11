@@ -21,10 +21,6 @@ class Piece {
 
     constexpr Piece() : piece(PAWN) {}
     constexpr Piece(int _piece) : piece(_piece) {}
-
-    /**
-     * Colour be capital or not, returns the piece accordingly.
-     */
     constexpr Piece(char c) {
         switch (std::tolower(c)) {
         case 'p':
@@ -50,12 +46,18 @@ class Piece {
         }
     }
 
-    constexpr operator uint8_t() const { return piece; }
+    constexpr uint8_t raw() const { return piece; }
 
     constexpr Piece operator+(const Piece &o) const { return piece + o.piece; }
     constexpr Piece operator-(const Piece &o) const { return piece - o.piece; }
     constexpr Piece operator+(const uint8_t &o) const { return piece + o; }
     constexpr Piece operator-(const uint8_t &o) const { return piece - o; }
+    constexpr bool operator==(const Piece &o) const { return piece == o.piece; }
+    constexpr bool operator!=(const Piece &o) const { return piece != o.piece; }
+    constexpr bool operator<(const Piece &o) const { return piece < o.piece; }
+    constexpr bool operator>(const Piece &o) const { return piece > o.piece; }
+    constexpr bool operator<=(const Piece &o) const { return piece <= o.piece; }
+    constexpr bool operator>=(const Piece &o) const { return piece >= o.piece; }
 
     constexpr Piece &operator+=(const Piece &other) {
         piece += other.piece;

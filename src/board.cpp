@@ -385,8 +385,8 @@ const std::array<bool, 4> Board::get_castling_rights() const {
     return can_castle;
 }
 
-BitBoard &Board::get_bb(Piece type) { return piece_bbs[type]; }
-BitBoard Board::get_bb(Piece type) const { return piece_bbs[type]; }
+BitBoard &Board::get_bb(Piece type) { return piece_bbs[type.raw()]; }
+BitBoard Board::get_bb(Piece type) const { return piece_bbs[type.raw()]; }
 BitBoard &Board::get_bb(Colour colour) { return colour_bbs[colour.raw()]; }
 BitBoard Board::get_bb(Colour colour) const { return colour_bbs[colour.raw()]; }
 BitBoard Board::get_bb(Piece type, Colour colour) const {
@@ -400,7 +400,7 @@ Board Board::mirrored() const {
     copy.turn = turn.opposite();
 
     for (Piece p : PIECES) {
-        copy.piece_bbs[p] = piece_bbs[p].flip(flip);
+        copy.piece_bbs[p.raw()] = piece_bbs[p.raw()].flip(flip);
     }
 
     for (Colour c : COLOURS) {
