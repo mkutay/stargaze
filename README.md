@@ -47,6 +47,19 @@ Stargaze has a comprehensive test suite built on the **doctest** framework. It i
     ./bin/stargaze_tests --test-suite="unit"
     ```
 
+### Search Benchmarks
+
+Run the release-mode position benchmarks to measure time to depth and depth
+reached in one second:
+
+```bash
+make benchmark
+```
+
+Each result is printed as one machine-readable line containing the position,
+completed depth, elapsed milliseconds, nodes, and nodes per second. Compare
+runs on the same machine and build configuration for meaningful results.
+
 ## UCI Protocol & Testing
 
 The engine supports the Universal Chess Interface (UCI) protocol, which allows playing against it via chess GUIs (like Arena or Cute Chess) or setting up matches against other engines.

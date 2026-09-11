@@ -89,6 +89,13 @@ TEST_BIN        = $(BIN_DIR)/stargaze_tests
 
 ENGINE_SOURCES  = $(filter-out src/main.cpp,$(SOURCES))
 TEST_SOURCES    = $(wildcard tests/*.cpp tests/unit/*.cpp tests/integration/*.cpp)
+BENCHMARK_SOURCES = $(wildcard tests/benchmark/*.cpp)
+BENCHMARK_BUILD_DIR = build/benchmarks
+BENCHMARK_BIN = $(BIN_DIR)/stargaze_benchmarks
+BENCHMARK_OBJECTS = $(patsubst src/%.cpp,$(BENCHMARK_BUILD_DIR)/src/%.o,$(ENGINE_SOURCES)) \
+                    $(patsubst tests/%.cpp,$(BENCHMARK_BUILD_DIR)/%.o,$(BENCHMARK_SOURCES)) \
+                    $(BENCHMARK_BUILD_DIR)/main.o
+BENCHMARK_DEPS = $(BENCHMARK_OBJECTS:.o=.d)
 
 TEST_OBJECTS    = $(patsubst src/%.cpp,$(TEST_BUILD_DIR)/src/%.o,$(ENGINE_SOURCES)) \
                   $(patsubst tests/%.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SOURCES))
@@ -108,12 +115,31 @@ $(TEST_BIN): $(TEST_OBJECTS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(TEST_FLAGS) $(TEST_OBJECTS) -o $@
 
+$(BENCHMARK_BUILD_DIR)/src/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) -Itests $(DEPFLAGS) -c $< -o $@
+
+$(BENCHMARK_BUILD_DIR)/%.o: tests/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) -Itests $(DEPFLAGS) -c $< -o $@
+
+$(BENCHMARK_BUILD_DIR)/main.o: tests/main.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) -Itests $(DEPFLAGS) -c $< -o $@
+
+$(BENCHMARK_BIN): $(BENCHMARK_OBJECTS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) -flto $(BENCHMARK_OBJECTS) -o $@
+
 # Build the engine binary first so UCI integration tests can spawn it
 test: debug $(TEST_BIN)
 	./$(TEST_BIN)
 
 test-unit: $(TEST_BIN)
 	./$(TEST_BIN) --test-suite-exclude=integration
+
+benchmark: $(BENCHMARK_BIN)
+	./$(BENCHMARK_BIN)
 
 # Generate compilation database for language server (clangd)
 compdb:
@@ -124,9 +150,10 @@ compdb:
 -include $(DEBUG_DEPS)
 -include $(SANITIZE_DEPS)
 -include $(TEST_DEPS)
+-include $(BENCHMARK_DEPS)
 
 # Phony targets
-.PHONY: all release debug verify sanitize run run-debug run-verify clean run-perft test test-unit compdb
+.PHONY: all release debug verify sanitize run run-debug run-verify clean run-perft test test-unit benchmark compdb
 
 # Perft execution defaults
 FEN ?= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
