@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string_view>
 #include <vector>
 
@@ -11,7 +12,7 @@ constexpr std::string_view KIWIPETE =
 constexpr std::string_view CPW_POSITION_3 =
     "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1";
 constexpr std::string_view CPW_POSITION_4 =
-    "r3k2r/pbp1qbp1/1p1pn1p1/1P1PN3/1p2P3/2N2Q1p/2PB1PPP/R3K2R b KQkq - 0 1";
+    "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
 constexpr std::string_view CPW_POSITION_5 =
     "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
 constexpr std::string_view CPW_POSITION_6 =
@@ -45,4 +46,19 @@ inline const std::vector<std::string_view> EVAL_SYMMETRY_FENS = {
     CASTLING_EP_POSITION,
     ASYMMETRIC_POSITION,
     KINGS_ONLY};
+
+// Perft test cases (expected node counts for depth 1, 2, ..., N).
+struct PerftTestCase {
+    std::string_view fen;
+    std::vector<uint64_t> expected_nodes;
+};
+
+inline const std::vector<PerftTestCase> PERFT_TEST_CASES = {
+    {START_POSITION, {20, 400, 8902, 197281}},
+    {KIWIPETE, {48, 2039, 97862}},
+    {CPW_POSITION_3, {14, 191, 2812, 43238}},
+    {CPW_POSITION_4, {6, 264, 9467}},
+    {CPW_POSITION_5, {44, 1486, 62379}},
+    {CPW_POSITION_6, {45, 2033, 87459}},
+};
 } // namespace test
