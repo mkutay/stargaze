@@ -347,6 +347,31 @@ static_assert(BB::A1.flip(Colour::WHITE) == BB::A1);
 static_assert(BB::A1.flip(Colour::BLACK) == BB::A8);
 static_assert(BB::E4.flip(Colour::WHITE) == BB::E4);
 static_assert(BB::E4.flip(Colour::BLACK) == BB::E5);
+static_assert(BitBoard(BitBoard::EMPTY).count() == 0);
+static_assert(B1.count() == 1);
+static_assert(B1.lsb_square() == SQ::B1);
+static_assert(B1.msb_square() == SQ::B1);
+static_assert((A1 | H8).count() == 2);
+static_assert((A1 | H8).lsb_square() == SQ::A1);
+static_assert((A1 | H8).msb_square() == SQ::H8);
+static_assert((A1 | H8).has_square(SQ::A1));
+static_assert((A1 | H8).has_square(SQ::H8));
+static_assert(!(A1 | H8).has_square(SQ::E4));
+static_assert([] {
+    BitBoard b = A1 | H8;
+    b.erase_square(SQ::A1);
+    return b.count() == 1 && !b.has_square(SQ::A1);
+}());
+static_assert([] {
+    BitBoard b = H8;
+    b.set_square(SQ::C3);
+    return b.count() == 2 && b.has_square(SQ::C3);
+}());
+static_assert([] {
+    BitBoard b = H8 | C3;
+    Square popped = b.get_square_pop();
+    return popped == SQ::C3 && b.count() == 1 && b.has_square(SQ::H8);
+}());
 } // namespace BB
 
 static_assert(sizeof(BitBoard) == sizeof(uint64_t));

@@ -8,7 +8,6 @@ TEST_SUITE("unit") {
             Board board(fen);
             Board mirrored_board = board.mirrored();
 
-            // The evaluation score should be symmetric.
             CHECK(board.evaluate() == mirrored_board.evaluate());
         }
     }

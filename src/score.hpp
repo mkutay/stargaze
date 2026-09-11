@@ -16,9 +16,6 @@ class Score {
     constexpr Score() : v(0) {}
     constexpr Score(int32_t val) : v(val) {}
 
-    // Explicit conversion to int32_t to avoid implicit ambiguity.
-    explicit constexpr operator int32_t() const { return v; }
-
     static constexpr Score draw() { return Score(0); }
     static constexpr Score mate(int plies) {
         return plies >= 0 ? Score(MATE_SCORE - plies)
@@ -27,7 +24,8 @@ class Score {
     static constexpr Score centipawns(int cp) { return Score(cp); }
 
     constexpr bool is_mate() const {
-        return std::abs(v) >= MATE_THRESHOLD && std::abs(v) <= MATE_SCORE;
+        const int32_t abs_v = v < 0 ? -v : v;
+        return abs_v >= MATE_THRESHOLD && abs_v <= MATE_SCORE;
     }
 
     constexpr bool is_draw() const { return v == 0; }
@@ -156,3 +154,32 @@ template <> struct std::formatter<Score> {
         }
     }
 };
+
+static_assert(Score::centipawns(150).raw() == 150);
+static_assert(!Score::centipawns(150).is_mate());
+static_assert(!Score::centipawns(150).is_draw());
+static_assert(Score::draw().is_draw());
+static_assert(Score::draw().raw() == 0);
+static_assert(!Score::draw().is_mate());
+static_assert(Score::mate(3).is_mate());
+static_assert(!Score::mate(3).is_draw());
+static_assert(Score::mate(3).mate_plies() == 3);
+static_assert(Score::mate(3).mate_moves() == 2); // (3+1)/2 = 2 moves
+static_assert(Score::mate(-3).is_mate());
+static_assert(!Score::mate(-3).is_draw());
+static_assert(Score::mate(-3).mate_plies() == 3);
+static_assert(Score::mate(-3).mate_moves() == -2);
+static_assert(Score(100) + Score(200) == 300);
+static_assert(Score(200) - Score(100) == 100);
+static_assert(-Score(100) == -100);
+static_assert(Score(100) < Score(200));
+static_assert(Score(200) > Score(100));
+static_assert(Score(100) <= Score(200));
+static_assert(Score(200) >= Score(100));
+static_assert(Score(100) != Score(200));
+static_assert(Score::mate(3).to_tt(2).raw() ==
+              199999); // winning mate in 3 plies found at search ply 2
+static_assert(Score::mate(3).to_tt(2).from_tt(2).mate_plies() == 3);
+static_assert(Score::mate(-3).to_tt(2).raw() ==
+              -199999); // losing mate in 3 plies found at search ply 2
+static_assert(Score::mate(-3).to_tt(2).from_tt(2).mate_plies() == 3);

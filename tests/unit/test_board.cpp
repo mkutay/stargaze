@@ -21,7 +21,6 @@ void verify_make_undo_recursive(Board &board, int depth) {
 
         board.undo_move();
 
-        // Check invariants are completely restored:
         CHECK(board.fen() == fen_before);
         CHECK(board.get_hash() == hash_before);
         CHECK(board.get_castling_rights() == castling_before);
@@ -34,18 +33,15 @@ TEST_SUITE("unit") {
         Board board1;
         verify_make_undo_recursive(board1, 3);
 
-        // Kiwipete position to depth 2 (large branching factor).
         Board board2(test::KIWIPETE);
         verify_make_undo_recursive(board2, 2);
 
-        // Castling and en-passant rich position.
         Board board3(test::CASTLING_EP_POSITION);
         verify_make_undo_recursive(board3, 2);
     }
 
     TEST_CASE("Zobrist and Eval incremental vs scratch") {
         Board board;
-        // Simulating a sequence of moves
         std::vector<std::string> moves_seq = {"e2e4", "e7e5", "g1f3", "b8c6",
                                               "f1c4", "g8f6", "d2d3"};
 
