@@ -145,18 +145,20 @@ benchmark: $(BENCHMARK_BIN)
 compdb:
 	python3 tools/gen_compile_commands.py
 
-# Run a strength match against Stockfish
-STOCKFISH ?= stockfish
-SKILL ?= 0
+# Run a match between two UCI engines
+ENGINE_A ?= ./$(TARGET)
+ENGINE_B ?= stockfish
+NAME_A ?= Stargaze
+NAME_B ?= Stockfish
 GAMES ?= 48
 BASE ?= 10
 INCREMENT ?= 0.1
-PGN ?= games/stockfish-match.pgn
+PGN ?= games/engine-match.pgn
 
-match-stockfish: release
-	python3 tools/match_stockfish.py --stockfish "$(STOCKFISH)" --engine "./$(TARGET)" \
-		--skill "$(SKILL)" --games "$(GAMES)" --base "$(BASE)" \
-		--increment "$(INCREMENT)" --pgn "$(PGN)" $(MATCH_ARGS)
+match: release
+	python3 tools/match_engines.py --engine-a "$(ENGINE_A)" --engine-b "$(ENGINE_B)" \
+		--name-a "$(NAME_A)" --name-b "$(NAME_B)" --games "$(GAMES)" \
+		--base "$(BASE)" --increment "$(INCREMENT)" --pgn "$(PGN)" $(MATCH_ARGS)
 
 # Include dependency files if they exist
 -include $(RELEASE_DEPS)
@@ -166,7 +168,7 @@ match-stockfish: release
 -include $(BENCHMARK_DEPS)
 
 # Phony targets
-.PHONY: all release debug verify sanitize run run-debug run-verify clean run-perft test test-unit benchmark compdb match-stockfish
+.PHONY: all release debug verify sanitize run run-debug run-verify clean run-perft test test-unit benchmark compdb match
 
 # Perft execution defaults
 FEN ?= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

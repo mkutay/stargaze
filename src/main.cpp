@@ -13,13 +13,6 @@
 
 constexpr uint16_t MAX_DEPTH = 60;
 constexpr uint32_t INFINITE_TIME_MS = 100'000'000;
-constexpr uint32_t SELF_PLAY_TIME_LIMIT_MS = 5000;
-
-#ifdef DEBUG
-#include "debug.hpp"
-#else
-#define debug(...) void()
-#endif
 
 struct GoParams {
     uint16_t max_depth = MAX_DEPTH;
@@ -256,52 +249,7 @@ void run_uci_loop() {
     stop_and_wait_for_search(search, search_thread);
 }
 
-void run_self_play() {
-    Board board;
-    Search search(&board);
-
-    while (true) {
-        const std::size_t move_number = board.get_move_history().size() / 2 + 1;
-        const std::string_view side =
-            (board.get_turn() == Colour::WHITE) ? "WHITE" : "BLACK";
-
-        std::cout << "\n===============\n"
-                  << "Move " << move_number << ": " << side << '\n'
-                  << "===============\n"
-                  << board.nice() << '\n';
-
-        if (board.is_draw()) {
-            std::cout << "Game drawn!\n";
-            break;
-        }
-
-        const SearchInfo result = search.iterative_deepening<false>(
-            MAX_DEPTH, SELF_PLAY_TIME_LIMIT_MS);
-
-        debug(result);
-
-        if (result.pv.moves.empty()) {
-            std::cout << "No valid move found!\n";
-            break;
-        }
-
-        board.make_move(result.pv.moves[0]);
-    }
-}
-
-int main(int argc, char **argv) {
-    const bool selfplay = [&]() {
-        for (int i = 1; i < argc; ++i) {
-            if (std::string_view(argv[i]) == "--selfplay")
-                return true;
-        }
-        return false;
-    }();
-
-    if (selfplay) {
-        run_self_play();
-    } else {
-        run_uci_loop();
-    }
+int main() {
+    run_uci_loop();
     return 0;
 }

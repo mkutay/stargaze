@@ -29,12 +29,6 @@ The engine supports the Universal Chess Interface (UCI) protocol, which allows p
 
 To run with a GUI, simply load the compiled binary `./bin/stargaze` into your chess GUI of choice.
 
-You can run the engine in self-play mode to test its performance against itself:
-
-```bash
-./bin/stargaze --selfplay
-```
-
 In addition to standard UCI commands, Stargaze supports:
 
 - `perft <depth>`: Runs a perft performance test from the current position to the specified depth (with move division).
@@ -51,14 +45,23 @@ To play a 10-game match between Stargaze and itself with 10 seconds of time cont
 cutechess-cli -engine cmd=./bin/stargaze name=Stargaze_1 -engine cmd=./bin/stargaze name=Stargaze_2 -each proto=uci tc=10 -games 10 -repeat
 ```
 
-### Estimating Strength Against Stockfish
+### Engine Matches
 
-Install `python-chess`, build Stargaze, and run the match tool. It cycles through the checked-in `tools/data/openings.epd` suite and plays every position twice with reversed engine colours. `--games` is rounded up to a complete pair; use at least 48 games to cover every bundled position once per colour. The tool reports Stargaze's estimated absolute Elo from Stockfish's approximate skill-level rating.
+Install `python-chess` and use the match target to compare any two UCI engine binaries. It cycles through `tools/data/openings.epd`, playing every position twice with reversed colours. Use at least 48 games to cover every bundled position once per colour.
 
 ```bash
 python3 -m pip install python-chess
-make match-stockfish STOCKFISH=/path/to/stockfish SKILL=5 GAMES=96 \
-    BASE=10 INCREMENT=0.1 PGN=games/stockfish-match.pgn
+
+# Current Stargaze against a saved baseline binary.
+make match ENGINE_B=./bin/stargaze-baseline NAME_B=Baseline \
+    GAMES=96 BASE=2 INCREMENT=0.05
+
+# Fast approximate strength check against weakened Stockfish.
+make match ENGINE_B=/path/to/stockfish GAMES=96 BASE=2 INCREMENT=0.05 \
+    MATCH_ARGS="--elo-b 2200"
+
+# Stockfish's older skill-level mode deliberately chooses weaker moves.
+make match ENGINE_B=/path/to/stockfish MATCH_ARGS="--skill-b 7"
 ```
 
-Use `MATCH_ARGS="--openings path/to/suite.epd"` to pass additional options. More games and several Stockfish skill levels produce a more useful estimate; the reported confidence interval quantifies sampling uncertainty but cannot guarantee an exact Elo.
+Set `ENGINE_A`, `ENGINE_B`, `NAME_A`, and `NAME_B` to select the competitors. `MATCH_ARGS` accepts strength controls (`--elo-a/b` or `--skill-a/b`) and `--openings path/to/suite.epd`. The tool always reports Engine A's relative Elo difference; when `--elo-b` is supplied, it also estimates Engine A's absolute Elo.
