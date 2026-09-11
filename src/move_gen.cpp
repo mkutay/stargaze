@@ -16,7 +16,7 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     BitBoard other_pieces = get_bb(them);
     BitBoard occupied = own_pieces | other_pieces;
 
-    Square king_sq = get_bb(PP::KING, us).get_lsb_square();
+    Square king_sq = get_bb(PP::KING, us).lsb_square();
 
     // King Danger Map (squares attacked by the opponent, with king removed
     // from occupied)
@@ -33,30 +33,30 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     }
 
     BitBoard opponent_knights = get_bb(PP::KNIGHT, them);
-    while (opponent_knights) {
+    while (opponent_knights.has_square()) {
         Square sq = opponent_knights.get_square_pop();
         king_danger |= Mask::KNIGHT_MASKS.at(sq);
     }
 
-    Square opponent_king_sq = get_bb(PP::KING, them).get_lsb_square();
+    Square opponent_king_sq = get_bb(PP::KING, them).lsb_square();
     king_danger |= Mask::KING_MASKS.at(opponent_king_sq);
 
     BitBoard opponent_bishops =
         get_bb(PP::BISHOP, them) | get_bb(PP::QUEEN, them);
-    while (opponent_bishops) {
+    while (opponent_bishops.has_square()) {
         Square sq = opponent_bishops.get_square_pop();
         king_danger |= Magic::bishop_attacks(sq, occupied_no_king);
     }
 
     BitBoard opponent_rooks = get_bb(PP::ROOK, them) | get_bb(PP::QUEEN, them);
-    while (opponent_rooks) {
+    while (opponent_rooks.has_square()) {
         Square sq = opponent_rooks.get_square_pop();
         king_danger |= Magic::rook_attacks(sq, occupied_no_king);
     }
 
     auto emit_moves = [&legal_moves, other_pieces](Square from,
                                                    BitBoard targets) {
-        while (targets) {
+        while (targets.has_square()) {
             Square to = targets.get_square_pop();
             bool capture = other_pieces.has_square(to);
             legal_moves.emplace_back(from, to, Move::create_flags(capture));
@@ -96,7 +96,7 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
 
     BitBoard check_mask = BitBoard(BitBoard::ALL_SQUARES);
     if (num_checkers == 1) {
-        Square checker_sq = checkers.get_lsb_square();
+        Square checker_sq = checkers.lsb_square();
         Piece checker_type = *get_piece(checker_sq);
         if (checker_type == PP::BISHOP || checker_type == PP::ROOK ||
             checker_type == PP::QUEEN) {
@@ -118,14 +118,14 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
                        (Mask::ROOK_MASKS.at(king_sq) &
                         (get_bb(PP::ROOK, them) | get_bb(PP::QUEEN, them)));
 
-    while (pinners) {
+    while (pinners.has_square()) {
         Square pinner_sq = pinners.get_square_pop();
         BitBoard between = Magic::RAY_BETWEEN[king_sq][pinner_sq];
         BitBoard pieces_between = between & occupied;
         if (pieces_between.count() == 1) {
             BitBoard own_pinned = pieces_between & own_pieces;
-            if (own_pinned) {
-                Square pinned_sq = own_pinned.get_lsb_square();
+            if (own_pinned.has_square()) {
+                Square pinned_sq = own_pinned.lsb_square();
                 pin_mask[pinned_sq] = between | BitBoard(pinner_sq);
                 pinned_pieces |= own_pinned;
             }
@@ -144,7 +144,7 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     // Pawns
     {
         BitBoard pawns = get_bb(PP::PAWN, turn) & active_own;
-        while (pawns) {
+        while (pawns.has_square()) {
             Square from = pawns.get_square_pop();
             BitBoard pin_m = pin_mask[from];
             BitBoard target_mask = movable_mask & pin_m;
@@ -225,20 +225,22 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
                         pin_m.has_square(ep)) {
                         bool ep_legal = true;
                         BitBoard occupied_after = occupied;
-                        occupied_after.erase_bit(from);
-                        occupied_after.erase_bit(captured_pawn_sq);
-                        occupied_after.set_bit(ep);
+                        occupied_after.erase_square(from);
+                        occupied_after.erase_square(captured_pawn_sq);
+                        occupied_after.set_square(ep);
 
                         BitBoard sliders =
                             get_bb(PP::ROOK, !turn) | get_bb(PP::QUEEN, !turn);
-                        if (Magic::rook_attacks(king_sq, occupied_after) &
-                            sliders) {
+                        if ((Magic::rook_attacks(king_sq, occupied_after) &
+                             sliders)
+                                .has_square()) {
                             ep_legal = false;
                         }
                         BitBoard diag_sliders = get_bb(PP::BISHOP, !turn) |
                                                 get_bb(PP::QUEEN, !turn);
-                        if (Magic::bishop_attacks(king_sq, occupied_after) &
-                            diag_sliders) {
+                        if ((Magic::bishop_attacks(king_sq, occupied_after) &
+                             diag_sliders)
+                                .has_square()) {
                             ep_legal = false;
                         }
 
@@ -255,7 +257,7 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     // Knights
     {
         BitBoard knights = get_bb(PP::KNIGHT, turn) & active_own;
-        while (knights) {
+        while (knights.has_square()) {
             Square from = knights.get_square_pop();
             BitBoard targets = Mask::KNIGHT_MASKS.at(from) & ~own_pieces &
                                movable_mask & pin_mask[from];
@@ -269,7 +271,7 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     // Bishops
     {
         BitBoard bishops = get_bb(PP::BISHOP, turn) & active_own;
-        while (bishops) {
+        while (bishops.has_square()) {
             Square from = bishops.get_square_pop();
             BitBoard targets = Magic::bishop_attacks(from, occupied) &
                                ~own_pieces & movable_mask & pin_mask[from];
@@ -283,7 +285,7 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     // Rooks
     {
         BitBoard rooks = get_bb(PP::ROOK, turn) & active_own;
-        while (rooks) {
+        while (rooks.has_square()) {
             Square from = rooks.get_square_pop();
             BitBoard targets = Magic::rook_attacks(from, occupied) &
                                ~own_pieces & movable_mask & pin_mask[from];
@@ -297,7 +299,7 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     // Queens
     {
         BitBoard queens = get_bb(PP::QUEEN, turn) & active_own;
-        while (queens) {
+        while (queens.has_square()) {
             Square from = queens.get_square_pop();
             BitBoard targets = (Magic::bishop_attacks(from, occupied) |
                                 Magic::rook_attacks(from, occupied)) &
@@ -344,30 +346,36 @@ bool Board::is_in_check(Colour by_colour) const {
 bool Board::is_attacked(Colour by_colour, BitBoard bb) const {
     assert(bb.count() == 1);
 
-    Square sq = bb.get_lsb_square();
+    Square sq = bb.lsb_square();
     Colour other = !by_colour;
     auto occupied = get_bb(CC::WHITE) | get_bb(CC::BLACK);
 
-    if (get_bb(PP::KING, other) & Mask::KING_MASKS.at(sq))
+    const auto king_mask = get_bb(PP::KING, other) & Mask::KING_MASKS.at(sq);
+    if (king_mask.has_square())
         return true;
 
-    if (by_colour == CC::WHITE) {
-        if ((bb.north().west() | bb.north().east()) & get_bb(PP::PAWN, other))
-            return true;
-    } else {
-        if ((bb.south().west() | bb.south().east()) & get_bb(PP::PAWN, other))
-            return true;
-    }
-
-    if (get_bb(PP::KNIGHT, other) & Mask::KNIGHT_MASKS.at(sq))
+    const auto pawn_mask =
+        by_colour == CC::WHITE
+            ? bb.north().west() | bb.north().east() & get_bb(PP::PAWN, other)
+            : bb.south().west() | bb.south().east() & get_bb(PP::PAWN, other);
+    if (pawn_mask.has_square())
         return true;
 
-    if (Magic::bishop_attacks(sq, occupied) &
-        (get_bb(PP::BISHOP, other) | get_bb(PP::QUEEN, other)))
+    const auto knight_mask =
+        get_bb(PP::KNIGHT, other) & Mask::KNIGHT_MASKS.at(sq);
+    if (knight_mask.has_square())
         return true;
 
-    if (Magic::rook_attacks(sq, occupied) &
-        (get_bb(PP::ROOK, other) | get_bb(PP::QUEEN, other)))
+    const auto bishop_mask =
+        Magic::bishop_attacks(sq, occupied) & get_bb(PP::BISHOP, other) |
+        get_bb(PP::QUEEN, other);
+    if (bishop_mask.has_square())
+        return true;
+
+    const auto rook_mask =
+        Magic::rook_attacks(sq, occupied) & get_bb(PP::ROOK, other) |
+        get_bb(PP::QUEEN, other);
+    if (rook_mask.has_square())
         return true;
 
     return false;

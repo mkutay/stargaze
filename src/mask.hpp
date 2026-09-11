@@ -38,7 +38,7 @@ constexpr std::array<BitBoard, 127> generate_moving_masks() {
     for (int8_t move = -63; move <= 63; move++) {
         for (Square sq = 0; sq < 64; sq++) {
             if (sq.move(move))
-                masks[moving_masks_index(move)].set_bit(sq);
+                masks[moving_masks_index(move)].set_square(sq);
         }
     }
 

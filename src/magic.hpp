@@ -14,7 +14,7 @@ constexpr BitBoard slider_mask(Square sq, const std::array<int8_t, N> &moves) {
     for (auto dir : moves) {
         for (auto cur = sq.move(dir); cur && cur->move(dir);
              cur = cur->move(dir)) {
-            mask.set_bit(*cur);
+            mask.set_square(*cur);
         }
     }
     return mask;
@@ -26,7 +26,7 @@ constexpr BitBoard attacks_slow(Square sq, BitBoard blockers,
     BitBoard attacks = 0;
     for (auto dir : moves) {
         for (auto cur = sq.move(dir); cur; cur = cur->move(dir)) {
-            attacks.set_bit(*cur);
+            attacks.set_square(*cur);
             if (blockers.has_square(*cur))
                 break;
         }
@@ -116,7 +116,7 @@ constexpr std::array<std::array<BitBoard, 64>, 64> generate_ray_between() {
                         found = true;
                         break;
                     }
-                    path.set_bit(*cur);
+                    path.set_square(*cur);
                 }
                 if (found) {
                     table[sq1][sq2] = path;
@@ -150,9 +150,10 @@ struct MagicKeys {
 
                 BitBoard occ = 0;
                 for (int i = 0; i < n; i++) {
-                    int idx = static_cast<int>((occ * magic) >> (64 - bits));
+                    int idx = static_cast<int>((occ.raw() * magic.raw()) >>
+                                               (64 - bits));
                     table[offset + idx] = detail::attacks_slow(sq, occ, moves);
-                    occ = (occ - mask) & mask;
+                    occ = mask & (occ.raw() - mask.raw());
                 }
 
                 offset += n;
@@ -168,13 +169,13 @@ extern const MagicKeys keys;
 
 inline constexpr BitBoard rook_attacks(Square sq, BitBoard occupancy) {
     const auto &e = keys.rook[sq];
-    int index = ((occupancy & e.mask) * e.magic) >> e.shift;
+    int index = ((occupancy & e.mask).raw() * e.magic.raw()) >> e.shift;
     return BitBoard(keys.rook_table[e.offset + index]);
 }
 
 inline constexpr BitBoard bishop_attacks(Square sq, BitBoard occupancy) {
     const auto &e = keys.bishop[sq];
-    int index = ((occupancy & e.mask) * e.magic) >> e.shift;
+    int index = ((occupancy & e.mask).raw() * e.magic.raw()) >> e.shift;
     return BitBoard(keys.bishop_table[e.offset + index]);
 }
 

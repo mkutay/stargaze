@@ -14,7 +14,7 @@ void Board::initialise_eval(std::array<int, 2> &_mg_score,
     for (Colour c : COLOURS) {
         for (Piece p : PIECES) {
             auto bb = piece_bbs[p] & colour_bbs[c];
-            while (bb) {
+            while (bb.has_square()) {
                 auto sq = bb.get_square_pop();
                 _mg_score[c] += Eval::mg_value(c, p, sq);
                 _eg_score[c] += Eval::eg_value(c, p, sq);

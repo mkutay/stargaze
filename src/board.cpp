@@ -276,7 +276,7 @@ void Board::check_state_consistency() const {
     for (auto bb : piece_bbs)
         all_pieces |= bb;
 
-    assert(all_pieces == colour_bbs[0] | colour_bbs[1]);
+    assert(all_pieces == (colour_bbs[0] | colour_bbs[1]));
 }
 
 bool Board::is_draw() const {
@@ -335,7 +335,7 @@ std::optional<Piece> Board::get_piece(Square sq) const {
     BitBoard bb = sq;
 
     for (auto type : PIECES)
-        if (get_bb(type) & bb)
+        if ((get_bb(type) & bb).has_square())
             return type;
 
     return std::nullopt;
@@ -345,7 +345,7 @@ std::optional<Colour> Board::get_colour(Square sq) const {
     BitBoard bb = sq;
 
     for (auto colour : COLOURS)
-        if (get_bb(colour) & bb)
+        if ((get_bb(colour) & bb).has_square())
             return colour;
 
     return std::nullopt;

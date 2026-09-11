@@ -4,6 +4,7 @@
 #include <bit>
 #include <cassert>
 #include <concepts>
+#include <cstdint>
 #include <string>
 
 class BitBoard {
@@ -11,58 +12,28 @@ class BitBoard {
     uint64_t bb;
 
   public:
-    /**
-     * The default constructor is deleted to prevent accidentally creating an
-     * uninitialised bitboard, preserving the variant.
-     */
     constexpr BitBoard() : bb(0) {}
     constexpr BitBoard(uint64_t _bb) : bb(_bb) {}
     constexpr BitBoard(Square sq) : bb(1ull << sq) {
         assert(sq >= 0 && sq < 64);
     }
 
-    constexpr operator uint64_t() const { return bb; }
+    constexpr uint64_t raw() const { return bb; }
 
     constexpr bool has_square(Square sq) const { return (bb >> sq) & 1; }
-
-    /**
-     * Get the index of the most significant bit (MSB).
-     */
-    constexpr Square get_msb_square() const {
-        return 63 - std::countl_zero(bb);
-    }
-
-    /**
-     * Get the index of the least significant bit (LSB). Same as using the De
-     * Brunj algorithm to find the index of the LSB, but faster!
-     */
-    constexpr Square get_lsb_square() const { return std::countr_zero(bb); }
-
-    /**
-     * Get the bitboard with only the least significant bit (LSB) set. This is
-     * useful for iterating through the bits of a bb, as it allows you to
-     * isolate and remove the LSB in each iteration.
-     */
+    constexpr bool has_square() const { return bb != 0; }
+    constexpr Square msb_square() const { return 63 - std::countl_zero(bb); }
+    constexpr Square lsb_square() const { return std::countr_zero(bb); }
     constexpr BitBoard lsb() const { return bb & -bb; }
+    constexpr BitBoard msb() const { return 1ull << msb_square(); }
+    constexpr int count() const { return std::popcount(bb); }
 
-    /**
-     * Get the bitboard with only the most significant bit (MSB) set.
-     */
-    constexpr BitBoard msb() const { return 1ull << get_msb_square(); }
-
-    /**
-     * Get the index of the least significant bit (LSB) and remove it from the
-     * bitboard, returning the index as a Square.
-     *
-     * Note that if the bitboard is zero, this will throw.
-     */
     constexpr Square get_square_pop() {
-        const Square sq = get_lsb_square();
+        assert(bb != 0);
+        const Square sq = lsb_square();
         bb &= bb - 1;
         return sq;
     }
-
-    constexpr int count() const { return std::popcount(bb); }
 
     constexpr BitBoard operator|(const BitBoard &o) const { return bb | o.bb; }
     constexpr BitBoard operator&(const BitBoard &o) const { return bb & o.bb; }
@@ -130,25 +101,22 @@ class BitBoard {
         return bb == o;
     }
 
-    constexpr void set_bit(Square sq) { bb |= (1ull << sq); }
-    constexpr void erase_bit(Square sq) { bb &= ~(1ull << sq); }
-    constexpr void toggle_bit(Square sq) { bb ^= (1ull << sq); }
+    constexpr void set_square(Square sq) { bb |= (1ull << sq); }
+    constexpr void erase_square(Square sq) { bb &= ~(1ull << sq); }
+    constexpr void toggle_square(Square sq) { bb ^= (1ull << sq); }
 
     /**
      * Checks if the bitboard has not set any of the bits in check.
      */
-    constexpr bool empty(BitBoard check) const { return !(bb & check); }
+    constexpr bool empty(BitBoard check) const { return !(bb & check.bb); }
 
     /**
      * Checks if the bitboard has set all of the bits in check.
      */
     constexpr bool occupied(BitBoard check) const {
-        return (bb & check) == check;
+        return (bb & check.bb) == check.bb;
     }
 
-    /**
-     * Return the adjacent squares.
-     */
     constexpr BitBoard adjacent() const {
         return north() | south() | east() | west() | north().east() |
                north().west() | south().east() | south().west();
@@ -157,16 +125,15 @@ class BitBoard {
     constexpr std::string to_string() const {
         BitBoard copy = bb;
         std::string board_str;
-        while (copy) {
+        while (copy.bb) {
             board_str += copy.get_square_pop().to_string() + " ";
         }
         return board_str;
     }
 
     /**
-     * Moves the bitboard using the value in `move`.
-     *
-     * Also see Square::move(int8_t).
+     * Moves the bitboard using the value in `move`. Also see
+     * Square::move(int8_t).
      */
     constexpr BitBoard move(int8_t move) const {
         auto [rank_difference, file_difference] = Square::decompose(move);
@@ -182,10 +149,10 @@ class BitBoard {
         // Apply file shift (east/west), one step at a time to avoid
         // wrap-around.
         if (file_difference > 0) {
-            for (int8_t i = 0; i < file_difference; ++i)
+            for (int8_t i = 0; i < file_difference; i++)
                 result = result.east();
         } else if (file_difference < 0) {
-            for (int8_t i = 0; i > file_difference; --i)
+            for (int8_t i = 0; i > file_difference; i--)
                 result = result.west();
         }
 
@@ -211,8 +178,7 @@ class BitBoard {
      */
     constexpr BitBoard flip(Colour turn) const {
         // Derive an all-ones mask when turn == BLACK (1) and all-zeros when
-        // turn == WHITE (0), exploiting two's-complement negation:
-        // `-(uint64_t) 1 == 0xFFFFFFFFFFFFFFFF`.
+        // turn == WHITE (0): -(uint64_t) 1 == 0xFFFFFFFFFFFFFFFF.
         const uint64_t mask = -static_cast<uint64_t>(turn);
         return (bb & ~mask) | (std::byteswap(bb) & mask);
     }
@@ -325,12 +291,12 @@ static_assert(H8.lsb() == SQ::H8);
 static_assert((C3 | C4 | C5 | E3 | E4 | E5 | D3 | D5).lsb() == SQ::C3);
 static_assert(A1.has_square(SQ::A1));
 static_assert(!H8.has_square(SQ::A1));
-static_assert(A1.get_lsb_square() == SQ::A1);
-static_assert(A1.get_msb_square() == SQ::A1);
-static_assert(A4.get_lsb_square() == SQ::A4);
-static_assert(B5.get_msb_square() == SQ::B5);
-static_assert((A4 | A1).get_lsb_square() == SQ::A1);
-static_assert((B5 | H2).get_msb_square() == SQ::B5);
+static_assert(A1.lsb_square() == SQ::A1);
+static_assert(A1.msb_square() == SQ::A1);
+static_assert(A4.lsb_square() == SQ::A4);
+static_assert(B5.msb_square() == SQ::B5);
+static_assert((A4 | A1).lsb_square() == SQ::A1);
+static_assert((B5 | H2).msb_square() == SQ::B5);
 static_assert(A1.lsb() == A1);
 static_assert(A1.msb() == A1);
 static_assert(A4.lsb() == A4);
