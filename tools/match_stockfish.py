@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-"""Run a timed UCI match between Stargaze and Stockfish."""
+"""
+Run a timed UCI match between Stargaze and Stockfish.
+
+Install `python-chess`, build Stargaze, and run the match tool.
+It alternates colours and reports Stargaze's estimated Elo difference
+from the selected Stockfish skill level with an approximate 95%
+interval. It also estimates Stargaze's absolute Elo from Stockfish's
+approximate skill-level rating.
+
+`--base` and `--increment` are seconds. Stockfish skill levels range
+from 0 to 20. For levels 0-19, the tool uses Stockfish's published
+non-linear CCRL Blitz calibration, ranging from approximately 1320 to
+3190 Elo. Level 20 is unrestricted strength and has no calibrated Elo,
+so only the relative Elo difference is reported for it. Actual strength
+varies by Stockfish build, hardware, opponent pool, and time control.
+"""
 
 import argparse
 import math
