@@ -13,10 +13,10 @@ generate_masks(const std::array<int8_t, N> &moves) {
         for (auto dir : moves) {
             if constexpr (once) {
                 if (auto next = sq.move(dir))
-                    masks[sq] |= BitBoard(*next);
+                    masks[sq.raw()] |= BitBoard(*next);
             } else {
                 for (auto cur = sq.move(dir); cur; cur = cur->move(dir))
-                    masks[sq] |= BitBoard(*cur);
+                    masks[sq.raw()] |= BitBoard(*cur);
             }
         }
     }
@@ -186,11 +186,11 @@ static_assert(Mask::RANK_6.adjacent() ==
 static_assert(Mask::RANK_7.adjacent() ==
               (Mask::RANK_6 | Mask::RANK_7 | Mask::RANK_8));
 static_assert(Mask::RANK_8.adjacent() == (Mask::RANK_7 | Mask::RANK_8));
-static_assert(Mask::ROOK_MASKS.at(SQ::D5) ==
+static_assert(Mask::ROOK_MASKS.at(SQ::D5.raw()) ==
               ((Mask::RANK_5 | Mask::FILE_D) & (~BB::D5)));
-static_assert(Mask::BISHOP_MASKS.at(SQ::A1) ==
+static_assert(Mask::BISHOP_MASKS.at(SQ::A1.raw()) ==
               (BB::B2 | BB::C3 | BB::D4 | BB::E5 | BB::F6 | BB::G7 | BB::H8));
-static_assert(Mask::KNIGHT_MASKS.at(SQ::H8) == (BB::G6 | BB::F7));
+static_assert(Mask::KNIGHT_MASKS.at(SQ::H8.raw()) == (BB::G6 | BB::F7));
 static_assert(Mask::MOVING_MASKS[63] == Mask::ALL_SQUARES);
 static_assert(Mask::MOVING_MASKS[53] == BitBoard(0xfcfcfcfcfcfcfc00ull));
 static_assert(Mask::MOVING_MASKS[56] == BitBoard(0x7f7f7f7f7f7f7f00ull));

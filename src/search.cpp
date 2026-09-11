@@ -171,7 +171,7 @@ int Search::score_move(Move move, std::optional<Move> pv_move,
         }
     }
 
-    return history_table[move.from()][move.to()];
+    return history_table[move.from().raw()][move.to().raw()];
 }
 
 Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
@@ -354,7 +354,7 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
                     killers[ply][0] = move;
                 }
                 // Update history
-                int &h = history_table[move.from()][move.to()];
+                int &h = history_table[move.from().raw()][move.to().raw()];
                 h += depth_left * depth_left;
                 if (h >= KILLER_SCORES[0])
                     h = KILLER_SCORES[0] - 1;

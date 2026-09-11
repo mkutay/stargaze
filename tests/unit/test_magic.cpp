@@ -8,9 +8,9 @@ TEST_SUITE("unit") {
         Square d4 = SQ::D4;
         BitBoard rook_empty = Magic::rook_attacks(d4, BitBoard(0ULL));
         // Should contain all squares on D-file and 4th rank (except D4 itself)
-        BitBoard expected_rook_empty =
-            (Mask::ROOK_MASKS.at(d4) | BB::D1 | BB::D8 | BB::A4 | BB::H4) &
-            ~BitBoard(d4);
+        BitBoard expected_rook_empty = (Mask::ROOK_MASKS.at(d4.raw()) | BB::D1 |
+                                        BB::D8 | BB::A4 | BB::H4) &
+                                       ~BitBoard(d4);
         CHECK(rook_empty == expected_rook_empty);
 
         // Rook on D4 blocked on D2 and F4
@@ -29,9 +29,9 @@ TEST_SUITE("unit") {
         // 2. Test bishop attacks
         // Bishop on D4 (index 27) with no blockers
         BitBoard bishop_empty = Magic::bishop_attacks(d4, BitBoard(0ULL));
-        BitBoard expected_bishop_empty =
-            (Mask::BISHOP_MASKS.at(d4) | BB::A1 | BB::H8 | BB::G1 | BB::A7) &
-            ~BitBoard(d4);
+        BitBoard expected_bishop_empty = (Mask::BISHOP_MASKS.at(d4.raw()) |
+                                          BB::A1 | BB::H8 | BB::G1 | BB::A7) &
+                                         ~BitBoard(d4);
         CHECK(bishop_empty == expected_bishop_empty);
 
         // Bishop on D4 blocked on F6 and C3
@@ -49,21 +49,21 @@ TEST_SUITE("unit") {
 
         // 3. Test RAY_BETWEEN
         // Aligned squares (e.g. A1 and A8) -> should contain A2..A7
-        BitBoard ray_a1_a8 = Magic::RAY_BETWEEN[SQ::A1][SQ::A8];
+        BitBoard ray_a1_a8 = Magic::RAY_BETWEEN[SQ::A1.raw()][SQ::A8.raw()];
         BitBoard expected_a1_a8 =
             BB::A2 | BB::A3 | BB::A4 | BB::A5 | BB::A6 | BB::A7;
         CHECK(ray_a1_a8 == expected_a1_a8);
 
         // Diagonal aligned squares (e.g. A1 and H8) -> should contain B2..G7
-        BitBoard ray_a1_h8 = Magic::RAY_BETWEEN[SQ::A1][SQ::H8];
+        BitBoard ray_a1_h8 = Magic::RAY_BETWEEN[SQ::A1.raw()][SQ::H8.raw()];
         BitBoard expected_a1_h8 =
             BB::B2 | BB::C3 | BB::D4 | BB::E5 | BB::F6 | BB::G7;
         CHECK(ray_a1_h8 == expected_a1_h8);
 
         // Unaligned squares (e.g. A1 and B3) -> should be empty
-        CHECK(Magic::RAY_BETWEEN[SQ::A1][SQ::B3] == 0ULL);
+        CHECK(Magic::RAY_BETWEEN[SQ::A1.raw()][SQ::B3.raw()] == 0ULL);
 
         // Adjacent squares (e.g. A1 and A2) -> should be empty
-        CHECK(Magic::RAY_BETWEEN[SQ::A1][SQ::A2] == 0ULL);
+        CHECK(Magic::RAY_BETWEEN[SQ::A1.raw()][SQ::A2.raw()] == 0ULL);
     }
 }

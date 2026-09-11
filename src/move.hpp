@@ -54,7 +54,7 @@ class Move {
     constexpr Move() : m_move(0) {}
     constexpr Move(uint16_t move) : m_move(move) {}
     constexpr Move(Square from, Square to, int flags)
-        : m_move(from | (to << 6) | (flags << 12)) {}
+        : m_move(from.raw() | (to.raw() << 6) | (flags << 12)) {}
     constexpr Square from() const { return m_move & 0x3f; }
     constexpr Square to() const { return (m_move >> 6) & 0x3f; }
     constexpr uint8_t flags() const { return (m_move >> 12) & 0x0f; }

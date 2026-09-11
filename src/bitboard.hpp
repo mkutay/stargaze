@@ -14,18 +14,18 @@ class BitBoard {
   public:
     constexpr BitBoard() : bb(0) {}
     constexpr BitBoard(uint64_t _bb) : bb(_bb) {}
-    constexpr BitBoard(Square sq) : bb(1ull << sq) {
+    constexpr BitBoard(Square sq) : bb(1ull << sq.raw()) {
         assert(sq >= 0 && sq < 64);
     }
 
     constexpr uint64_t raw() const { return bb; }
 
-    constexpr bool has_square(Square sq) const { return (bb >> sq) & 1; }
+    constexpr bool has_square(Square sq) const { return (bb >> sq.raw()) & 1; }
     constexpr bool has_square() const { return bb != 0; }
     constexpr Square msb_square() const { return 63 - std::countl_zero(bb); }
     constexpr Square lsb_square() const { return std::countr_zero(bb); }
     constexpr BitBoard lsb() const { return bb & -bb; }
-    constexpr BitBoard msb() const { return 1ull << msb_square(); }
+    constexpr BitBoard msb() const { return 1ull << msb_square().raw(); }
     constexpr int count() const { return std::popcount(bb); }
 
     constexpr Square get_square_pop() {
@@ -101,9 +101,9 @@ class BitBoard {
         return bb == o;
     }
 
-    constexpr void set_square(Square sq) { bb |= (1ull << sq); }
-    constexpr void erase_square(Square sq) { bb &= ~(1ull << sq); }
-    constexpr void toggle_square(Square sq) { bb ^= (1ull << sq); }
+    constexpr void set_square(Square sq) { bb |= (1ull << sq.raw()); }
+    constexpr void erase_square(Square sq) { bb &= ~(1ull << sq.raw()); }
+    constexpr void toggle_square(Square sq) { bb ^= (1ull << sq.raw()); }
 
     /**
      * Checks if the bitboard has not set any of the bits in check.

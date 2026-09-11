@@ -25,33 +25,30 @@ class Square {
     uint8_t sq;
 
   public:
-    /**
-     * The default constructor is deleted to prevent accidentally creating an
-     * uninitialised square, preserving the variant.
-     */
-    constexpr Square() = delete;
+    constexpr Square() : sq(0) {}
     constexpr Square(uint8_t sq) : sq(sq) { assert(sq >= 0 && sq <= 64); }
     constexpr Square(uint8_t rank, uint8_t file) : sq(rank * 8 + file) {
         assert(rank >= 0 && rank <= 7);
         assert(file >= 0 && file <= 7);
     }
-    constexpr Square(std::string str) {
+    constexpr Square(std::string str) : Square(str[1] - '1', str[0] - 'a') {
         assert(str.size() == 2);
-        char file = str[0];
-        char rank = str[1];
-        assert(file >= 'a' && file <= 'h');
-        assert(rank >= '1' && rank <= '8');
-        sq = (rank - '1') * 8 + (file - 'a');
     }
 
-    constexpr operator int() const { return sq; }
+    constexpr uint8_t raw() const { return sq; }
 
     constexpr Square operator+(const Square &o) const { return sq + o.sq; }
     constexpr Square operator-(const Square &o) const { return sq - o.sq; }
-    constexpr Square operator^(const Square &o) const { return sq ^ o; }
+    constexpr Square operator^(const Square &o) const { return sq ^ o.sq; }
     constexpr Square operator+(const int &o) const { return sq + o; }
     constexpr Square operator-(const int &o) const { return sq - o; }
     constexpr Square operator^(const int &o) const { return sq ^ o; }
+    constexpr bool operator==(const Square &o) const { return sq == o.sq; }
+    constexpr bool operator!=(const Square &o) const { return sq != o.sq; }
+    constexpr bool operator<(const Square &o) const { return sq < o.sq; }
+    constexpr bool operator>(const Square &o) const { return sq > o.sq; }
+    constexpr bool operator<=(const Square &o) const { return sq <= o.sq; }
+    constexpr bool operator>=(const Square &o) const { return sq >= o.sq; }
 
     constexpr Square &operator+=(const Square &o) {
         sq += o.sq;
@@ -97,9 +94,6 @@ class Square {
         return sq + 1;
     }
 
-    /**
-     * Create a new square with a difference of `move`.
-     */
     constexpr std::optional<Square> move(int8_t move) const {
         auto [rank_difference, file_difference] = decompose(move);
 
@@ -210,7 +204,7 @@ constexpr Square F8 = Square(61);
 constexpr Square G8 = Square(62);
 constexpr Square H8 = Square(63);
 
-static_assert(Square(0) == A1);
+static_assert(Square() == A1);
 static_assert(Square(3, 3) == D4);
 static_assert(Square("e4") == E4);
 static_assert(Square("h8") == H8);

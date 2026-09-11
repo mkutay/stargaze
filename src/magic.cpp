@@ -7,8 +7,9 @@ constexpr MagicKeys keys{};
 constexpr std::array<std::array<BitBoard, 64>, 64> RAY_BETWEEN =
     detail::generate_ray_between();
 
-static_assert(rook_attacks(SQ::D5, BitBoard{}) == Mask::ROOK_MASKS.at(SQ::D5));
+static_assert(rook_attacks(SQ::D5, BitBoard{}) ==
+              Mask::ROOK_MASKS.at(SQ::D5.raw()));
 static_assert(bishop_attacks(SQ::D5, BitBoard{}) ==
-              Mask::BISHOP_MASKS.at(SQ::D5));
+              Mask::BISHOP_MASKS.at(SQ::D5.raw()));
 
 } // namespace Magic

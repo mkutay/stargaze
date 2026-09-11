@@ -119,7 +119,7 @@ constexpr std::array<std::array<BitBoard, 64>, 64> generate_ray_between() {
                     path.set_square(*cur);
                 }
                 if (found) {
-                    table[sq1][sq2] = path;
+                    table[sq1.raw()][sq2.raw()] = path;
                     break;
                 }
             }
@@ -145,8 +145,8 @@ struct MagicKeys {
                 int bits = mask.count();
                 int n = 1 << bits;
 
-                BitBoard magic = magics[sq];
-                entries[sq] = {mask, magic, 64 - bits, offset};
+                BitBoard magic = magics[sq.raw()];
+                entries[sq.raw()] = {mask, magic, 64 - bits, offset};
 
                 BitBoard occ = 0;
                 for (int i = 0; i < n; i++) {
@@ -168,13 +168,13 @@ struct MagicKeys {
 extern const MagicKeys keys;
 
 inline constexpr BitBoard rook_attacks(Square sq, BitBoard occupancy) {
-    const auto &e = keys.rook[sq];
+    const auto &e = keys.rook[sq.raw()];
     int index = ((occupancy & e.mask).raw() * e.magic.raw()) >> e.shift;
     return BitBoard(keys.rook_table[e.offset + index]);
 }
 
 inline constexpr BitBoard bishop_attacks(Square sq, BitBoard occupancy) {
-    const auto &e = keys.bishop[sq];
+    const auto &e = keys.bishop[sq.raw()];
     int index = ((occupancy & e.mask).raw() * e.magic.raw()) >> e.shift;
     return BitBoard(keys.bishop_table[e.offset + index]);
 }

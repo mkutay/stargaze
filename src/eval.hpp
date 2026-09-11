@@ -164,7 +164,8 @@ class Eval {
             for (Piece p : PIECES) {
                 for (Square sq = 0; sq < 64; sq++) {
                     auto pesto = c == Colour::WHITE ? (sq ^ 56) : sq;
-                    table[c][p][sq] = value[p] + pesto_table[p][pesto];
+                    table[c][p][sq.raw()] =
+                        value[p] + pesto_table[p][pesto.raw()];
                 }
             }
         }
@@ -195,11 +196,11 @@ class Eval {
     Eval() = delete;
 
     static constexpr int mg_value(Colour colour, Piece piece, Square sq) {
-        return mg_table[colour][piece][sq];
+        return mg_table[colour][piece][sq.raw()];
     }
 
     static constexpr int eg_value(Colour colour, Piece piece, Square sq) {
-        return eg_table[colour][piece][sq];
+        return eg_table[colour][piece][sq.raw()];
     }
 
     static constexpr int gamephase_inc(Piece piece) {
