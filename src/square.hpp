@@ -135,7 +135,7 @@ class Square {
      * same square; for black, it returns the square mirrored across the
      * horizontal axis.
      */
-    constexpr Square flip(Colour turn) const { return sq ^ (turn * 56); }
+    constexpr Square flip(Colour turn) const { return sq ^ (turn.raw() * 56); }
 };
 
 namespace SQ {

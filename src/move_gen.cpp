@@ -11,7 +11,7 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     std::vector<Move> legal_moves;
 
     Colour us = turn;
-    Colour them = !turn;
+    Colour them = turn.opposite();
     BitBoard own_pieces = get_bb(us);
     BitBoard other_pieces = get_bb(them);
     BitBoard occupied = own_pieces | other_pieces;
@@ -229,15 +229,16 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
                         occupied_after.erase_square(captured_pawn_sq);
                         occupied_after.set_square(ep);
 
-                        BitBoard sliders =
-                            get_bb(PP::ROOK, !turn) | get_bb(PP::QUEEN, !turn);
+                        BitBoard sliders = get_bb(PP::ROOK, turn.opposite()) |
+                                           get_bb(PP::QUEEN, turn.opposite());
                         if ((Magic::rook_attacks(king_sq, occupied_after) &
                              sliders)
                                 .has_square()) {
                             ep_legal = false;
                         }
-                        BitBoard diag_sliders = get_bb(PP::BISHOP, !turn) |
-                                                get_bb(PP::QUEEN, !turn);
+                        BitBoard diag_sliders =
+                            get_bb(PP::BISHOP, turn.opposite()) |
+                            get_bb(PP::QUEEN, turn.opposite());
                         if ((Magic::bishop_attacks(king_sq, occupied_after) &
                              diag_sliders)
                                 .has_square()) {
@@ -324,13 +325,13 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
                  BBB1 = BB::B1.flip(turn);
 
             // King side castling
-            if (can_castle[turn * 2] && occupied.empty(BBF1 | BBG1) &&
+            if (can_castle[turn.raw() * 2] && occupied.empty(BBF1 | BBG1) &&
                 king_danger.empty(BitBoard(SQE1) | BBF1 | BitBoard(SQG1))) {
                 legal_moves.emplace_back(SQE1, SQG1, Move::KING_SIDE_CASTLE);
             }
 
             // Queen side castling
-            if (can_castle[turn * 2 + 1] &&
+            if (can_castle[turn.raw() * 2 + 1] &&
                 occupied.empty(BBB1 | BBC1 | BBD1) &&
                 king_danger.empty(BitBoard(SQE1) | BBD1 | BitBoard(SQC1))) {
                 legal_moves.emplace_back(SQE1, SQC1, Move::QUEEN_SIDE_CASTLE);
@@ -350,7 +351,7 @@ bool Board::is_attacked(Colour by_colour, BitBoard bb) const {
     assert(bb.count() == 1);
 
     Square sq = bb.lsb_square();
-    Colour other = !by_colour;
+    Colour other = by_colour.opposite();
     auto occupied = get_bb(CC::WHITE) | get_bb(CC::BLACK);
 
     const auto king_mask =

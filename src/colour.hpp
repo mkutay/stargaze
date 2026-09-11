@@ -13,17 +13,15 @@ class Colour {
     constexpr Colour() : colour(WHITE) {}
     constexpr Colour(uint8_t _colour) : colour(_colour) {}
 
-    constexpr operator uint8_t() const { return colour; }
+    constexpr uint8_t raw() const { return colour; }
+    constexpr Colour opposite() const { return Colour(1 - colour); }
+    constexpr bool operator==(Colour o) const { return colour == o.colour; }
+    constexpr bool operator!=(Colour o) const { return colour != o.colour; }
 
     /**
-     * Returns the weight of the colour, which is 1 for white and -1 for black.
+     * 1 for white, -1 for black.
      */
     constexpr int weight() const { return -colour * 2 + 1; }
-
-    /**
-     * Returns the opposite colour.
-     */
-    constexpr Colour operator!() const { return Colour(1 - colour); }
 };
 
 namespace CC {
@@ -32,8 +30,8 @@ constexpr auto BLACK = Colour(Colour::BLACK);
 
 static_assert(WHITE.weight() == 1);
 static_assert(BLACK.weight() == -1);
-static_assert(!WHITE == BLACK);
-static_assert(WHITE == !BLACK);
+static_assert(WHITE.opposite() == BLACK);
+static_assert(WHITE.opposite().opposite() == WHITE);
 } // namespace CC
 
 constexpr const static std::array<Colour, 2> COLOURS = {CC::WHITE, CC::BLACK};

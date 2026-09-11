@@ -179,7 +179,7 @@ class BitBoard {
     constexpr BitBoard flip(Colour turn) const {
         // Derive an all-ones mask when turn == BLACK (1) and all-zeros when
         // turn == WHITE (0): -(uint64_t) 1 == 0xFFFFFFFFFFFFFFFF.
-        const uint64_t mask = -static_cast<uint64_t>(turn);
+        const uint64_t mask = -static_cast<uint64_t>(turn.raw());
         return (bb & ~mask) | (std::byteswap(bb) & mask);
     }
 

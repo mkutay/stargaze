@@ -8,7 +8,7 @@ uint64_t Board::calculate_hash() const {
 
     for (Colour c : COLOURS) {
         for (Piece p : PIECES) {
-            auto piece_bb = piece_bbs[p] & colour_bbs[c];
+            auto piece_bb = piece_bbs[p] & colour_bbs[c.raw()];
             while (piece_bb.has_square()) {
                 auto sq = piece_bb.get_square_pop();
                 ret_hash ^= Zobrist::piece(c, p, sq);

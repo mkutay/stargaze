@@ -13,11 +13,11 @@ void Board::initialise_eval(std::array<int, 2> &_mg_score,
 
     for (Colour c : COLOURS) {
         for (Piece p : PIECES) {
-            auto bb = piece_bbs[p] & colour_bbs[c];
+            auto bb = piece_bbs[p] & colour_bbs[c.raw()];
             while (bb.has_square()) {
                 auto sq = bb.get_square_pop();
-                _mg_score[c] += Eval::mg_value(c, p, sq);
-                _eg_score[c] += Eval::eg_value(c, p, sq);
+                _mg_score[c.raw()] += Eval::mg_value(c, p, sq);
+                _eg_score[c.raw()] += Eval::eg_value(c, p, sq);
                 _game_phase += Eval::gamephase_inc(p);
             }
         }
@@ -25,8 +25,8 @@ void Board::initialise_eval(std::array<int, 2> &_mg_score,
 }
 
 int Board::evaluate() const {
-    int mg_diff = mg_score[turn] - mg_score[!turn];
-    int eg_diff = eg_score[turn] - eg_score[!turn];
+    int mg_diff = mg_score[turn.raw()] - mg_score[turn.opposite().raw()];
+    int eg_diff = eg_score[turn.raw()] - eg_score[turn.opposite().raw()];
     int mg_phase = game_phase;
     if (mg_phase > Eval::gamephase_sum())
         mg_phase = Eval::gamephase_sum(); // in case of early promotion

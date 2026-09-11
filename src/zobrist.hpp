@@ -46,7 +46,7 @@ class Zobrist {
     Zobrist() = delete;
 
     static constexpr uint64_t piece(Colour colour, Piece piece, Square sq) {
-        return keys.hash[colour][piece][sq.raw()];
+        return keys.hash[colour.raw()][piece][sq.raw()];
     }
 
     static constexpr uint64_t castling(size_t index) {

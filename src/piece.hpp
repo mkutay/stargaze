@@ -119,7 +119,7 @@ class Piece {
             std::unreachable();
         }
 
-        return piece_str[colour];
+        return piece_str[colour.raw()];
     }
 };
 

@@ -41,7 +41,7 @@ template <bool Undo> void Board::apply_move(Move move) {
         moves.pop_back();
         hash_history.pop_back();
 
-        turn = !turn;
+        turn = turn.opposite();
         current_hash ^= Zobrist::black_move();
     }
 
@@ -72,7 +72,7 @@ template <bool Undo> void Board::apply_move(Move move) {
         halfmove_clock = undo_info.halfmove_clock;
 
         // Decrement if black
-        fullmove_number -= turn;
+        fullmove_number -= turn.raw();
     } else {
         if (moving_piece == PP::PAWN || move.is_capture())
             halfmove_clock = 0;
@@ -80,7 +80,7 @@ template <bool Undo> void Board::apply_move(Move move) {
             halfmove_clock++;
 
         // Increment if black.
-        fullmove_number += turn;
+        fullmove_number += turn.raw();
     }
 
     auto ep_key = [](std::optional<Square> sq) -> uint64_t {
@@ -100,7 +100,7 @@ template <bool Undo> void Board::apply_move(Move move) {
         can_castle = undo_info.can_castle;
     } else {
         if (moving_piece == PP::KING) {
-            can_castle[turn * 2] = can_castle[turn * 2 + 1] = false;
+            can_castle[turn.raw() * 2] = can_castle[turn.raw() * 2 + 1] = false;
         }
 
         if (from == SQ::A1 || to == SQ::A1)
@@ -119,7 +119,7 @@ template <bool Undo> void Board::apply_move(Move move) {
         }
     }
 
-    Colour opponent = !turn;
+    Colour opponent = turn.opposite();
     Square src = Undo ? to : from;
     Square dst = Undo ? from : to;
 
@@ -148,7 +148,7 @@ template <bool Undo> void Board::apply_move(Move move) {
         }
         break;
     case Move::EN_PASSANT: {
-        auto addition = turn * 16 - 8;
+        auto addition = turn.raw() * 16 - 8;
         Square captured_sq = to + addition;
         if constexpr (!Undo) {
             clear_piece(PP::PAWN, opponent, captured_sq);
@@ -212,7 +212,7 @@ void Board::make_null_move() {
     }
 
     current_hash ^= Zobrist::black_move();
-    turn = !turn;
+    turn = turn.opposite();
     ep_square = std::nullopt;
     halfmove_clock++;
 
@@ -232,7 +232,7 @@ void Board::undo_null_move() {
     history.pop_back();
     hash_history.pop_back();
 
-    turn = !turn;
+    turn = turn.opposite();
     current_hash ^= Zobrist::black_move();
 
     if (turn == CC::BLACK) {
@@ -359,8 +359,8 @@ void Board::move_piece(Piece piece, Colour colour, Square from, Square to) {
 void Board::add_piece(Piece piece, Colour colour, Square sq) {
     current_hash ^= Zobrist::piece(colour, piece, sq);
 
-    mg_score[colour] += Eval::mg_value(colour, piece, sq);
-    eg_score[colour] += Eval::eg_value(colour, piece, sq);
+    mg_score[colour.raw()] += Eval::mg_value(colour, piece, sq);
+    eg_score[colour.raw()] += Eval::eg_value(colour, piece, sq);
     game_phase += Eval::gamephase_inc(piece);
 
     BitBoard mask = BitBoard(sq);
@@ -371,8 +371,8 @@ void Board::add_piece(Piece piece, Colour colour, Square sq) {
 void Board::clear_piece(Piece piece, Colour colour, Square sq) {
     current_hash ^= Zobrist::piece(colour, piece, sq);
 
-    mg_score[colour] -= Eval::mg_value(colour, piece, sq);
-    eg_score[colour] -= Eval::eg_value(colour, piece, sq);
+    mg_score[colour.raw()] -= Eval::mg_value(colour, piece, sq);
+    eg_score[colour.raw()] -= Eval::eg_value(colour, piece, sq);
     game_phase -= Eval::gamephase_inc(piece);
 
     BitBoard mask = ~BitBoard(sq);
@@ -387,8 +387,8 @@ const std::array<bool, 4> Board::get_castling_rights() const {
 
 BitBoard &Board::get_bb(Piece type) { return piece_bbs[type]; }
 BitBoard Board::get_bb(Piece type) const { return piece_bbs[type]; }
-BitBoard &Board::get_bb(Colour colour) { return colour_bbs[colour]; }
-BitBoard Board::get_bb(Colour colour) const { return colour_bbs[colour]; }
+BitBoard &Board::get_bb(Colour colour) { return colour_bbs[colour.raw()]; }
+BitBoard Board::get_bb(Colour colour) const { return colour_bbs[colour.raw()]; }
 BitBoard Board::get_bb(Piece type, Colour colour) const {
     return get_bb(type) & get_bb(colour);
 }
@@ -397,14 +397,14 @@ Board Board::mirrored() const {
     Board copy = *this;
     auto flip = CC::BLACK;
 
-    copy.turn = !turn;
+    copy.turn = turn.opposite();
 
     for (Piece p : PIECES) {
         copy.piece_bbs[p] = piece_bbs[p].flip(flip);
     }
 
     for (Colour c : COLOURS) {
-        copy.colour_bbs[c] = colour_bbs[!c].flip(flip);
+        copy.colour_bbs[c.raw()] = colour_bbs[c.opposite().raw()].flip(flip);
     }
 
     copy.can_castle[0] = can_castle[2];
