@@ -29,6 +29,9 @@ struct SearchInfo {
 };
 
 class Search {
+  public:
+    constexpr static const uint16_t MAX_SEARCH_DEPTH = 64;
+
   private:
     constexpr static const int PAWN_VALUE = Eval::value(Piece::PAWN);
 

@@ -361,8 +361,8 @@ bool Board::is_attacked(Colour by_colour, BitBoard bb) const {
 
     const auto pawn_mask =
         by_colour == CC::WHITE
-            ? bb.north().west() | bb.north().east() & get_bb(PP::PAWN, other)
-            : bb.south().west() | bb.south().east() & get_bb(PP::PAWN, other);
+            ? (bb.north().west() | bb.north().east()) & get_bb(PP::PAWN, other)
+            : (bb.south().west() | bb.south().east()) & get_bb(PP::PAWN, other);
     if (pawn_mask.has_square())
         return true;
 
@@ -372,14 +372,13 @@ bool Board::is_attacked(Colour by_colour, BitBoard bb) const {
         return true;
 
     const auto bishop_mask =
-        Magic::bishop_attacks(sq, occupied) & get_bb(PP::BISHOP, other) |
-        get_bb(PP::QUEEN, other);
+        Magic::bishop_attacks(sq, occupied) &
+        (get_bb(PP::BISHOP, other) | get_bb(PP::QUEEN, other));
     if (bishop_mask.has_square())
         return true;
 
-    const auto rook_mask =
-        Magic::rook_attacks(sq, occupied) & get_bb(PP::ROOK, other) |
-        get_bb(PP::QUEEN, other);
+    const auto rook_mask = Magic::rook_attacks(sq, occupied) &
+                           (get_bb(PP::ROOK, other) | get_bb(PP::QUEEN, other));
     if (rook_mask.has_square())
         return true;
 

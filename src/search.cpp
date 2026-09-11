@@ -20,7 +20,8 @@ SearchInfo Search::iterative_deepening(uint16_t max_depth,
     start_time = std::chrono::high_resolution_clock::now();
     nodes_searched = 0;
     time_up = false;
-    killers.assign(max_depth, std::array<Move, 2>{});
+    killers.assign(std::max(max_depth, MAX_SEARCH_DEPTH),
+                   std::array<Move, 2>{});
     last_pv = PVLine(max_depth);
 
     tt.new_search();
@@ -183,8 +184,11 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
     if (board->is_draw() || (ply > 0 && board->is_repetition()))
         return 0;
 
+    if (ply >= MAX_SEARCH_DEPTH - 1)
+        return board->evaluate();
+
     bool in_check = board->is_in_check(board->get_turn());
-    if (in_check)
+    if (in_check && ply < MAX_SEARCH_DEPTH - 1)
         depth_left++;
 
     bool is_pv_node = (beta - alpha) > 1;

@@ -8,7 +8,7 @@ def main():
     
     cxx = "clang++"
     std_flags = "-std=c++23 -Wall -Wextra -Wshadow -pedantic -Isrc"
-    debug_flags = "-O2 -g -fsanitize=address -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC"
+    debug_flags = "-O2 -g -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC"
     test_flags = f"{debug_flags} -DVERIFY_CONSISTENCY -Itests"
     
     commands = []
@@ -49,10 +49,12 @@ def main():
             "file": rel_src
         })
 
-    output_path = os.path.join(root_dir, "compile_commands.json")
-    with open(output_path, "w") as f:
-        json.dump(commands, f, indent=2)
-    print(f"Generated compile_commands.json at {output_path}")
+    # Write compile_commands.json to root
+    out_path = os.path.join(root_dir, "compile_commands.json")
+    with open(out_path, "w") as f:
+        json.dump(commands, f, indent=4)
+        
+    print(f"Generated {out_path} with {len(commands)} entries.")
 
 if __name__ == "__main__":
     main()

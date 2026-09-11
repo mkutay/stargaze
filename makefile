@@ -6,46 +6,66 @@ CXXFLAGS = -std=c++23 -Wall -Wextra -Wshadow -pedantic -Isrc -fconstexpr-steps=5
 DEPFLAGS = -MMD -MP
 
 # Build directories
-BUILD_DIR = build
-BIN_DIR = bin
+BUILD_DIR          = build
+BUILD_RELEASE_DIR  = build/release
+BUILD_DEBUG_DIR    = build/debug
+BUILD_SANITIZE_DIR = build/sanitize
+TEST_BUILD_DIR     = build/tests
+BIN_DIR            = bin
 
 # Target executable name
 TARGET = $(BIN_DIR)/stargaze
 
 # Source and object files
 SOURCES = $(wildcard src/*.cpp)
-OBJECTS = $(patsubst src/%.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
-DEPS = $(OBJECTS:.o=.d)
+
+RELEASE_OBJECTS  = $(patsubst src/%.cpp,$(BUILD_RELEASE_DIR)/%.o,$(SOURCES))
+DEBUG_OBJECTS    = $(patsubst src/%.cpp,$(BUILD_DEBUG_DIR)/%.o,$(SOURCES))
+SANITIZE_OBJECTS = $(patsubst src/%.cpp,$(BUILD_SANITIZE_DIR)/%.o,$(SOURCES))
+
+RELEASE_DEPS  = $(RELEASE_OBJECTS:.o=.d)
+DEBUG_DEPS    = $(DEBUG_OBJECTS:.o=.d)
+SANITIZE_DEPS = $(SANITIZE_OBJECTS:.o=.d)
 
 # Profile flags
-RELEASE_FLAGS = -O3 -flto -march=native -DNDEBUG
-DEBUG_FLAGS = -O2 -g -fsanitize=address -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
+RELEASE_FLAGS  = -O3 -flto -march=native -DNDEBUG
+DEBUG_FLAGS    = -O2 -g -fsanitize=undefined -DLOCAL -DDEBUG -D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
+SANITIZE_FLAGS = $(DEBUG_FLAGS) -fsanitize=address
 
 # Default profile is release
 all: release
 
 # Release target
-release: CXXFLAGS += $(RELEASE_FLAGS)
-release: LDFLAGS += -flto
-release: $(TARGET)
+release: $(RELEASE_OBJECTS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) -flto $(RELEASE_OBJECTS) -o $(TARGET)
 
 # Debug target
-debug: CXXFLAGS += $(DEBUG_FLAGS)
-debug: $(TARGET)
+debug: $(DEBUG_OBJECTS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(DEBUG_FLAGS) $(DEBUG_OBJECTS) -o $(TARGET)
 
 # Verification target (debug with consistency verification checks)
-verify: CXXFLAGS += $(DEBUG_FLAGS) -DVERIFY_CONSISTENCY
-verify: $(TARGET)
+verify: DEBUG_FLAGS += -DVERIFY_CONSISTENCY
+verify: debug
 
-# Link the executable
-$(TARGET): $(OBJECTS)
+# Dedicated sanitize target (with AddressSanitizer)
+sanitize: $(SANITIZE_OBJECTS)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(SANITIZE_FLAGS) $(SANITIZE_OBJECTS) -o $(TARGET)
 
-# Compile object files
-$(BUILD_DIR)/%.o: src/%.cpp
-	@mkdir -p $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
+# Compile object files for each profile
+$(BUILD_RELEASE_DIR)/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) $(DEPFLAGS) -c $< -o $@
+
+$(BUILD_DEBUG_DIR)/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(DEBUG_FLAGS) $(DEPFLAGS) -c $< -o $@
+
+$(BUILD_SANITIZE_DIR)/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(SANITIZE_FLAGS) $(DEPFLAGS) -c $< -o $@
 
 # Run the executable (defaults to building release first)
 run: release
@@ -65,13 +85,11 @@ clean:
 
 # --- Testing ---
 TEST_DIR        = tests
-TEST_BUILD_DIR  = build/tests
 TEST_BIN        = $(BIN_DIR)/stargaze_tests
 
 ENGINE_SOURCES  = $(filter-out src/main.cpp,$(SOURCES))
 TEST_SOURCES    = $(wildcard tests/*.cpp tests/unit/*.cpp tests/integration/*.cpp)
 
-# Engine + test objects, both compiled with sanitizers, into build/tests
 TEST_OBJECTS    = $(patsubst src/%.cpp,$(TEST_BUILD_DIR)/src/%.o,$(ENGINE_SOURCES)) \
                   $(patsubst tests/%.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SOURCES))
 TEST_DEPS       = $(TEST_OBJECTS:.o=.d)
@@ -102,11 +120,13 @@ compdb:
 	python3 tools/gen_compile_commands.py
 
 # Include dependency files if they exist
--include $(DEPS)
+-include $(RELEASE_DEPS)
+-include $(DEBUG_DEPS)
+-include $(SANITIZE_DEPS)
 -include $(TEST_DEPS)
 
 # Phony targets
-.PHONY: all release debug verify run run-debug run-verify clean run-perft test test-unit compdb
+.PHONY: all release debug verify sanitize run run-debug run-verify clean run-perft test test-unit compdb
 
 # Perft execution defaults
 FEN ?= "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
