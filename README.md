@@ -78,3 +78,25 @@ To play a 10-game match between Stargaze and itself with 10 seconds of time cont
 ```bash
 cutechess-cli -engine cmd=./bin/stargaze name=Stargaze_1 -engine cmd=./bin/stargaze name=Stargaze_2 -each proto=uci tc=10 -games 10 -repeat
 ```
+
+### Estimating Strength Against Stockfish
+
+Install `python-chess`, build Stargaze, and run the match tool. It alternates
+colors and reports Stargaze's estimated Elo difference from the selected
+Stockfish skill level with an approximate 95% interval. It also estimates
+Stargaze's absolute Elo from Stockfish's approximate skill-level rating.
+
+```bash
+python3 -m pip install python-chess
+make release
+python3 tools/match_stockfish.py --stockfish /path/to/stockfish \
+    --skill 5 --games 100 --base 10 --increment 0.1 \
+    --pgn games/stockfish-match.pgn
+```
+
+`--base` and `--increment` are seconds. Stockfish skill levels range from 0 to
+20. For levels 0-19, the tool uses Stockfish's published non-linear CCRL Blitz
+calibration, ranging from approximately 1320 to 3190 Elo. Level 20 is
+unrestricted strength and has no calibrated Elo, so only the relative Elo
+difference is reported for it. Actual strength varies by Stockfish build,
+hardware, opponent pool, and time control.
