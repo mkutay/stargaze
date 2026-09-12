@@ -54,11 +54,14 @@ std::vector<std::string> tokens(const std::string &line) {
 }
 
 std::optional<Move> find_move(Board &board, const std::string &text) {
-    const auto moves = board.get_moves();
-    const auto found =
-        std::find_if(moves.begin(), moves.end(),
-                     [&text](Move move) { return move.to_string() == text; });
-    return found == moves.end() ? std::nullopt : std::optional(*found);
+    std::optional<Move> result;
+    board.generate_moves([&](Move move) {
+        if (move.to_string() != text)
+            return true;
+        result = move;
+        return false;
+    });
+    return result;
 }
 
 GoParams parse_go(const std::string &line, Board &board, const Search &search) {

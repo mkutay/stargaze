@@ -122,6 +122,40 @@ TEST_SUITE("unit") {
         }));
     }
 
+    TEST_CASE("Move generation emitters complete or stop on request") {
+        Board board;
+        const auto expected = board.get_moves();
+
+        std::vector<Move> emitted;
+        const bool completed =
+            board.generate_moves([&](Move move) { emitted.push_back(move); });
+        CHECK(completed);
+        CHECK(emitted == expected);
+
+        int emitted_before_stop = 0;
+        const bool stopped = board.generate_moves([&](Move) {
+            emitted_before_stop++;
+            return false;
+        });
+        CHECK_FALSE(stopped);
+        CHECK(emitted_before_stop == 1);
+    }
+
+    TEST_CASE("Legal move existence stops without collecting moves") {
+        Board initial;
+        CHECK(initial.has_legal_move());
+        CHECK(initial.get_move() == initial.get_moves().front());
+
+        Board checkmate("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1");
+        CHECK(checkmate.in_check());
+        CHECK_FALSE(checkmate.has_legal_move());
+        CHECK_FALSE(checkmate.get_move().has_value());
+
+        Board stalemate("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1");
+        CHECK_FALSE(stalemate.in_check());
+        CHECK_FALSE(stalemate.has_legal_move());
+    }
+
     TEST_CASE("Checking move generation") {
         Board direct(test::DIRECT_ROOK_CHECK);
         auto direct_checks =

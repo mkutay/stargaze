@@ -157,13 +157,13 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
     bool in_check = board->in_check();
     if constexpr (AllowRepetition) {
         if (board->is_draw() || (ply > 0 && board->is_repetition())) {
-            if (in_check && board->get_moves().empty())
+            if (in_check && !board->has_legal_move())
                 return Score::mated(ply);
             return 0;
         }
     } else if (board->get_halfmove_clock() >= 100 ||
                board->is_insufficient_material()) {
-        if (in_check && board->get_moves().empty())
+        if (in_check && !board->has_legal_move())
             return Score::mated(ply);
         return 0;
     }
@@ -387,7 +387,7 @@ Score Search::quiescence(Score alpha, Score beta, uint16_t ply) {
             : board->get_halfmove_clock() >= 100 ||
                   board->is_insufficient_material();
     if (is_draw) {
-        if (in_check && board->get_moves().empty())
+        if (in_check && !board->has_legal_move())
             return Score::mated(ply);
         return 0;
     }

@@ -18,13 +18,11 @@ uint64_t Board::perft(int depth) {
         return 1;
 
     uint64_t nodes = 0;
-    auto legal_moves = get_moves();
-
-    for (Move move : legal_moves) {
+    generate_moves([&](Move move) {
         make_move(move);
         nodes += perft(depth - 1);
         undo_move();
-    }
+    });
 
     return nodes;
 }
