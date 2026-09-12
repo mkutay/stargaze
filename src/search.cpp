@@ -1,6 +1,6 @@
-#include "eval.hpp"
+#include "stargaze/eval.hpp"
 
-#include "search.hpp"
+#include "stargaze/search.hpp"
 #include <algorithm>
 #include <chrono>
 #include <optional>

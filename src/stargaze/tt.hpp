@@ -1,6 +1,6 @@
 #pragma once
-#include "move.hpp"
-#include "score.hpp"
+#include "stargaze/move.hpp"
+#include "stargaze/score.hpp"
 #include <cstdint>
 #include <vector>
 

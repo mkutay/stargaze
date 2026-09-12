@@ -1,7 +1,7 @@
-#include "board.hpp"
-#include "colour.hpp"
-#include "eval.hpp"
-#include "piece.hpp"
+#include "stargaze/board.hpp"
+#include "stargaze/colour.hpp"
+#include "stargaze/eval.hpp"
+#include "stargaze/piece.hpp"
 #include <array>
 
 void Board::initialise_eval(std::array<int, 2> &_mg_score,

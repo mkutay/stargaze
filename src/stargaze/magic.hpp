@@ -1,6 +1,6 @@
 #pragma once
-#include "bitboard.hpp"
-#include "square.hpp"
+#include "stargaze/bitboard.hpp"
+#include "stargaze/square.hpp"
 #include <array>
 #include <cstddef>
 

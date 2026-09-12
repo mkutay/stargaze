@@ -1,7 +1,7 @@
-#include "time_management.hpp"
+#include "stargaze/time_management.hpp"
 
-#include "board.hpp"
-#include "search.hpp"
+#include "stargaze/board.hpp"
+#include "stargaze/search.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>

@@ -1,7 +1,7 @@
 #pragma once
-#include "colour.hpp"
-#include "piece.hpp"
-#include "square.hpp"
+#include "stargaze/colour.hpp"
+#include "stargaze/piece.hpp"
+#include "stargaze/square.hpp"
 #include <array>
 
 class Eval {

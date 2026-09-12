@@ -1,7 +1,7 @@
 #pragma once
-#include "bitboard.hpp"
-#include "piece.hpp"
-#include "square.hpp"
+#include "stargaze/bitboard.hpp"
+#include "stargaze/piece.hpp"
+#include "stargaze/square.hpp"
 #include <array>
 #include <cstdlib>
 

@@ -1,13 +1,13 @@
-#include "board.hpp"
+#include "stargaze/board.hpp"
 
-#include "bitboard.hpp"
-#include "colour.hpp"
-#include "eval.hpp"
-#include "mask.hpp"
-#include "move.hpp"
-#include "piece.hpp"
-#include "square.hpp"
-#include "zobrist.hpp"
+#include "stargaze/bitboard.hpp"
+#include "stargaze/colour.hpp"
+#include "stargaze/eval.hpp"
+#include "stargaze/mask.hpp"
+#include "stargaze/move.hpp"
+#include "stargaze/piece.hpp"
+#include "stargaze/square.hpp"
+#include "stargaze/zobrist.hpp"
 #include <algorithm>
 #include <array>
 #include <cctype>

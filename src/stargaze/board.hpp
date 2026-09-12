@@ -1,9 +1,9 @@
 #pragma once
-#include "bitboard.hpp"
-#include "colour.hpp"
-#include "move.hpp"
-#include "piece.hpp"
-#include "square.hpp"
+#include "stargaze/bitboard.hpp"
+#include "stargaze/colour.hpp"
+#include "stargaze/move.hpp"
+#include "stargaze/piece.hpp"
+#include "stargaze/square.hpp"
 #include <array>
 #include <cassert>
 #include <optional>

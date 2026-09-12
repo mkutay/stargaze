@@ -1,5 +1,5 @@
-#include "magic.hpp"
-#include "mask.hpp"
+#include "stargaze/magic.hpp"
+#include "stargaze/mask.hpp"
 #include <array>
 #include <cassert>
 #include <cstddef>

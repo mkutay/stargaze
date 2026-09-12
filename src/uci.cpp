@@ -1,8 +1,8 @@
-#include "uci.hpp"
+#include "stargaze/uci.hpp"
 
-#include "board.hpp"
-#include "search.hpp"
-#include "time_management.hpp"
+#include "stargaze/board.hpp"
+#include "stargaze/search.hpp"
+#include "stargaze/time_management.hpp"
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>

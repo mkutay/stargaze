@@ -1,6 +1,6 @@
-#include "debug.hpp"
-#include "move.hpp"
-#include "search.hpp"
+#include "stargaze/debug.hpp"
+#include "stargaze/move.hpp"
+#include "stargaze/search.hpp"
 #include <iostream>
 #include <map>
 #include <string>

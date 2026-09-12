@@ -1,5 +1,5 @@
 #pragma once
-#include "square.hpp"
+#include "stargaze/square.hpp"
 #include <array>
 #include <bit>
 #include <cassert>

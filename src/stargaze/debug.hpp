@@ -1,8 +1,8 @@
 #pragma once
-#include "colour.hpp"
-#include "move.hpp"
-#include "piece.hpp"
-#include "search.hpp"
+#include "stargaze/colour.hpp"
+#include "stargaze/move.hpp"
+#include "stargaze/piece.hpp"
+#include "stargaze/search.hpp"
 #include <bitset>
 #include <iostream>
 #include <queue>

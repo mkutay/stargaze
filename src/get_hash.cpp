@@ -1,5 +1,5 @@
-#include "board.hpp"
-#include "zobrist.hpp"
+#include "stargaze/board.hpp"
+#include "stargaze/zobrist.hpp"
 
 uint64_t Board::get_hash() const { return current_hash; }
 

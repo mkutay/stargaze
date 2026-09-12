@@ -1,6 +1,6 @@
-#include "board.hpp"
 #include "doctest/doctest.h"
-#include "search.hpp"
+#include "stargaze/board.hpp"
+#include "stargaze/search.hpp"
 #include "test_helpers.hpp"
 #include <array>
 #include <cstdint>

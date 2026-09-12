@@ -1,5 +1,5 @@
-#include "board.hpp"
 #include "doctest/doctest.h"
+#include "stargaze/board.hpp"
 #include "test_helpers.hpp"
 #include <string>
 #include <vector>

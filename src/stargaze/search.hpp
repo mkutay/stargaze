@@ -1,9 +1,9 @@
 #pragma once
-#include "board.hpp"
-#include "eval.hpp"
-#include "move.hpp"
-#include "score.hpp"
-#include "tt.hpp"
+#include "stargaze/board.hpp"
+#include "stargaze/eval.hpp"
+#include "stargaze/move.hpp"
+#include "stargaze/score.hpp"
+#include "stargaze/tt.hpp"
 #include <array>
 #include <atomic>
 #include <cassert>

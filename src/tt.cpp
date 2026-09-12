@@ -1,4 +1,4 @@
-#include "tt.hpp"
+#include "stargaze/tt.hpp"
 #include <algorithm>
 
 TT::TT(size_t exp_size) : current_age(0) {

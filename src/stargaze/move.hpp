@@ -1,6 +1,6 @@
 #pragma once
-#include "piece.hpp"
-#include "square.hpp"
+#include "stargaze/piece.hpp"
+#include "stargaze/square.hpp"
 #include <cassert>
 #include <string>
 

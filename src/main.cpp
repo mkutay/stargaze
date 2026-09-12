@@ -1,4 +1,4 @@
-#include "uci.hpp"
+#include "stargaze/uci.hpp"
 
 int main() {
     uci::run();

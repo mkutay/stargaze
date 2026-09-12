@@ -1,9 +1,9 @@
-#include "bitboard.hpp"
-#include "board.hpp"
-#include "colour.hpp"
-#include "magic.hpp"
-#include "mask.hpp"
-#include "piece.hpp"
+#include "stargaze/bitboard.hpp"
+#include "stargaze/board.hpp"
+#include "stargaze/colour.hpp"
+#include "stargaze/magic.hpp"
+#include "stargaze/mask.hpp"
+#include "stargaze/piece.hpp"
 #include <vector>
 
 BitBoard Board::pinners(Colour colour, Square square) const {

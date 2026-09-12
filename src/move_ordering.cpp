@@ -1,4 +1,4 @@
-#include "search.hpp"
+#include "stargaze/search.hpp"
 
 #include <algorithm>
 

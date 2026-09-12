@@ -1,4 +1,4 @@
-#include "board.hpp"
+#include "stargaze/board.hpp"
 #include <charconv>
 #include <format>
 

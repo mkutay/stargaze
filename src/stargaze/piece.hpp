@@ -1,5 +1,5 @@
 #pragma once
-#include "colour.hpp"
+#include "stargaze/colour.hpp"
 #include <array>
 #include <cassert>
 #include <cctype>
