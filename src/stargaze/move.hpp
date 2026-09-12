@@ -69,11 +69,6 @@ class Move {
     }
     constexpr bool is_quiet() const { return (flags() & 0b1100) == 0; }
 
-    /**
-     * Return the piece type that a pawn is promoted to in this move. Only valid
-     * if this move is a promotion. The colour is inferred from the board turn
-     * at the time the move is applied.
-     */
     constexpr Piece promotion_piece() const {
         assert(is_promotion());
 

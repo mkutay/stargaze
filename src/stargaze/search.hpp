@@ -70,14 +70,7 @@ class Search {
     std::array<std::array<int, 64>, 64> history_table{};
 
     Score quiescence(Score alpha, Score beta);
-
-    /**
-     * Check if the search should stop due to time limit or other conditions.
-     * Used for iterative deepening and alpha-beta search to terminate early if
-     * needed.
-     */
     bool should_stop();
-
     int score_move(Move move, std::optional<Move> pv_move = std::nullopt,
                    std::optional<Move> tt_move = std::nullopt,
                    std::optional<uint16_t> ply = std::nullopt) const;
@@ -88,11 +81,6 @@ class Search {
     void pick_next_move(std::vector<Move> &moves, std::vector<int> &scores,
                         size_t index) const;
     void record_cutoff(Move move, uint16_t ply, uint16_t depth);
-
-    /**
-     * Perform alpha-beta search with the given alpha, beta, depth left, and
-     * ply. The PV line is updated with the best moves found during the search.
-     */
     Score alpha_beta(Score alpha, Score beta, uint16_t depth_left, uint16_t ply,
                      PVLine *pline, bool follow_pv);
 
@@ -112,12 +100,6 @@ class Search {
         node_limit = nodes;
         root_moves = std::move(moves);
     }
-
-    /**
-     * Perform iterative deepening search up to the given maximum depth and time
-     * limit. The last search info can be provided to continue from a previous
-     * search.
-     */
     SearchInfo iterative_deepening(
         uint16_t max_depth, uint32_t _time_limit_ms,
         const std::function<void(const SearchInfo &)> &on_iteration = {});
