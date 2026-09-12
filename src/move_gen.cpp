@@ -184,12 +184,18 @@ bool Board::gives_check(Move move) const {
                        get_bb(PP::KING, turn.opposite()).lsb_square());
 }
 
+std::optional<Move> Board::get_move() {
+    auto m = get_moves();
+    return m.empty() ? std::nullopt : std::optional{m.front()};
+}
+
 template <bool Captures, bool KingMoves, bool Checks, bool Promotions,
           bool Quiets>
 std::vector<Move> Board::get_moves() {
     constexpr bool GenerateAll =
         Captures && KingMoves && Checks && Promotions && Quiets;
     std::vector<Move> legal_moves;
+    legal_moves.reserve(64);
 
     Colour opponent = turn.opposite();
     BitBoard us = get_bb(turn);
@@ -397,9 +403,9 @@ std::vector<Move> Board::get_moves() {
     return legal_moves;
 }
 
-bool Board::is_in_check(Colour by_colour) const {
-    auto king_bb = get_bb(PP::KING, by_colour);
-    return is_attacked(by_colour, king_bb);
+bool Board::in_check() const {
+    auto king_bb = get_bb(PP::KING, turn);
+    return is_attacked(turn, king_bb);
 }
 
 bool Board::is_attacked(Colour by_colour, BitBoard bb) const {

@@ -80,7 +80,7 @@ TEST_SUITE("benchmark") {
 
             print_result("fixed-time", position, result, nps);
             CHECK_MESSAGE(result.depth > 0, position.name);
-            CHECK(result.stopped);
+            CHECK((result.stopped || result.depth == Search::MAX_SEARCH_DEPTH));
             total_nps += nps;
             total_depth += result.depth;
         }

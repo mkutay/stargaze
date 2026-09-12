@@ -114,6 +114,7 @@ TEST_SUITE("integration") {
         bool found_author = false;
         bool found_uciok = false;
         bool found_clear_hash = false;
+        bool found_hash = false;
         for (const auto &line : log) {
             if (line.find("id name stargaze") != std::string::npos)
                 found_name = true;
@@ -124,11 +125,15 @@ TEST_SUITE("integration") {
             if (line.find("option name Clear Hash type button") !=
                 std::string::npos)
                 found_clear_hash = true;
+            if (line.find("option name Hash type spin default 64") !=
+                std::string::npos)
+                found_hash = true;
         }
         CHECK(found_name);
         CHECK(found_author);
         CHECK(found_uciok);
         CHECK(found_clear_hash);
+        CHECK(found_hash);
 
         proc.write_line("isready");
         log.clear();
@@ -171,6 +176,29 @@ TEST_SUITE("integration") {
         proc.write_line("position startpos");
         proc.write_line("go depth 2 searchmoves e2e4");
         CHECK(proc.read_until("bestmove", log) == "bestmove e2e4");
+        proc.write_line("quit");
+    }
+
+    TEST_CASE("UCI node limit returns a legal move") {
+        StargazeProcess proc;
+        std::vector<std::string> log;
+
+        proc.write_line("position startpos");
+        proc.write_line("go nodes 1");
+        const std::string bestmove = proc.read_until("bestmove", log);
+        CHECK(bestmove != "bestmove 0000");
+        proc.write_line("quit");
+    }
+
+    TEST_CASE("UCI ponderhit starts the move clock") {
+        StargazeProcess proc;
+        std::vector<std::string> log;
+
+        proc.write_line("position startpos");
+        proc.write_line("go ponder movetime 10");
+        proc.write_line("ponderhit");
+        CHECK(proc.read_until("bestmove", log).find("bestmove") !=
+              std::string::npos);
         proc.write_line("quit");
     }
 

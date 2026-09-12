@@ -171,9 +171,11 @@ class Board {
     template <bool Captures = true, bool KingMoves = true, bool Checks = true,
               bool Promotions = true, bool Quiets = true>
     std::vector<Move> get_moves();
+    std::optional<Move> get_move();
     bool gives_check(Move move) const;
     uint64_t get_hash() const;
-    bool is_in_check(Colour by_colour) const;
+    uint8_t get_halfmove_clock() const;
+    bool in_check() const;
 
     /**
      * Check if the given colour has any non-pawn, non-king material.
@@ -198,6 +200,7 @@ class Board {
     const std::array<bool, 4> get_castling_rights() const;
     std::string nice() const;
     std::string fen() const;
+    bool is_insufficient_material() const;
     bool is_draw() const;
     bool is_repetition() const;
 };

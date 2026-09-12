@@ -24,7 +24,7 @@ std::vector<Move> checking_moves(Board &board, const std::vector<Move> &moves) {
     std::vector<Move> checks;
     for (Move move : moves) {
         board.make_move(move);
-        if (board.is_in_check(board.get_turn()))
+        if (board.in_check())
             checks.push_back(move);
         board.undo_move();
     }
@@ -193,5 +193,33 @@ TEST_SUITE("unit") {
             check_same_moves(board.get_moves<true, true, true, true, true>(),
                              all);
         }
+    }
+
+    TEST_CASE("Dead positions are draws") {
+        CHECK(Board("7k/8/8/8/8/8/8/7K w - - 0 1").is_draw());
+        CHECK(Board("7k/8/8/8/8/8/8/1B5K w - - 0 1").is_draw());
+        CHECK(Board("7k/8/8/8/8/8/8/1N5K w - - 0 1").is_draw());
+        CHECK(Board("2b4k/8/8/8/8/8/8/1B5K w - - 0 1").is_draw());
+        CHECK_FALSE(Board("7k/8/8/8/8/8/8/1R5K w - - 0 1").is_draw());
+    }
+
+    TEST_CASE("Null moves do not advance draw counters") {
+        Board board("7k/8/8/8/3pP3/8/8/R6K w - d6 99 1");
+        const std::string fen = board.fen();
+        const uint64_t hash = board.get_hash();
+
+        board.make_null_move();
+        CHECK(board.get_halfmove_clock() == 99);
+        CHECK_FALSE(board.is_draw());
+        const uint64_t null_hash = board.get_hash();
+        const auto replies = board.get_moves();
+        REQUIRE_FALSE(replies.empty());
+        board.make_move(replies.front());
+        board.undo_move();
+        CHECK(board.get_hash() == null_hash);
+        board.undo_null_move();
+
+        CHECK(board.fen() == fen);
+        CHECK(board.get_hash() == hash);
     }
 }

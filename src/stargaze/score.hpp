@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 
@@ -17,8 +18,12 @@ class Score {
 
     static constexpr Score draw() { return Score(0); }
     static constexpr Score mate(int plies) {
-        return plies >= 0 ? Score(MATE_SCORE - plies)
-                          : Score(-MATE_SCORE - plies);
+        assert(plies >= 0);
+        return Score(MATE_SCORE - plies);
+    }
+    static constexpr Score mated(int plies) {
+        assert(plies >= 0);
+        return Score(-MATE_SCORE + plies);
     }
     static constexpr Score centipawns(int cp) { return Score(cp); }
 
@@ -151,10 +156,11 @@ static_assert(Score::mate(3).is_mate());
 static_assert(!Score::mate(3).is_draw());
 static_assert(Score::mate(3).mate_plies() == 3);
 static_assert(Score::mate(3).mate_moves() == 2); // (3+1)/2 = 2 moves
-static_assert(Score::mate(-3).is_mate());
-static_assert(!Score::mate(-3).is_draw());
-static_assert(Score::mate(-3).mate_plies() == 3);
-static_assert(Score::mate(-3).mate_moves() == -2);
+static_assert(Score::mated(0).raw() == -Score::MATE_SCORE);
+static_assert(Score::mated(3).is_mate());
+static_assert(!Score::mated(3).is_draw());
+static_assert(Score::mated(3).mate_plies() == 3);
+static_assert(Score::mated(3).mate_moves() == -2);
 static_assert(Score(100) + Score(200) == 300);
 static_assert(Score(200) - Score(100) == 100);
 static_assert(-Score(100) == -100);
@@ -166,6 +172,6 @@ static_assert(Score(100) != Score(200));
 static_assert(Score::mate(3).to_tt(2).raw() ==
               199999); // winning mate in 3 plies found at search ply 2
 static_assert(Score::mate(3).to_tt(2).from_tt(2).mate_plies() == 3);
-static_assert(Score::mate(-3).to_tt(2).raw() ==
+static_assert(Score::mated(3).to_tt(2).raw() ==
               -199999); // losing mate in 3 plies found at search ply 2
-static_assert(Score::mate(-3).to_tt(2).from_tt(2).mate_plies() == 3);
+static_assert(Score::mated(3).to_tt(2).from_tt(2).mate_plies() == 3);

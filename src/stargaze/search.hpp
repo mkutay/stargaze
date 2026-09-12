@@ -55,21 +55,25 @@ class Search {
     constexpr static const int CASTLE_SCORE = 60000;
     constexpr static const std::array<int, 2> KILLER_SCORES = {50000, 40000};
 
-    bool time_up;
-    uint32_t time_limit_ms;
+    using Clock = std::chrono::steady_clock;
+
+    bool stop_reached = false;
+    std::atomic<int64_t> deadline_ms{std::numeric_limits<int64_t>::max()};
     uint64_t node_limit = std::numeric_limits<uint64_t>::max();
     uint64_t nodes_searched;
     Board *board;
-    std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+    std::chrono::time_point<Clock> start_time;
     TT tt;
 
     PVLine last_pv;
 
     std::vector<std::array<Move, 2>> killers;
-    std::vector<Move> root_moves;
+    // searchmoves as defined by UCI protocol
+    std::vector<Move> search_moves;
     std::array<std::array<int, 64>, 64> history_table{};
 
-    Score quiescence(Score alpha, Score beta);
+    template <bool AllowRepetition, bool CountNodes = true>
+    Score quiescence(Score alpha, Score beta, uint16_t ply);
     bool should_stop();
     int score_move(Move move, std::optional<Move> pv_move = std::nullopt,
                    std::optional<Move> tt_move = std::nullopt,
@@ -81,8 +85,11 @@ class Search {
     void pick_next_move(std::vector<Move> &moves, std::vector<int> &scores,
                         size_t index) const;
     void record_cutoff(Move move, uint16_t ply, uint16_t depth);
+    template <bool AllowRepetition>
     Score alpha_beta(Score alpha, Score beta, uint16_t depth_left, uint16_t ply,
                      PVLine *pline, bool follow_pv);
+    void halve_history();
+    std::optional<Move> get_fallback_move();
 
   public:
     /**
@@ -94,13 +101,21 @@ class Search {
     explicit Search(Board *board) : board(board) { assert(board != nullptr); }
 
     void clear_tt() { tt.clear(); }
+    void resize_tt(size_t megabytes) { tt.resize(megabytes); }
     const PVLine &get_last_pv() const { return last_pv; }
+    void set_time_limit(uint32_t limit_ms) {
+        const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             Clock::now().time_since_epoch())
+                             .count();
+        deadline_ms.store(now + limit_ms, std::memory_order_relaxed);
+    }
     void set_limits(uint64_t nodes = std::numeric_limits<uint64_t>::max(),
                     std::vector<Move> moves = {}) {
         node_limit = nodes;
-        root_moves = std::move(moves);
+        search_moves = std::move(moves);
     }
     SearchInfo iterative_deepening(
-        uint16_t max_depth, uint32_t _time_limit_ms,
-        const std::function<void(const SearchInfo &)> &on_iteration = {});
+        uint16_t max_depth, uint32_t time_limit_ms,
+        const std::function<void(const SearchInfo &)> &on_iteration = {},
+        const std::function<void()> &on_start = {});
 };

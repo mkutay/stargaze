@@ -214,13 +214,6 @@ void Board::make_null_move() {
     current_hash ^= Zobrist::black_move();
     turn = turn.opposite();
     ep_square = std::nullopt;
-    halfmove_clock++;
-
-    if (turn == CC::WHITE) {
-        fullmove_number++;
-    }
-
-    hash_history.emplace_back(current_hash);
 
 #ifdef VERIFY_CONSISTENCY
     check_state_consistency();
@@ -230,19 +223,16 @@ void Board::make_null_move() {
 void Board::undo_null_move() {
     UndoInfo undo_info = history.back();
     history.pop_back();
-    hash_history.pop_back();
 
     turn = turn.opposite();
     current_hash ^= Zobrist::black_move();
 
-    if (turn == CC::BLACK) {
-        fullmove_number--;
-    }
-
     can_castle = undo_info.can_castle;
     ep_square = undo_info.ep_square;
     halfmove_clock = undo_info.halfmove_clock;
-    current_hash = hash_history.back();
+    if (ep_square.has_value()) {
+        current_hash ^= Zobrist::en_passant(*ep_square);
+    }
 
 #ifdef VERIFY_CONSISTENCY
     check_state_consistency();
@@ -279,8 +269,28 @@ void Board::check_state_consistency() const {
     assert(all_pieces == (colour_bbs[0] | colour_bbs[1]));
 }
 
+bool Board::is_insufficient_material() const {
+    if (get_bb(PP::PAWN) == Mask::EMPTY && get_bb(PP::ROOK) == Mask::EMPTY &&
+        get_bb(PP::QUEEN) == Mask::EMPTY) {
+        const BitBoard bishops = get_bb(PP::BISHOP);
+        const int minor_count = bishops.count() + get_bb(PP::KNIGHT).count();
+        if (minor_count <= 1)
+            return true;
+
+        // With bishops alone, mate is impossible when every bishop is bound to
+        // the same square colour.
+        if (get_bb(PP::KNIGHT) == Mask::EMPTY &&
+            ((bishops & Mask::LIGHT_SQUARES) == Mask::EMPTY) !=
+                ((bishops & Mask::DARK_SQUARES) == Mask::EMPTY)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool Board::is_draw() const {
-    if (halfmove_clock >= 100)
+    if (halfmove_clock >= 100 || is_insufficient_material())
         return true;
 
     int count = 0;
@@ -307,6 +317,8 @@ bool Board::is_repetition() const {
 }
 
 Colour Board::get_turn() const { return turn; }
+
+uint8_t Board::get_halfmove_clock() const { return halfmove_clock; }
 
 std::string Board::nice() const {
     std::vector<std::string> result;

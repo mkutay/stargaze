@@ -7,6 +7,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdio>
+#include <format>
 #include <iostream>
 #include <limits>
 #include <mutex>
@@ -14,6 +15,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace uci {
@@ -21,6 +23,18 @@ namespace {
 
 constexpr uint16_t MAX_DEPTH = 60;
 constexpr uint32_t INFINITE_TIME_MS = 100'000'000;
+std::mutex output_mutex;
+
+template <typename... Args>
+void print_line(std::format_string<Args...> format, Args &&...args) {
+    std::lock_guard lock(output_mutex);
+    std::println(format, std::forward<Args>(args)...);
+}
+
+void print_output(std::string_view output) {
+    std::lock_guard lock(output_mutex);
+    std::print("{}", output);
+}
 
 struct GoParams {
     uint16_t max_depth = MAX_DEPTH;
@@ -110,7 +124,7 @@ GoParams parse_go(const std::string &line, Board &board, const Search &search) {
     }
 
     if (params.time_limit == INFINITE_TIME_MS && has_clock &&
-        !params.wait_for_stop) {
+        (!params.wait_for_stop || params.ponder)) {
         params.time_limit = calculate_time_limit(board, search, wtime, btime,
                                                  winc, binc, movestogo);
     }
@@ -118,18 +132,19 @@ GoParams parse_go(const std::string &line, Board &board, const Search &search) {
 }
 
 void print_search_info(const SearchInfo &info) {
-    std::print("info depth {}", info.depth);
+    std::string line = std::format("info depth {}", info.depth);
     if (info.score.is_mate())
-        std::print(" score mate {}", info.score.mate_moves());
+        line += std::format(" score mate {}", info.score.mate_moves());
     else
-        std::print(" score cp {}", info.score.raw());
+        line += std::format(" score cp {}", info.score.raw());
 
     const uint64_t nps =
         info.time_ms > 0 ? info.nodes * 1000 / info.time_ms : 0;
-    std::print(" nodes {} time {} nps {} pv", info.nodes, info.time_ms, nps);
+    line += std::format(" nodes {} time {} nps {} pv", info.nodes, info.time_ms,
+                        nps);
     for (Move move : info.pv.moves)
-        std::print(" {}", move.to_string());
-    std::print("\n");
+        line += std::format(" {}", move.to_string());
+    print_line("{}", line);
 }
 
 class SearchController {
@@ -140,13 +155,16 @@ class SearchController {
     bool searching = false;
     bool result_ready = false;
     bool release_result = true;
+    bool pondering = false;
+    bool timer_started = false;
+    uint32_t ponder_time_limit = INFINITE_TIME_MS;
     SearchInfo result{MAX_DEPTH};
 
     void print_bestmove() {
         if (!result.pv.moves.empty())
-            std::println("bestmove {}", result.pv.moves.front().to_string());
+            print_line("bestmove {}", result.pv.moves.front().to_string());
         else
-            std::println("bestmove 0000");
+            print_line("bestmove 0000");
     }
 
   public:
@@ -162,10 +180,20 @@ class SearchController {
             searching = true;
             result_ready = false;
             release_result = !params.wait_for_stop;
+            pondering = params.ponder;
+            timer_started = false;
+            ponder_time_limit = params.time_limit;
         }
         thread = std::thread([this, params]() {
             SearchInfo current = search.iterative_deepening(
-                params.max_depth, params.time_limit, print_search_info);
+                params.max_depth,
+                params.ponder ? INFINITE_TIME_MS : params.time_limit,
+                print_search_info, [this, is_ponder = params.ponder]() {
+                    std::lock_guard lock(mutex);
+                    timer_started = true;
+                    if (is_ponder && !pondering)
+                        search.set_time_limit(ponder_time_limit);
+                });
             std::unique_lock lock(mutex);
             result = std::move(current);
             result_ready = true;
@@ -189,6 +217,9 @@ class SearchController {
 
     void ponderhit() {
         std::lock_guard lock(mutex);
+        pondering = false;
+        if (timer_started)
+            search.set_time_limit(ponder_time_limit);
         release_result = true;
         cv.notify_one();
     }
@@ -241,31 +272,45 @@ void run() {
             continue;
 
         if (debug)
-            std::println("info string received {}", line);
+            print_line("info string received {}", line);
 
         if (command == "uci") {
-            std::print("id name stargaze\n"
-                       "id author mkutay\n"
-                       "option name Clear Hash type button\n"
-                       "option name Ponder type check default true\n"
-                       "uciok\n");
+            print_output(
+                "id name stargaze\n"
+                "id author mkutay\n"
+                "option name Clear Hash type button\n"
+                "option name Hash type spin default 64 min 1 max 4096\n"
+                "option name Ponder type check default true\n"
+                "uciok\n");
         } else if (command == "debug") {
             std::string value;
             if (iss >> value)
                 debug = value == "on";
         } else if (command == "isready") {
-            std::println("readyok");
+            print_line("readyok");
         } else if (command == "setoption") {
-            std::string token, name;
+            std::string token, name, value;
             iss >> token;
             while (iss >> token && token != "value") {
                 if (!name.empty())
                     name += ' ';
                 name += token;
             }
+            if (token == "value")
+                iss >> value;
             std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-            if (name == "clear hash")
+            if (name == "clear hash") {
+                controller.stop();
                 search.clear_tt();
+            } else if (name == "hash" && !value.empty()) {
+                try {
+                    const size_t megabytes =
+                        std::clamp<size_t>(std::stoull(value), 1, 4096);
+                    controller.stop();
+                    search.resize_tt(megabytes);
+                } catch (...) {
+                }
+            }
         } else if (command == "register") {
             // Stargaze does not require registration.
         } else if (command == "ucinewgame") {
@@ -276,13 +321,15 @@ void run() {
             controller.stop();
             set_position(board, iss);
         } else if (command == "go") {
+            controller.stop();
             controller.start(parse_go(line, board, search));
         } else if (command == "stop") {
             controller.stop();
         } else if (command == "ponderhit") {
             controller.ponderhit();
         } else if (command == "d" || command == "print") {
-            std::println("{}", board.nice());
+            controller.stop();
+            print_line("{}", board.nice());
         } else if (command == "quit") {
             controller.stop();
             break;

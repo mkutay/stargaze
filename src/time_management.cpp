@@ -65,7 +65,7 @@ uint32_t calculate_time_limit(const Board &board, const Search &search,
     uint32_t complexity = 100;
     complexity += std::min<uint32_t>(30, legal_moves.size());
     complexity += std::min<uint32_t>(30, captures * 5);
-    if (board.is_in_check(board.get_turn()))
+    if (board.in_check())
         complexity += 25;
     if (std::abs(board.evaluate()) < 2 * Eval::value(Piece::PAWN))
         complexity += 10;
