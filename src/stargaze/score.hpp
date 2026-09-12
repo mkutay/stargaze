@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <format>
 
 class Score {
   private:
@@ -139,19 +138,6 @@ class Score {
     }
     friend constexpr bool operator>=(int32_t lhs, const Score &rhs) {
         return lhs >= rhs.v;
-    }
-};
-
-// std::formatter specialisation for Score
-template <> struct std::formatter<Score> {
-    constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
-
-    auto format(const Score &score, std::format_context &ctx) const {
-        if (score.is_mate()) {
-            return std::format_to(ctx.out(), "mate {}", score.mate_moves());
-        } else {
-            return std::format_to(ctx.out(), "{}", score.raw());
-        }
     }
 };
 

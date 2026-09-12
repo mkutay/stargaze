@@ -1,6 +1,7 @@
 #include "stargaze/debug.hpp"
 #include "stargaze/move.hpp"
 #include "stargaze/search.hpp"
+#include <format>
 #include <iostream>
 #include <map>
 #include <string>
@@ -39,12 +40,11 @@ std::string to_string(const SearchInfo result) {
     const int nps =
         result.time_ms != 0 ? (result.nodes * 1000ll) / result.time_ms : 0;
     return "{" +
-           std::format(
-               "depth: {}, score: {}, nodes: {}, time_ms: {}, stopped: {}, pv: "
-               "{}, "
-               "nps: {}",
-               result.depth, result.score, result.nodes, result.time_ms,
-               to_string(result.stopped), to_string(result.pv.moves), nps) +
+           std::format("depth: {}, score: {}, nodes: {}, time_ms: {}, stopped: "
+                       "{}, pv: {}, nps: {}",
+                       result.depth, to_string(result.score), result.nodes,
+                       result.time_ms, to_string(result.stopped),
+                       to_string(result.pv.moves), nps) +
            "}";
 }
 
@@ -61,7 +61,12 @@ std::string to_string(const Colour colour) {
     return colour == Colour::WHITE ? "WHITE" : "BLACK";
 }
 
-std::string to_string(const Score score) { return std::format("{}", score); }
+std::string to_string(const Score score) {
+    if (score.is_mate()) {
+        return std::format("mate {}", score.mate_moves());
+    }
+    return std::to_string(score.raw());
+}
 
 void debug_out([[maybe_unused]] int size, [[maybe_unused]] bool first,
                [[maybe_unused]] std::string name) {
