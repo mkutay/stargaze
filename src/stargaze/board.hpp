@@ -157,6 +157,8 @@ class Board {
      */
     BitBoard pinned(Colour colour, Square square) const;
 
+    bool gives_check(Move move, BitBoard occupied, Square square) const;
+
   public:
     Board();
     explicit Board(std::string_view fen);
@@ -166,7 +168,10 @@ class Board {
     void undo_move();
     void make_null_move();
     void undo_null_move();
-    template <bool CapturesOnly = false> std::vector<Move> get_moves();
+    template <bool Captures = true, bool KingMoves = true, bool Checks = true,
+              bool Promotions = true, bool Quiets = true>
+    std::vector<Move> get_moves();
+    bool gives_check(Move move) const;
     uint64_t get_hash() const;
     bool is_in_check(Colour by_colour) const;
 

@@ -1,8 +1,43 @@
 #include "doctest/doctest.h"
 #include "stargaze/board.hpp"
 #include "test_helpers.hpp"
+#include <algorithm>
 #include <string>
 #include <vector>
+
+namespace {
+void sort_moves(std::vector<Move> &moves) {
+    std::ranges::sort(
+        moves, [](Move a, Move b) { return a.to_string() < b.to_string(); });
+}
+
+template <typename Predicate>
+std::vector<Move> matching_moves(const std::vector<Move> &moves,
+                                 Predicate predicate) {
+    std::vector<Move> matching;
+    std::ranges::copy_if(moves, std::back_inserter(matching), predicate);
+    sort_moves(matching);
+    return matching;
+}
+
+std::vector<Move> checking_moves(Board &board, const std::vector<Move> &moves) {
+    std::vector<Move> checks;
+    for (Move move : moves) {
+        board.make_move(move);
+        if (board.is_in_check(board.get_turn()))
+            checks.push_back(move);
+        board.undo_move();
+    }
+    sort_moves(checks);
+    return checks;
+}
+
+void check_same_moves(std::vector<Move> actual, std::vector<Move> expected) {
+    sort_moves(actual);
+    sort_moves(expected);
+    CHECK(actual == expected);
+}
+} // namespace
 
 void verify_make_undo_recursive(Board &board, int depth) {
     if (depth == 0)
@@ -62,6 +97,101 @@ TEST_SUITE("unit") {
             Board scratch_board(board.fen());
             CHECK(board.get_hash() == scratch_board.get_hash());
             CHECK(board.evaluate() == scratch_board.evaluate());
+        }
+    }
+
+    TEST_CASE("Move generation categories") {
+        Board board(test::MOVE_GEN_CATEGORIES);
+
+        auto captures = board.get_moves<true, false, false, false, false>();
+        CHECK(std::ranges::all_of(captures,
+                                  [](Move move) { return move.is_capture(); }));
+
+        auto promotions = board.get_moves<false, false, false, true, false>();
+        CHECK(promotions.size() == 4);
+        CHECK(std::ranges::all_of(
+            promotions, [](Move move) { return move.is_promotion(); }));
+
+        auto king_moves = board.get_moves<false, true, false, false, false>();
+        CHECK(std::ranges::all_of(
+            king_moves, [](Move move) { return move.from() == SQ::E1; }));
+
+        auto tactical = board.get_moves<true, false, false, true, false>();
+        CHECK(std::ranges::all_of(tactical, [](Move move) {
+            return move.is_capture() || move.is_promotion();
+        }));
+    }
+
+    TEST_CASE("Checking move generation") {
+        Board direct(test::DIRECT_ROOK_CHECK);
+        auto direct_checks =
+            direct.get_moves<false, false, true, false, false>();
+        CHECK(std::ranges::any_of(direct_checks, [](Move move) {
+            return move.to_string() == "a1a8";
+        }));
+
+        Board discovered(test::DISCOVERED_ROOK_CHECK);
+        auto discovered_checks =
+            discovered.get_moves<false, false, true, false, false>();
+        CHECK(std::ranges::any_of(discovered_checks, [](Move move) {
+            return move.to_string() == "e2f3";
+        }));
+
+        Board promotion(test::PROMOTION_CHECKS);
+        auto promotion_checks =
+            promotion.get_moves<false, false, true, false, false>();
+        CHECK(std::ranges::any_of(promotion_checks, [](Move move) {
+            return move.to_string() == "g7g8r";
+        }));
+        CHECK(std::ranges::any_of(promotion_checks, [](Move move) {
+            return move.to_string() == "g7g8q";
+        }));
+    }
+
+    TEST_CASE("Move generation categories match full legal move set") {
+        for (const auto fen : test::MOVE_GEN_FENS) {
+            Board board(fen);
+            auto all = board.get_moves();
+
+            auto captures = matching_moves(
+                all, [](Move move) { return move.is_capture(); });
+            auto promotions = matching_moves(
+                all, [](Move move) { return move.is_promotion(); });
+            auto quiets = matching_moves(all, [](Move move) {
+                return !move.is_capture() && !move.is_promotion();
+            });
+            auto king = matching_moves(all, [&board](Move move) {
+                return board.get_piece(move.from()) == PP::KING;
+            });
+            auto checks = checking_moves(board, all);
+
+            check_same_moves(
+                board.get_moves<true, false, false, false, false>(), captures);
+            check_same_moves(
+                board.get_moves<false, true, false, false, false>(), king);
+            check_same_moves(
+                board.get_moves<false, false, true, false, false>(), checks);
+            check_same_moves(
+                board.get_moves<false, false, false, true, false>(),
+                promotions);
+            check_same_moves(
+                board.get_moves<false, false, false, false, true>(), quiets);
+
+            auto tactical = matching_moves(all, [](Move move) {
+                return move.is_capture() || move.is_promotion();
+            });
+            check_same_moves(board.get_moves<true, false, false, true, false>(),
+                             tactical);
+
+            auto forcing = matching_moves(all, [&](Move move) {
+                return move.is_capture() || move.is_promotion() ||
+                       std::ranges::find(checks, move) != checks.end();
+            });
+            check_same_moves(board.get_moves<true, false, true, true, false>(),
+                             forcing);
+
+            check_same_moves(board.get_moves<true, true, true, true, true>(),
+                             all);
         }
     }
 }

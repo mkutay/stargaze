@@ -130,22 +130,18 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
     bool is_pv_node = (beta - alpha) > 1;
     Move tt_move;
 
-    auto hash = board->get_hash();
-    TTEntry *tt_entry = tt.probe(hash);
+    TTEntry *tt_entry = tt.probe(board->get_hash());
 
     if (tt_entry != nullptr) {
-        tt_move = Move(tt_entry->best_move);
+        tt_move = tt_entry->best_move;
+        auto tt_score = tt_entry->score.from_tt(ply);
 
-        // Use TT score if depth is sufficient and not a PV node, as PV nodes
-        // require a full search to find the best move.
-        if (tt_entry->depth >= depth_left && !is_pv_node) {
-            Score tt_score = tt_entry->score.from_tt(ply);
-
-            if ((tt_entry->bound == Bound::EXACT) ||
-                (tt_entry->bound == Bound::LOWER && tt_score >= beta) ||
-                (tt_entry->bound == Bound::UPPER && tt_score <= alpha)) {
-                return tt_score;
-            }
+        // since PV nodes require a full search to find the best move
+        if (tt_entry->depth >= depth_left && !is_pv_node &&
+            ((tt_entry->bound == Bound::EXACT) ||
+             (tt_entry->bound == Bound::LOWER && tt_score >= beta) ||
+             (tt_entry->bound == Bound::UPPER && tt_score <= alpha))) {
+            return tt_score;
         }
     }
 
@@ -153,8 +149,6 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
         return quiescence(alpha, beta);
 
     // Static Evaluation for Pruning Heuristics
-    // Refine static_eval with TT score when available, as TT provides
-    // a better positional estimate than a raw static evaluation.
     Score static_eval = board->evaluate();
     if (tt_entry != nullptr) {
         Score tt_score = tt_entry->score.from_tt(ply);
@@ -196,13 +190,15 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
         pv_move = last_pv.moves[ply];
     }
 
-    std::vector<Move> moves = board->get_moves<false>();
+    std::vector<Move> moves = board->get_moves();
+
     if (ply == 0 && !root_moves.empty()) {
         std::erase_if(moves, [this](Move move) {
             return std::find(root_moves.begin(), root_moves.end(), move) ==
                    root_moves.end();
         });
     }
+
     std::vector<int> scores;
     score_moves(moves, scores, pv_move, tt_move, ply);
 
@@ -297,7 +293,8 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
     if (!pline->moves.empty()) {
         if (!should_stop()) {
             Score tt_score = alpha.to_tt(ply);
-            tt.store(hash, pline->moves.front(), tt_score, depth_left, bound);
+            tt.store(board->get_hash(), pline->moves.front(), tt_score,
+                     depth_left, bound);
         }
         return alpha;
     }
@@ -327,7 +324,9 @@ Score Search::quiescence(Score alpha, Score beta) {
         alpha = std::max(alpha, stand_pat);
     }
 
-    std::vector<Move> moves = board->get_moves<true>();
+    std::vector<Move> moves =
+        in_check ? board->get_moves()
+                 : board->get_moves<true, false, false, true, false>();
     std::vector<int> scores;
     score_moves(moves, scores);
 

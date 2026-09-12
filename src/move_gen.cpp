@@ -130,7 +130,65 @@ BitBoard Board::check_evasion_targets(Square king, BitBoard checkers) const {
     return BitBoard(checker);
 }
 
-template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
+bool Board::gives_check(Move move, BitBoard occupied, Square square) const {
+    Square from = move.from();
+    Square to = move.to();
+    Piece piece =
+        move.is_promotion() ? move.promotion_piece() : *get_piece(from);
+    BitBoard occupied_after = occupied;
+    occupied_after.erase_square(from);
+    occupied_after.erase_square(to);
+    occupied_after.set_square(to);
+
+    BitBoard diagonal = get_bb(PP::BISHOP, turn) | get_bb(PP::QUEEN, turn);
+    BitBoard orthogonal = get_bb(PP::ROOK, turn) | get_bb(PP::QUEEN, turn);
+    diagonal.erase_square(from);
+    orthogonal.erase_square(from);
+
+    if (move.is_en_passant()) {
+        occupied_after.erase_square(to - 8 * turn.weight());
+    } else if (move.is_castle()) {
+        Square rook_from =
+            move.flags() == Move::KING_SIDE_CASTLE ? to + 1 : to - 2;
+        Square rook_to =
+            move.flags() == Move::KING_SIDE_CASTLE ? to - 1 : to + 1;
+        occupied_after.erase_square(rook_from);
+        occupied_after.set_square(rook_to);
+        orthogonal.erase_square(rook_from);
+        orthogonal.set_square(rook_to);
+    }
+
+    if (piece == PP::BISHOP || piece == PP::QUEEN)
+        diagonal.set_square(to);
+    if (piece == PP::ROOK || piece == PP::QUEEN)
+        orthogonal.set_square(to);
+
+    bool direct =
+        (piece == PP::PAWN &&
+         (turn == CC::WHITE
+              ? BitBoard(to).north().west() | BitBoard(to).north().east()
+              : BitBoard(to).south().west() | BitBoard(to).south().east())
+             .has_square(square)) ||
+        (piece == PP::KNIGHT && Mask::knights(to).has_square(square)) ||
+        (piece == PP::KING && Mask::kings(to).has_square(square));
+
+    return direct ||
+           (Magic::bishop_attacks(square, occupied_after) & diagonal)
+               .has_square() ||
+           (Magic::rook_attacks(square, occupied_after) & orthogonal)
+               .has_square();
+}
+
+bool Board::gives_check(Move move) const {
+    return gives_check(move, get_bb(turn) | get_bb(turn.opposite()),
+                       get_bb(PP::KING, turn.opposite()).lsb_square());
+}
+
+template <bool Captures, bool KingMoves, bool Checks, bool Promotions,
+          bool Quiets>
+std::vector<Move> Board::get_moves() {
+    constexpr bool GenerateAll =
+        Captures && KingMoves && Checks && Promotions && Quiets;
     std::vector<Move> legal_moves;
 
     Colour opponent = turn.opposite();
@@ -139,23 +197,37 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     BitBoard occupied = us | them;
 
     Square king_sq = get_bb(PP::KING, turn).lsb_square();
+    Square enemy_king_sq = get_bb(PP::KING, opponent).lsb_square();
     BitBoard king_danger = attacked(opponent);
     BitBoard pinned_pieces = pinned(turn, king_sq);
 
-    auto emit_moves = [&legal_moves, them](Square from, BitBoard targets) {
+    auto add_move = [&](Move move, bool selected) {
+        if (selected || (Checks && gives_check(move, occupied, enemy_king_sq)))
+            legal_moves.push_back(move);
+    };
+
+    auto add_moves = [&]<bool IsKing = false>(Square from, BitBoard targets) {
         while (targets.has_square()) {
             Square to = targets.get_square_pop();
             bool capture = them.has_square(to);
-            legal_moves.emplace_back(from, to, Move::create_flags(capture));
+            Move move(from, to, Move::create_flags(capture));
+            bool selected = (IsKing && KingMoves) || (capture && Captures) ||
+                            (!capture && Quiets);
+            add_move(move, selected);
         }
     };
 
     BitBoard king_targets = Mask::kings(king_sq) & ~us & ~king_danger;
-    if constexpr (CapturesOnly) {
-        king_targets &= them;
+    if constexpr (!GenerateAll && !KingMoves && !Checks) {
+        if constexpr (Captures && !Quiets)
+            king_targets &= them;
+        else if constexpr (!Captures && Quiets)
+            king_targets &= ~them;
+        else if constexpr (!Captures && !Quiets)
+            king_targets = BitBoard();
     }
 
-    emit_moves(king_sq, king_targets);
+    add_moves.template operator()<true>(king_sq, king_targets);
 
     BitBoard checkers = attackers(opponent, king_sq);
     int num_checkers = checkers.count();
@@ -170,7 +242,6 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
     BitBoard active_own = num_checkers == 0 ? us : us & ~pinned_pieces;
     int mul = turn.weight();
 
-    // Pawns
     {
         BitBoard pawns = get_bb(PP::PAWN, turn) & active_own;
         while (pawns.has_square()) {
@@ -189,11 +260,13 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
             if (!occupied.has_square(push1_to) &&
                 target_mask.has_square(push1_to)) {
                 if (push1_rel.rank() == 7) { // Promotion rank
-                    for (auto promo : Move::PROMOTION_PIECES) {
-                        legal_moves.emplace_back(from, push1_to, promo);
+                    if constexpr (Promotions || Checks) {
+                        for (auto promo : Move::PROMOTION_PIECES) {
+                            add_move(Move(from, push1_to, promo), Promotions);
+                        }
                     }
-                } else if constexpr (!CapturesOnly) {
-                    legal_moves.emplace_back(from, push1_to, Move::QUIET);
+                } else if constexpr (Quiets || Checks) {
+                    add_move(Move(from, push1_to, Move::QUIET), Quiets);
                 }
             }
 
@@ -204,9 +277,9 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
                 if (!occupied.has_square(push1_to) &&
                     !occupied.has_square(push2_to) &&
                     target_mask.has_square(push2_to)) {
-                    if constexpr (!CapturesOnly) {
-                        legal_moves.emplace_back(from, push2_to,
-                                                 Move::DOUBLE_PAWN_PUSH);
+                    if constexpr (Quiets || Checks) {
+                        add_move(Move(from, push2_to, Move::DOUBLE_PAWN_PUSH),
+                                 Quiets);
                     }
                 }
             }
@@ -220,11 +293,14 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
             while (captures.has_square()) {
                 Square to = captures.get_square_pop();
                 if (from_rel.rank() == 6) {
-                    for (auto promo : Move::PROMOTION_CAPTURE_PIECES) {
-                        legal_moves.emplace_back(from, to, promo);
+                    if constexpr (Captures || Promotions || Checks) {
+                        for (auto promo : Move::PROMOTION_CAPTURE_PIECES) {
+                            add_move(Move(from, to, promo),
+                                     Captures || Promotions);
+                        }
                     }
-                } else {
-                    legal_moves.emplace_back(from, to, Move::CAPTURE);
+                } else if constexpr (Captures || Checks) {
+                    add_move(Move(from, to, Move::CAPTURE), Captures);
                 }
             }
 
@@ -252,8 +328,9 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
                         (Magic::bishop_attacks(king_sq, occupied_after) &
                          (get_bb(PP::BISHOP, opponent) |
                           get_bb(PP::QUEEN, opponent)));
-                    if (!discovered_attackers.has_square()) {
-                        legal_moves.emplace_back(from, ep, Move::EN_PASSANT);
+                    if (!discovered_attackers.has_square() &&
+                        (Captures || Checks)) {
+                        add_move(Move(from, ep, Move::EN_PASSANT), Captures);
                     }
                 }
             }
@@ -280,15 +357,19 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
             }
 
             targets &= ~us & evasion_targets;
-            if constexpr (CapturesOnly) {
-                targets &= them;
+            if constexpr (!GenerateAll && !Checks) {
+                if constexpr (Captures && !Quiets)
+                    targets &= them;
+                else if constexpr (!Captures && Quiets)
+                    targets &= ~them;
+                else if constexpr (!Captures && !Quiets)
+                    targets = BitBoard();
             }
-            emit_moves(from, targets);
+            add_moves(from, targets);
         }
     }
 
-    // Castling
-    if constexpr (!CapturesOnly) {
+    if constexpr (KingMoves || Quiets || Checks) {
         if (num_checkers == 0) {
             auto SQE1 = SQ::E1.flip(turn), SQG1 = SQ::G1.flip(turn),
                  SQC1 = SQ::C1.flip(turn);
@@ -299,14 +380,16 @@ template <bool CapturesOnly> std::vector<Move> Board::get_moves() {
             // King side castling
             if (can_castle[turn.raw() * 2] && occupied.empty(BBF1 | BBG1) &&
                 king_danger.empty(BitBoard(SQE1) | BBF1 | BitBoard(SQG1))) {
-                legal_moves.emplace_back(SQE1, SQG1, Move::KING_SIDE_CASTLE);
+                add_move(Move(SQE1, SQG1, Move::KING_SIDE_CASTLE),
+                         KingMoves || Quiets);
             }
 
             // Queen side castling
             if (can_castle[turn.raw() * 2 + 1] &&
                 occupied.empty(BBB1 | BBC1 | BBD1) &&
                 king_danger.empty(BitBoard(SQE1) | BBD1 | BitBoard(SQC1))) {
-                legal_moves.emplace_back(SQE1, SQC1, Move::QUEEN_SIDE_CASTLE);
+                add_move(Move(SQE1, SQC1, Move::QUEEN_SIDE_CASTLE),
+                         KingMoves || Quiets);
             }
         }
     }
@@ -324,5 +407,11 @@ bool Board::is_attacked(Colour by_colour, BitBoard bb) const {
     return attackers(by_colour.opposite(), bb.lsb_square()).has_square();
 }
 
-template std::vector<Move> Board::get_moves<true>();
-template std::vector<Move> Board::get_moves<false>();
+template std::vector<Move> Board::get_moves<true, true, true, true, true>();
+template std::vector<Move> Board::get_moves<true, false, false, true, false>();
+template std::vector<Move> Board::get_moves<true, false, false, false, false>();
+template std::vector<Move> Board::get_moves<false, true, false, false, false>();
+template std::vector<Move> Board::get_moves<false, false, false, true, false>();
+template std::vector<Move> Board::get_moves<false, false, true, false, false>();
+template std::vector<Move> Board::get_moves<false, false, false, false, true>();
+template std::vector<Move> Board::get_moves<true, false, true, true, false>();

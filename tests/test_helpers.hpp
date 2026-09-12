@@ -46,6 +46,36 @@ constexpr std::string_view EN_PASSANT_EXPOSES_ROOK =
 constexpr std::string_view CASTLING_THROUGH_QUEEN_ATTACK =
     "4k3/8/q7/8/8/8/8/4K2R w K - 0 1";
 
+constexpr std::string_view MOVE_GEN_CATEGORIES =
+    "4k3/P6r/8/8/8/8/7p/R3K2R w KQ - 0 1";
+constexpr std::string_view DIRECT_ROOK_CHECK = "4k3/8/8/8/8/8/8/R3K3 w - - 0 1";
+constexpr std::string_view DISCOVERED_ROOK_CHECK =
+    "4k3/8/8/8/8/8/4B3/4R1K1 w - - 0 1";
+constexpr std::string_view LEGAL_DISCOVERED_ROOK_CHECK =
+    "4k3/8/8/8/8/4B3/4R3/6K1 w - - 0 1";
+constexpr std::string_view PROMOTION_CHECKS = "7k/6P1/8/8/8/8/8/K7 w - - 0 1";
+constexpr std::string_view LEGAL_PROMOTIONS = "6k1/6P1/8/8/8/8/8/K7 w - - 0 1";
+constexpr std::string_view PROMOTION_CAPTURES =
+    "1r2k2r/P6P/8/8/8/8/8/4K3 w - - 0 1";
+constexpr std::string_view LEGAL_CASTLING = "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1";
+
+inline const std::vector<std::string_view> MOVE_GEN_FENS = {
+    START_POSITION,
+    KIWIPETE,
+    MOVE_GEN_CATEGORIES,
+    DIRECT_ROOK_CHECK,
+    LEGAL_DISCOVERED_ROOK_CHECK,
+    LEGAL_PROMOTIONS,
+    PROMOTION_CAPTURES,
+    LEGAL_CASTLING,
+    ORTHOGONAL_PIN,
+    DIAGONAL_PIN,
+    DOUBLE_CHECK,
+    KING_XRAY_CAPTURE,
+    EN_PASSANT_CHECK_EVASION,
+    EN_PASSANT_EXPOSES_ROOK,
+};
+
 constexpr std::string_view EMPTY_BOARD = "8/8/8/8/8/8/8/8 w - - 0 1";
 constexpr std::string_view KINGS_ONLY = "k7/8/8/8/8/8/8/7K b - - 15 40";
 
