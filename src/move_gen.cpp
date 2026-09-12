@@ -95,23 +95,29 @@ BitBoard Board::attacked(Colour attacker) const {
 
 BitBoard Board::attackers(Colour attacker, Square square) const {
     BitBoard occupied = get_bb(CC::WHITE) | get_bb(CC::BLACK);
+    return attackers(attacker, square, occupied);
+}
+
+BitBoard Board::attackers(Colour attacker, Square square, BitBoard occupied,
+                          BitBoard excluded) const {
+    const BitBoard ours = get_bb(attacker) & occupied & ~excluded;
     BitBoard target = square;
     BitBoard attackers = 0;
 
     if (attacker == CC::WHITE) {
         attackers |= (target.south().west() | target.south().east()) &
-                     get_bb(PP::PAWN, attacker);
+                     get_bb(PP::PAWN) & ours;
     } else {
         attackers |= (target.north().west() | target.north().east()) &
-                     get_bb(PP::PAWN, attacker);
+                     get_bb(PP::PAWN) & ours;
     }
 
-    attackers |= Mask::knights(square) & get_bb(PP::KNIGHT, attacker);
-    attackers |= Mask::kings(square) & get_bb(PP::KING, attacker);
+    attackers |= Mask::knights(square) & get_bb(PP::KNIGHT) & ours;
+    attackers |= Mask::kings(square) & get_bb(PP::KING) & ours;
     attackers |= Magic::bishop_attacks(square, occupied) &
-                 (get_bb(PP::BISHOP, attacker) | get_bb(PP::QUEEN, attacker));
+                 (get_bb(PP::BISHOP) | get_bb(PP::QUEEN)) & ours;
     attackers |= Magic::rook_attacks(square, occupied) &
-                 (get_bb(PP::ROOK, attacker) | get_bb(PP::QUEEN, attacker));
+                 (get_bb(PP::ROOK) | get_bb(PP::QUEEN)) & ours;
 
     return attackers;
 }

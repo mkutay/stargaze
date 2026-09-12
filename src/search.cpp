@@ -2,14 +2,67 @@
 
 #include "stargaze/search.hpp"
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <optional>
 
-void Search::halve_history() {
-    for (auto &from : history_table) {
-        for (int &score : from)
-            score /= 2;
+int Search::history_score(Move move) const {
+    const Piece piece = *board->get_piece(move.from());
+    return history_table[board->get_turn().raw()][piece.raw()][move.to().raw()];
+}
+
+void Search::update_history(Move move, int bonus) {
+    const Piece piece = *board->get_piece(move.from());
+    int &history =
+        history_table[board->get_turn().raw()][piece.raw()][move.to().raw()];
+    bonus = std::clamp(bonus, -HISTORY_MAX, HISTORY_MAX);
+    history += bonus - history * std::abs(bonus) / HISTORY_MAX;
+}
+
+void Search::record_cutoff(Move move, uint16_t ply, uint16_t depth) {
+    if (ply >= killers.size())
+        killers.resize(ply + 1, std::array<Move, 2>{});
+    if (killers[ply][0] != move) {
+        killers[ply][1] = killers[ply][0];
+        killers[ply][0] = move;
     }
+
+    update_history(move, 32 * depth * depth);
+}
+
+void Search::halve_history() {
+    for (auto &colour : history_table) {
+        for (auto &piece : colour) {
+            for (int &score : piece)
+                score /= 2;
+        }
+    }
+}
+
+int Search::lmr_reduction(uint16_t depth, size_t move_number, int history,
+                          bool pv_node) const {
+    static const auto reductions = [] {
+        std::array<std::array<uint8_t, MovePicker::MAX_MOVES + 1>,
+                   MAX_SEARCH_DEPTH + 1>
+            table{};
+        for (size_t d = 3; d <= MAX_SEARCH_DEPTH; d++) {
+            for (size_t move = 4; move <= MovePicker::MAX_MOVES; move++) {
+                table[d][move] = static_cast<uint8_t>(
+                    1 + std::log(static_cast<double>(d)) *
+                            std::log(static_cast<double>(move)) / 2.5);
+            }
+        }
+        return table;
+    }();
+
+    int reduction = reductions[std::min<size_t>(depth, MAX_SEARCH_DEPTH)]
+                              [std::min(move_number, MovePicker::MAX_MOVES)];
+    reduction -= pv_node;
+    reduction -= history > HISTORY_MAX / 4;
+    reduction += history < -HISTORY_MAX / 4;
+    return std::clamp(reduction, 0, static_cast<int>(depth) - 1);
 }
 
 std::optional<Move> Search::get_fallback_move() {
@@ -33,6 +86,7 @@ SearchInfo Search::iterative_deepening(
     deadline_ms.store(now_ms + time_limit_ms, std::memory_order_relaxed);
 
     nodes_searched = 0;
+    stop_check_count = 0;
     stop_reached = false;
     killers.assign(MAX_SEARCH_DEPTH, std::array<Move, 2>{});
     halve_history();
@@ -134,7 +188,7 @@ bool Search::should_stop() {
     if (stop_flag.load(std::memory_order_relaxed))
         return stop_reached = true;
 
-    if (!(nodes_searched & 0x3FF)) { // check every 1024 nodes
+    if (!(stop_check_count++ & 0x3FF)) {
         const auto current_ms =
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 Clock::now().time_since_epoch())
@@ -243,32 +297,33 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
         pv_move = last_pv.moves[ply];
     }
 
-    std::vector<Move> moves = board->get_moves();
-
-    if (ply == 0 && !search_moves.empty()) {
-        std::erase_if(moves, [this](Move move) {
-            return std::find(search_moves.begin(), search_moves.end(), move) ==
-                   search_moves.end();
-        });
-    }
-
-    std::vector<int> scores;
-    score_moves(moves, scores, pv_move, tt_move, ply);
+    const std::vector<Move> *allowed_moves =
+        ply == 0 && !search_moves.empty() ? &search_moves : nullptr;
+    MovePicker move_picker(*this, false, pv_move, tt_move, ply, allowed_moves);
 
     bool found_pv = false;
     Bound bound = Bound::UPPER;
+    size_t moves_searched = 0;
+    std::optional<Move> first_move;
+    std::array<Move, MovePicker::MAX_MOVES> searched_quiets{};
+    size_t quiets_searched = 0;
 
-    for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
-        pick_next_move(moves, scores, i);
+    while (!should_stop()) {
+        const auto picked = move_picker.next();
+        if (!picked)
+            break;
 
-        Move move = moves[i];
+        Move move = picked->move;
+        if (!first_move)
+            first_move = move;
         bool is_quiet = move.is_quiet();
+        int quiet_history = is_quiet ? history_score(move) : 0;
 
         // Futility Pruning
         if (depth_left <= 2 && is_quiet && !in_check &&
             !static_eval.is_mate()) {
             int fp_margin = depth_left * PAWN_VALUE * 2;
-            if (static_eval + fp_margin < alpha) {
+            if (static_eval + fp_margin < alpha && !board->gives_check(move)) {
                 continue;
             }
         }
@@ -287,10 +342,12 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
                 -beta, -alpha, depth_left - 1, ply + 1, &line, next_follow_pv);
         } else {
             // Late Move Reductions (LMR)
-            if (depth_left >= 3 && i >= 3 && is_quiet && !in_check &&
-                !gives_check) {
-                int reduction = 2 + (i > 6) + (depth_left > 6);
-                int reduced_depth = std::max(0, depth_left - reduction);
+            if (depth_left >= 3 && moves_searched >= 3 && is_quiet &&
+                !in_check && !gives_check) {
+                const int reduction = lmr_reduction(
+                    depth_left, moves_searched + 1, quiet_history, is_pv_node);
+                const int reduced_depth =
+                    std::max(0, static_cast<int>(depth_left) - 1 - reduction);
 
                 move_score = -alpha_beta<AllowRepetition>(
                     -alpha - 1, -alpha, reduced_depth, ply + 1, &line,
@@ -326,6 +383,8 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
         if (should_stop())
             break;
 
+        moves_searched++;
+
         if (move_score > alpha) {
             alpha = move_score;
             found_pv = true;
@@ -339,15 +398,22 @@ Score Search::alpha_beta(Score alpha, Score beta, uint16_t depth_left,
 
         if (move_score >= beta) {
             bound = Bound::LOWER;
-            if (is_quiet)
+            if (is_quiet) {
+                const int malus = -16 * depth_left * depth_left;
+                for (size_t i = 0; i < quiets_searched; i++)
+                    update_history(searched_quiets[i], malus);
                 record_cutoff(move, ply, depth_left);
+            }
             break;
         }
+
+        if (is_quiet)
+            searched_quiets[quiets_searched++] = move;
     }
 
     // Store best move (or first legal move if no improvement).
-    if (pline->moves.empty() && !moves.empty()) {
-        pline->moves.emplace_back(moves.front());
+    if (pline->moves.empty() && first_move) {
+        pline->moves.emplace_back(*first_move);
     }
 
     if (!pline->moves.empty()) {
@@ -387,40 +453,44 @@ Score Search::quiescence(Score alpha, Score beta, uint16_t ply) {
             : board->get_halfmove_clock() >= 100 ||
                   board->is_insufficient_material();
     if (is_draw) {
-        if (in_check && !board->has_legal_move())
-            return Score::mated(ply);
-        return 0;
+        return in_check && !board->has_legal_move() ? Score::mated(ply) : 0;
     }
 
     Score stand_pat = board->evaluate();
     if (!in_check) {
-        if (stand_pat >= beta)
-            return stand_pat;
+        if (stand_pat >= beta) {
+            return board->has_legal_move() ? stand_pat : 0;
+        }
         alpha = std::max(alpha, stand_pat);
     }
 
-    std::vector<Move> moves =
-        in_check ? board->get_moves()
-                 : board->get_moves<true, false, false, true, false>();
-    std::vector<int> scores;
-    score_moves(moves, scores);
+    MovePicker move_picker(*this, !in_check);
+    if (move_picker.empty()) {
+        if (in_check)
+            return Score::mated(ply);
+        if (!board->has_legal_move())
+            return 0;
+    }
 
-    for (size_t i = 0; i < moves.size() && !should_stop(); i++) {
-        pick_next_move(moves, scores, i);
+    while (!should_stop()) {
+        const auto picked = move_picker.next();
+        if (!picked)
+            break;
 
-        Move move = moves[i];
-        // Delta Pruning
+        Move move = picked->move;
         if (!in_check && !move.is_promotion()) {
             int gain = move.is_en_passant()
                            ? Eval::value(Piece::PAWN)
                            : Eval::value(*board->get_piece(move.to()));
-            if (stand_pat + gain + DELTA_PRUNING < alpha)
+            const bool fails_delta = stand_pat + gain + DELTA_PRUNING < alpha;
+            if ((picked->loses_exchange || fails_delta) &&
+                !board->gives_check(move))
                 continue;
         }
 
         board->make_move(move);
         Score score =
-            -quiescence<AllowRepetition, CountNodes>(-beta, -alpha, ply + 1);
+            -quiescence<AllowRepetition, true>(-beta, -alpha, ply + 1);
         board->undo_move();
 
         if (should_stop())
@@ -431,9 +501,6 @@ Score Search::quiescence(Score alpha, Score beta, uint16_t ply) {
 
         alpha = std::max(alpha, score);
     }
-
-    if (in_check && moves.empty())
-        return Score::mated(ply);
 
     return alpha;
 }

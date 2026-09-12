@@ -13,7 +13,11 @@
 #include <string_view>
 #include <vector>
 
+class MovePicker;
+
 class Board {
+    friend class MovePicker;
+
     std::array<BitBoard, 6> piece_bbs;
     std::array<BitBoard, 2> colour_bbs;
     std::vector<Move> moves;
@@ -125,6 +129,8 @@ class Board {
      * Returns the pieces of the given colour attacking a square.
      */
     BitBoard attackers(Colour attacker, Square square) const;
+    BitBoard attackers(Colour attacker, Square square, BitBoard occupied,
+                       BitBoard excluded = {}) const;
 
     /**
      * Returns the squares that can capture or block a lone checker.

@@ -2,6 +2,7 @@
 #include "stargaze/board.hpp"
 #include "stargaze/eval.hpp"
 #include "stargaze/move.hpp"
+#include "stargaze/move_picker.hpp"
 #include "stargaze/score.hpp"
 #include "stargaze/tt.hpp"
 #include <array>
@@ -10,6 +11,7 @@
 #include <chrono>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <vector>
 
 struct PVLine {
@@ -31,11 +33,14 @@ struct SearchInfo {
 };
 
 class Search {
+    friend class MovePicker;
+
   public:
     constexpr static const uint16_t MAX_SEARCH_DEPTH = 64;
 
   private:
     constexpr static const int PAWN_VALUE = Eval::value(Piece::PAWN);
+    constexpr static const int HISTORY_MAX = 16384;
 
     constexpr static const Score ALPHA_START = -Score::INFINITY_SCORE;
     constexpr static const Score BETA_START = Score::INFINITY_SCORE;
@@ -48,19 +53,13 @@ class Search {
 
     constexpr static const int DELTA_PRUNING = PAWN_VALUE * 2;
 
-    constexpr static const int PV_MOVE_SCORE = 200000;
-    constexpr static const int TT_MOVE_SCORE = 100000;
-    constexpr static const int PROMOTION_SCORE = 90000;
-    constexpr static const int CAPTURE_SCORE_BASE = 70000;
-    constexpr static const int CASTLE_SCORE = 60000;
-    constexpr static const std::array<int, 2> KILLER_SCORES = {50000, 40000};
-
     using Clock = std::chrono::steady_clock;
 
     bool stop_reached = false;
     std::atomic<int64_t> deadline_ms{std::numeric_limits<int64_t>::max()};
     uint64_t node_limit = std::numeric_limits<uint64_t>::max();
     uint64_t nodes_searched;
+    uint32_t stop_check_count = 0;
     Board *board;
     std::chrono::time_point<Clock> start_time;
     TT tt;
@@ -70,21 +69,16 @@ class Search {
     std::vector<std::array<Move, 2>> killers;
     // searchmoves as defined by UCI protocol
     std::vector<Move> search_moves;
-    std::array<std::array<int, 64>, 64> history_table{};
+    std::array<std::array<std::array<int, 64>, 6>, 2> history_table{};
 
     template <bool AllowRepetition, bool CountNodes = true>
     Score quiescence(Score alpha, Score beta, uint16_t ply);
     bool should_stop();
-    int score_move(Move move, std::optional<Move> pv_move = std::nullopt,
-                   std::optional<Move> tt_move = std::nullopt,
-                   std::optional<uint16_t> ply = std::nullopt) const;
-    void score_moves(const std::vector<Move> &moves, std::vector<int> &scores,
-                     std::optional<Move> pv_move = std::nullopt,
-                     std::optional<Move> tt_move = std::nullopt,
-                     std::optional<uint16_t> ply = std::nullopt) const;
-    void pick_next_move(std::vector<Move> &moves, std::vector<int> &scores,
-                        size_t index) const;
+    int history_score(Move move) const;
+    void update_history(Move move, int bonus);
     void record_cutoff(Move move, uint16_t ply, uint16_t depth);
+    int lmr_reduction(uint16_t depth, size_t move_number, int history,
+                      bool pv_node) const;
     template <bool AllowRepetition>
     Score alpha_beta(Score alpha, Score beta, uint16_t depth_left, uint16_t ply,
                      PVLine *pline, bool follow_pv);

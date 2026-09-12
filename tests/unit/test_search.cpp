@@ -3,6 +3,7 @@
 #include "stargaze/score.hpp"
 #include "stargaze/search.hpp"
 #include "test_helpers.hpp"
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 
@@ -63,6 +64,39 @@ TEST_SUITE("search") {
             search.iterative_deepening(1, std::numeric_limits<uint32_t>::max());
         CHECK(result.score.raw() < Score::INFINITY_SCORE);
         CHECK(result.score.raw() > -Score::INFINITY_SCORE);
+    }
+
+    TEST_CASE("quiescence detects horizon stalemate") {
+        Board board("k7/8/2K5/2Q5/8/8/8/8 w - - 0 1");
+        const auto moves = board.get_moves();
+        const auto stalemate =
+            std::find_if(moves.begin(), moves.end(),
+                         [](Move move) { return move.to_string() == "c5b6"; });
+        REQUIRE(stalemate != moves.end());
+
+        Search search(&board);
+        search.resize_tt(1);
+        search.set_limits(std::numeric_limits<uint64_t>::max(), {*stalemate});
+        const SearchInfo result =
+            search.iterative_deepening(1, std::numeric_limits<uint32_t>::max());
+        CHECK(result.score.is_draw());
+    }
+
+    TEST_CASE("quiescence work obeys the node limit") {
+        Board board("3r3k/8/8/8/3Q4/8/8/K7 w - - 0 1");
+        const auto moves = board.get_moves();
+        const auto quiet =
+            std::find_if(moves.begin(), moves.end(),
+                         [](Move move) { return move.to_string() == "a1a2"; });
+        REQUIRE(quiet != moves.end());
+
+        Search search(&board);
+        search.resize_tt(1);
+        search.set_limits(3, {*quiet});
+        const SearchInfo result =
+            search.iterative_deepening(1, std::numeric_limits<uint32_t>::max());
+        CHECK(result.stopped);
+        CHECK(result.nodes == 3);
     }
 
     TEST_CASE("transposition scores do not cross halfmove contexts") {
