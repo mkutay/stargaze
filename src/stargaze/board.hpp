@@ -60,10 +60,10 @@ class Board {
         std::array<bool, 4> can_castle;
         std::optional<Square> ep_square;
         uint8_t halfmove_clock;
+        uint64_t hash;
     };
 
     std::vector<UndoInfo> history;
-    std::vector<uint64_t> hash_history;
 
     BitBoard &get_bb(Piece type);
     BitBoard get_bb(Piece type) const;
@@ -113,18 +113,6 @@ class Board {
      * and testing.
      */
     void check_state_consistency() const;
-
-    /**
-     * Apply a move to the board, updating the board state accordingly. This
-     * includes updating the pieces, castling rights, and move history.
-     *
-     * Note that we assume the move is valid and legal. That is, we don't check
-     * if the move is actually possible, such as moving a piece that isn't
-     * there, or moving to a square occupied by your own piece, or moving into
-     * check. We also don't check if the move is legal in terms of the rules of
-     * chess, such as castling through check or en passant when not possible.
-     */
-    template <bool Undo> void apply_move(Move move);
 
     /**
      * Returns a bitboard of all squares attacked by the given colour.

@@ -12,7 +12,6 @@ Board::Board(std::string_view fen)
     can_castle.fill(false);
     moves.clear();
     history.clear();
-    hash_history.clear();
 
     int r = 7, f = 0;
     size_t i = 0;
@@ -89,7 +88,6 @@ Board::Board(std::string_view fen)
 
     initialise_eval(mg_score, eg_score, game_phase);
     current_hash = calculate_hash();
-    hash_history.emplace_back(current_hash);
 }
 
 std::string Board::fen() const {

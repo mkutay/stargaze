@@ -29,59 +29,31 @@ uint64_t Board::perft(int depth) {
     return nodes;
 }
 
-template <bool Undo> void Board::apply_move(Move move) {
+void Board::make_move(Move move) {
     auto from = move.from();
     auto to = move.to();
     auto flags = move.flags();
 
-    UndoInfo undo_info;
-    if constexpr (Undo) {
-        undo_info = history.back();
-        history.pop_back();
-        moves.pop_back();
-        hash_history.pop_back();
-
-        turn = turn.opposite();
-        current_hash ^= Zobrist::black_move();
-    }
-
-    Piece moving_piece;
+    Piece moving_piece = *get_piece(from);
     std::optional<Piece> captured_piece = std::nullopt;
-    if constexpr (Undo) {
-        moving_piece = undo_info.moving_piece;
-        captured_piece = undo_info.captured_piece;
-    } else {
-        moving_piece = *get_piece(from);
-        if (move.is_capture()) {
-            captured_piece = move.is_en_passant() ? PP::PAWN : *get_piece(to);
-        }
-        history.emplace_back(moving_piece, captured_piece, can_castle,
-                             ep_square, halfmove_clock);
+    if (move.is_capture()) {
+        captured_piece = move.is_en_passant() ? PP::PAWN : *get_piece(to);
     }
+    history.emplace_back(moving_piece, captured_piece, can_castle, ep_square,
+                         halfmove_clock, current_hash);
 
     std::optional<Square> new_ep = std::nullopt;
-    if constexpr (Undo) {
-        new_ep = undo_info.ep_square;
-    } else {
+    if (move.is_double_pawn_push()) {
         int mul = turn.weight();
-        if (move.is_double_pawn_push())
-            new_ep = std::optional<Square>{to - 8 * mul};
+        new_ep = std::optional<Square>{to - 8 * mul};
     }
 
-    if constexpr (Undo) {
-        halfmove_clock = undo_info.halfmove_clock;
+    if (moving_piece == PP::PAWN || move.is_capture())
+        halfmove_clock = 0;
+    else
+        halfmove_clock++;
 
-        // Decrement if black
-        fullmove_number -= turn.raw();
-    } else {
-        if (moving_piece == PP::PAWN || move.is_capture())
-            halfmove_clock = 0;
-        else
-            halfmove_clock++;
-
-        // Increment if black.
-        fullmove_number += turn.raw();
-    }
+    fullmove_number += turn.raw();
 
     auto ep_key = [](std::optional<Square> sq) -> uint64_t {
         return sq
@@ -90,28 +62,23 @@ template <bool Undo> void Board::apply_move(Move move) {
             .value_or(0ULL);
     };
 
-    // XOR out the old EP file key, update ep_square, then XOR in the new key.
     current_hash ^= ep_key(ep_square) ^ ep_key(new_ep);
     ep_square = new_ep;
 
     std::array<bool, 4> old_castle = can_castle;
 
-    if constexpr (Undo) {
-        can_castle = undo_info.can_castle;
-    } else {
-        if (moving_piece == PP::KING) {
-            can_castle[turn.raw() * 2] = can_castle[turn.raw() * 2 + 1] = false;
-        }
-
-        if (from == SQ::A1 || to == SQ::A1)
-            can_castle[1] = false; // white queen-side
-        if (from == SQ::H1 || to == SQ::H1)
-            can_castle[0] = false; // white king-side
-        if (from == SQ::A8 || to == SQ::A8)
-            can_castle[3] = false; // black queen-side
-        if (from == SQ::H8 || to == SQ::H8)
-            can_castle[2] = false; // black king-side
+    if (moving_piece == PP::KING) {
+        can_castle[turn.raw() * 2] = can_castle[turn.raw() * 2 + 1] = false;
     }
+
+    if (from == SQ::A1 || to == SQ::A1)
+        can_castle[1] = false; // white queen-side
+    if (from == SQ::H1 || to == SQ::H1)
+        can_castle[0] = false; // white king-side
+    if (from == SQ::A8 || to == SQ::A8)
+        can_castle[3] = false; // black queen-side
+    if (from == SQ::H8 || to == SQ::H8)
+        can_castle[2] = false; // black king-side
 
     for (size_t i = 0; i < 4; ++i) {
         if (old_castle[i] != can_castle[i]) {
@@ -120,92 +87,129 @@ template <bool Undo> void Board::apply_move(Move move) {
     }
 
     Colour opponent = turn.opposite();
-    Square src = Undo ? to : from;
-    Square dst = Undo ? from : to;
 
     switch (flags) {
     case Move::QUIET:
     case Move::DOUBLE_PAWN_PUSH:
-        move_piece(moving_piece, turn, src, dst);
+        move_piece(moving_piece, turn, from, to);
         break;
     case Move::KING_SIDE_CASTLE:
-        move_piece(PP::KING, turn, src, dst);
-        move_piece(PP::ROOK, turn, Undo ? to - 1 : to + 1,
-                   Undo ? to + 1 : to - 1);
+        move_piece(PP::KING, turn, from, to);
+        move_piece(PP::ROOK, turn, to + 1, to - 1);
         break;
     case Move::QUEEN_SIDE_CASTLE:
-        move_piece(PP::KING, turn, src, dst);
-        move_piece(PP::ROOK, turn, Undo ? to + 1 : to - 2,
-                   Undo ? to - 2 : to + 1);
+        move_piece(PP::KING, turn, from, to);
+        move_piece(PP::ROOK, turn, to - 2, to + 1);
         break;
     case Move::CAPTURE:
-        if constexpr (!Undo) {
-            clear_piece(*captured_piece, opponent, to);
-        }
-        move_piece(moving_piece, turn, src, dst);
-        if constexpr (Undo) {
-            add_piece(*captured_piece, opponent, to);
-        }
+        clear_piece(*captured_piece, opponent, to);
+        move_piece(moving_piece, turn, from, to);
         break;
     case Move::EN_PASSANT: {
         auto addition = turn.raw() * 16 - 8;
         Square captured_sq = to + addition;
-        if constexpr (!Undo) {
-            clear_piece(PP::PAWN, opponent, captured_sq);
-        }
-        move_piece(PP::PAWN, turn, src, dst);
-        if constexpr (Undo) {
-            add_piece(PP::PAWN, opponent, captured_sq);
-        }
+        clear_piece(PP::PAWN, opponent, captured_sq);
+        move_piece(PP::PAWN, turn, from, to);
         break;
     }
     case Move::KNIGHT_PROMOTION_CAPTURE:
     case Move::BISHOP_PROMOTION_CAPTURE:
     case Move::ROOK_PROMOTION_CAPTURE:
     case Move::QUEEN_PROMOTION_CAPTURE:
-        if constexpr (!Undo) {
-            clear_piece(*captured_piece, opponent, to);
-            clear_piece(PP::PAWN, turn, from);
-            add_piece(move.promotion_piece(), turn, to);
-        } else {
-            clear_piece(move.promotion_piece(), turn, to);
-            add_piece(*captured_piece, opponent, to);
-            add_piece(PP::PAWN, turn, from);
-        }
+        clear_piece(*captured_piece, opponent, to);
+        clear_piece(PP::PAWN, turn, from);
+        add_piece(move.promotion_piece(), turn, to);
         break;
     case Move::KNIGHT_PROMOTION:
     case Move::BISHOP_PROMOTION:
     case Move::ROOK_PROMOTION:
     case Move::QUEEN_PROMOTION:
-        if constexpr (!Undo) {
-            clear_piece(PP::PAWN, turn, from);
-            add_piece(move.promotion_piece(), turn, to);
-        } else {
-            clear_piece(move.promotion_piece(), turn, to);
-            add_piece(PP::PAWN, turn, from);
-        }
+        clear_piece(PP::PAWN, turn, from);
+        add_piece(move.promotion_piece(), turn, to);
         break;
     }
 
-    if constexpr (!Undo) {
-        moves.emplace_back(move);
-        current_hash ^= Zobrist::black_move();
-        turn = opponent;
-        hash_history.emplace_back(current_hash);
-    }
+    moves.emplace_back(move);
+    current_hash ^= Zobrist::black_move();
+    turn = opponent;
 
 #ifdef VERIFY_CONSISTENCY
     check_state_consistency();
 #endif
 }
 
-void Board::make_move(Move move) { apply_move<false>(move); }
+void Board::undo_move() {
+    Move move = moves.back();
+    moves.pop_back();
 
-void Board::undo_move() { apply_move<true>(moves.back()); }
+    UndoInfo undo_info = history.back();
+    history.pop_back();
+
+    auto from = move.from();
+    auto to = move.to();
+    auto flags = move.flags();
+
+    turn = turn.opposite();
+    Piece moving_piece = undo_info.moving_piece;
+    std::optional<Piece> captured_piece = undo_info.captured_piece;
+    ep_square = undo_info.ep_square;
+    halfmove_clock = undo_info.halfmove_clock;
+    fullmove_number -= turn.raw();
+    can_castle = undo_info.can_castle;
+
+    Colour opponent = turn.opposite();
+
+    switch (flags) {
+    case Move::QUIET:
+    case Move::DOUBLE_PAWN_PUSH:
+        move_piece(moving_piece, turn, to, from);
+        break;
+    case Move::KING_SIDE_CASTLE:
+        move_piece(PP::KING, turn, to, from);
+        move_piece(PP::ROOK, turn, to - 1, to + 1);
+        break;
+    case Move::QUEEN_SIDE_CASTLE:
+        move_piece(PP::KING, turn, to, from);
+        move_piece(PP::ROOK, turn, to + 1, to - 2);
+        break;
+    case Move::CAPTURE:
+        move_piece(moving_piece, turn, to, from);
+        add_piece(*captured_piece, opponent, to);
+        break;
+    case Move::EN_PASSANT: {
+        auto addition = turn.raw() * 16 - 8;
+        Square captured_sq = to + addition;
+        move_piece(PP::PAWN, turn, to, from);
+        add_piece(PP::PAWN, opponent, captured_sq);
+        break;
+    }
+    case Move::KNIGHT_PROMOTION_CAPTURE:
+    case Move::BISHOP_PROMOTION_CAPTURE:
+    case Move::ROOK_PROMOTION_CAPTURE:
+    case Move::QUEEN_PROMOTION_CAPTURE:
+        clear_piece(move.promotion_piece(), turn, to);
+        add_piece(*captured_piece, opponent, to);
+        add_piece(PP::PAWN, turn, from);
+        break;
+    case Move::KNIGHT_PROMOTION:
+    case Move::BISHOP_PROMOTION:
+    case Move::ROOK_PROMOTION:
+    case Move::QUEEN_PROMOTION:
+        clear_piece(move.promotion_piece(), turn, to);
+        add_piece(PP::PAWN, turn, from);
+        break;
+    }
+
+    current_hash = undo_info.hash;
+
+#ifdef VERIFY_CONSISTENCY
+    check_state_consistency();
+#endif
+}
 
 void Board::make_null_move() {
     history.emplace_back(PP::PAWN, std::nullopt, can_castle, ep_square,
-                         halfmove_clock);
+                         halfmove_clock, current_hash);
 
     if (ep_square.has_value()) {
         current_hash ^= Zobrist::en_passant(ep_square.value());
@@ -225,14 +229,10 @@ void Board::undo_null_move() {
     history.pop_back();
 
     turn = turn.opposite();
-    current_hash ^= Zobrist::black_move();
-
     can_castle = undo_info.can_castle;
     ep_square = undo_info.ep_square;
     halfmove_clock = undo_info.halfmove_clock;
-    if (ep_square.has_value()) {
-        current_hash ^= Zobrist::en_passant(*ep_square);
-    }
+    current_hash = undo_info.hash;
 
 #ifdef VERIFY_CONSISTENCY
     check_state_consistency();
@@ -294,10 +294,10 @@ bool Board::is_draw() const {
         return true;
 
     int count = 0;
-    int limit = hash_history.size() - 1;
+    int limit = history.size();
     int start = std::max(0, limit - halfmove_clock);
     for (int i = limit - 2; i >= start; i -= 2) {
-        if (hash_history[i] == current_hash) {
+        if (history[i].hash == current_hash) {
             if (++count >= 2)
                 return true;
         }
@@ -306,10 +306,10 @@ bool Board::is_draw() const {
 }
 
 bool Board::is_repetition() const {
-    int limit = hash_history.size() - 1;
+    int limit = history.size();
     auto start = std::max(0, limit - halfmove_clock);
     for (int i = limit - 2; i >= start; i -= 2) {
-        if (hash_history[i] == current_hash) {
+        if (history[i].hash == current_hash) {
             return true;
         }
     }
