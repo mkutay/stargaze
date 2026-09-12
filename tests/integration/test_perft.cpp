@@ -6,7 +6,7 @@
 
 TEST_SUITE("integration") {
     TEST_CASE("Perft suite validation") {
-        for (const auto &[name, fen, expected_nodes] : test::PERFT_TEST_CASES) {
+        for (const auto &[name, fen, expected_nodes] : test::POSITIONS) {
             Board board(fen);
             for (size_t i = 0; i < expected_nodes.size(); ++i) {
                 int depth = static_cast<int>(i + 1);

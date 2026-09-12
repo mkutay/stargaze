@@ -27,7 +27,6 @@ constexpr std::string_view SCHOLARS_MATE =
 constexpr std::string_view CRASHING_POSITION =
     "4R3/8/P1N4P/8/8/3pk1K1/ppr2R2/6Q1 w - - 0 1";
 
-// Move-generation edge cases.
 constexpr std::string_view ORTHOGONAL_PIN = "4r1k1/8/8/8/8/8/4R3/4K3 w - - 0 1";
 constexpr std::string_view DIAGONAL_PIN = "6k1/8/7b/8/8/8/3B4/2K5 w - - 0 1";
 constexpr std::string_view PINNED_PAWN_PUSH =
@@ -47,17 +46,14 @@ constexpr std::string_view EN_PASSANT_EXPOSES_ROOK =
 constexpr std::string_view CASTLING_THROUGH_QUEEN_ATTACK =
     "4k3/8/q7/8/8/8/8/4K2R w K - 0 1";
 
-// Endgames / Minimal positions.
 constexpr std::string_view EMPTY_BOARD = "8/8/8/8/8/8/8/8 w - - 0 1";
 constexpr std::string_view KINGS_ONLY = "k7/8/8/8/8/8/8/7K b - - 15 40";
 
-// Group for round-trip serialization tests.
 inline const std::vector<std::string_view> SERIALIZATION_FENS = {
     START_POSITION,       KIWIPETE,       CPW_POSITION_3,
     CPW_POSITION_4,       CPW_POSITION_5, CPW_POSITION_6,
     CASTLING_EP_POSITION, EMPTY_BOARD,    KINGS_ONLY};
 
-// Group for evaluation symmetry tests.
 inline const std::vector<std::string_view> EVAL_SYMMETRY_FENS = {
     START_POSITION,
     KIWIPETE,
@@ -68,13 +64,13 @@ inline const std::vector<std::string_view> EVAL_SYMMETRY_FENS = {
     KINGS_ONLY};
 
 // Perft test cases (expected node counts for depth 1, 2, ..., N).
-struct PerftTestCase {
+struct Position {
     std::string_view name;
     std::string_view fen;
     std::vector<uint64_t> expected_nodes;
 };
 
-inline const std::vector<PerftTestCase> PERFT_TEST_CASES = {
+inline const std::vector<Position> POSITIONS = {
     {"start position", START_POSITION, {20, 400, 8902, 197281}},
     {"kiwipete", KIWIPETE, {48, 2039, 97862}},
     {"CPW position 3", CPW_POSITION_3, {14, 191, 2812, 43238}},
