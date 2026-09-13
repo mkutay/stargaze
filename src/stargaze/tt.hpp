@@ -1,7 +1,9 @@
 #pragma once
 #include "stargaze/move.hpp"
 #include "stargaze/score.hpp"
+#include <array>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 enum class Bound : uint8_t {
@@ -14,25 +16,31 @@ enum class Bound : uint8_t {
 struct TTEntry {
     uint64_t hash;
     Score score;
-    Move best_move;
+    uint32_t age;
+    std::optional<Move> best_move;
     uint8_t depth;
     uint8_t halfmove_clock;
     Bound bound;
-    uint16_t age;
-
-    TTEntry()
-        : hash(0), score(0), best_move(0), depth(0), halfmove_clock(0),
-          bound(Bound::NONE), age(0) {}
+    // we can get three more bytes for free!
 };
+
+static_assert(sizeof(TTEntry) == 24);
+
+struct alignas(128) TTCluster {
+    constexpr static size_t SIZE = 5;
+    std::array<TTEntry, SIZE> entries;
+};
+
+static_assert(sizeof(TTCluster) == 128);
 
 class TT {
   private:
-    std::vector<TTEntry> table;
-    size_t table_size;
-    uint16_t current_age;
+    std::vector<TTCluster> table;
+    size_t cluster_count;
+    uint32_t current_age;
 
-    bool should_replace(TTEntry *entry, uint64_t hash, uint8_t halfmove_clock,
-                        uint8_t depth) const;
+    size_t index(uint64_t hash) const { return hash & (cluster_count - 1); }
+    int replacement_quality(const TTEntry &entry) const;
 
   public:
     explicit TT(size_t megabytes = 64);
@@ -40,6 +48,8 @@ class TT {
     void clear();
     void new_search();
     TTEntry *probe(uint64_t hash);
-    void store(uint64_t hash, Move best_move, Score score, uint8_t depth,
-               uint8_t halfmove_clock, Bound bound);
+    void prefetch(uint64_t hash) const;
+    void store(uint64_t hash, std::optional<Move> best_move, Score score,
+               uint8_t depth, uint8_t halfmove_clock, Bound bound);
+    int hashfull() const;
 };

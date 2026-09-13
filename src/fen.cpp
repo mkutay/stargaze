@@ -10,8 +10,8 @@ Board::Board(std::string_view fen)
                 BitBoard(0), BitBoard(0), BitBoard(0)},
       colour_bbs{BitBoard(0), BitBoard(0)} {
     can_castle.fill(false);
-    moves.clear();
-    history.clear();
+    moves.reserve(512);
+    history.reserve(512);
 
     int r = 7, f = 0;
     size_t i = 0;

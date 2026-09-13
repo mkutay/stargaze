@@ -150,6 +150,10 @@ TEST_SUITE("integration") {
         log.clear();
         std::string bestmove_line = proc.read_until("bestmove", log);
         CHECK(bestmove_line.find("bestmove") != std::string::npos);
+        CHECK(std::any_of(log.begin(), log.end(), [](const std::string &line) {
+            return line.find("info depth ") != std::string::npos &&
+                   line.find(" hashfull ") != std::string::npos;
+        }));
 
         proc.write_line("quit");
     }

@@ -201,7 +201,7 @@ class Board {
     std::optional<Piece> get_piece(Square sq) const;
     std::optional<Colour> get_colour(Square sq) const;
     Colour get_turn() const;
-    const std::vector<Move> get_move_history() const;
+    const std::vector<Move> &get_move_history() const;
     const std::array<bool, 4> get_castling_rights() const;
     std::string nice() const;
     std::string fen() const;

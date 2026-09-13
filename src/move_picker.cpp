@@ -9,7 +9,8 @@
 int MovePicker::score_move(const Search &search, Move move, int see,
                            std::optional<Move> pv_move,
                            std::optional<Move> tt_move,
-                           std::optional<uint16_t> ply) {
+                           std::optional<uint16_t> ply,
+                           SearchHistory::OptionalContext previous_context) {
     if (move == pv_move)
         return PV_MOVE_SCORE;
     if (move == tt_move)
@@ -28,27 +29,33 @@ int MovePicker::score_move(const Search &search, Move move, int see,
         }
     }
 
-    return QUIET_SCORE + search.history_score(move);
+    if (move == search.history.countermove(previous_context))
+        return COUNTER_MOVE_SCORE;
+
+    return QUIET_SCORE +
+           search.history.score(search.history_context(move), previous_context);
 }
 
 MovePicker::MovePicker(Search &search, bool tactical_only,
                        std::optional<Move> pv_move, std::optional<Move> tt_move,
                        std::optional<uint16_t> ply,
-                       const std::vector<Move> *allowed_moves) {
+                       std::optional<std::span<const Move>> allowed_moves,
+                       SearchHistory::OptionalContext previous_context) {
     auto emit = [&](Move move) {
-        if (allowed_moves &&
-            std::find(allowed_moves->begin(), allowed_moves->end(), move) ==
-                allowed_moves->end())
-            return;
+        if (allowed_moves) {
+            const std::span<const Move> filter = *allowed_moves;
+            if (std::find(filter.begin(), filter.end(), move) == filter.end())
+                return;
+        }
 
         assert(count < moves.size());
         const bool tactical = move.is_capture() || move.is_promotion();
         const int see_score = tactical && move != pv_move && move != tt_move
                                   ? see(*search.board, move)
                                   : 0;
-        moves[count++] = {
-            score_move(search, move, see_score, pv_move, tt_move, ply), move,
-            see_score < 0};
+        moves[count++] = {score_move(search, move, see_score, pv_move, tt_move,
+                                     ply, previous_context),
+                          move, see_score < 0};
     };
 
     if (tactical_only)

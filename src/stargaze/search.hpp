@@ -4,6 +4,7 @@
 #include "stargaze/move.hpp"
 #include "stargaze/move_picker.hpp"
 #include "stargaze/score.hpp"
+#include "stargaze/search_history.hpp"
 #include "stargaze/tt.hpp"
 #include <array>
 #include <atomic>
@@ -16,8 +17,7 @@
 
 struct PVLine {
     std::vector<Move> moves;
-    PVLine(int max_depth) { moves.reserve(max_depth); }
-    PVLine() {}
+    explicit PVLine(int max_depth = 0) { moves.reserve(max_depth); }
 };
 
 struct SearchInfo {
@@ -25,10 +25,11 @@ struct SearchInfo {
     uint16_t depth;
     uint64_t nodes;
     uint32_t time_ms;
+    uint16_t hashfull;
     Score score;
     PVLine pv;
     SearchInfo(int max_depth)
-        : stopped(false), depth(0), nodes(0), time_ms(0), score(0),
+        : stopped(false), depth(0), nodes(0), time_ms(0), hashfull(0), score(0),
           pv(max_depth) {}
 };
 
@@ -39,8 +40,9 @@ class Search {
     constexpr static const uint16_t MAX_SEARCH_DEPTH = 64;
 
   private:
+    enum class NodeType : uint8_t { PV, CUT, ALL };
+
     constexpr static const int PAWN_VALUE = Eval::value(Piece::PAWN);
-    constexpr static const int HISTORY_MAX = 16384;
 
     constexpr static const Score ALPHA_START = -Score::INFINITY_SCORE;
     constexpr static const Score BETA_START = Score::INFINITY_SCORE;
@@ -66,23 +68,44 @@ class Search {
 
     PVLine last_pv;
 
-    std::vector<std::array<Move, 2>> killers;
-    // searchmoves as defined by UCI protocol
+    std::array<std::array<Move, 2>, MAX_SEARCH_DEPTH> killers{};
     std::vector<Move> search_moves;
-    std::array<std::array<std::array<int, 64>, 6>, 2> history_table{};
+    SearchHistory history;
+    std::array<std::vector<Move>, MAX_SEARCH_DEPTH> pv_table{};
+    std::array<std::optional<Score>, MAX_SEARCH_DEPTH> static_evals{};
+
+    struct TTProbe {
+        std::optional<Score> score;
+        std::optional<Move> best_move;
+        uint8_t depth;
+        Bound bound;
+
+        bool can_cutoff(Score alpha, Score beta) const {
+            return score && (bound == Bound::EXACT ||
+                             (bound == Bound::LOWER && *score >= beta) ||
+                             (bound == Bound::UPPER && *score <= alpha));
+        }
+    };
 
     template <bool AllowRepetition, bool CountNodes = true>
-    Score quiescence(Score alpha, Score beta, uint16_t ply);
+    Score quiescence(Score alpha, Score beta, uint16_t ply,
+                     SearchHistory::OptionalContext previous_context);
     bool should_stop();
-    int history_score(Move move) const;
-    void update_history(Move move, int bonus);
-    void record_cutoff(Move move, uint16_t ply, uint16_t depth);
-    int lmr_reduction(uint16_t depth, size_t move_number, int history,
-                      bool pv_node) const;
-    template <bool AllowRepetition>
+    SearchHistory::Context history_context(Move move) const;
+    void record_cutoff(Move move, SearchHistory::Context context, uint16_t ply,
+                       uint16_t depth,
+                       SearchHistory::OptionalContext previous_context);
+    template <NodeType node>
+    int lmr_reduction(uint16_t depth, size_t move_number, int history_score,
+                      bool improving) const;
+    template <NodeType node, bool AllowRepetition>
     Score alpha_beta(Score alpha, Score beta, uint16_t depth_left, uint16_t ply,
-                     PVLine *pline, bool follow_pv);
-    void halve_history();
+                     bool follow_pv,
+                     SearchHistory::OptionalContext previous_context);
+    template <bool AllowRepetition>
+    std::optional<TTProbe> probe_tt(uint16_t ply);
+    template <bool AllowRepetition>
+    std::optional<Score> draw_score(uint16_t ply, bool in_check);
     std::optional<Move> get_fallback_move();
 
   public:
@@ -96,6 +119,7 @@ class Search {
 
     void clear_tt() { tt.clear(); }
     void resize_tt(size_t megabytes) { tt.resize(megabytes); }
+    int hashfull() const { return tt.hashfull(); }
     const PVLine &get_last_pv() const { return last_pv; }
     void set_time_limit(uint32_t limit_ms) {
         const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(

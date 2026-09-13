@@ -143,8 +143,8 @@ void print_search_info(const SearchInfo &info) {
 
     const uint64_t nps =
         info.time_ms > 0 ? info.nodes * 1000 / info.time_ms : 0;
-    line += std::format(" nodes {} time {} nps {} pv", info.nodes, info.time_ms,
-                        nps);
+    line += std::format(" nodes {} time {} nps {} hashfull {} pv", info.nodes,
+                        info.time_ms, nps, info.hashfull);
     for (Move move : info.pv.moves)
         line += std::format(" {}", move.to_string());
     print_line("{}", line);

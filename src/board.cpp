@@ -390,7 +390,7 @@ void Board::clear_piece(Piece piece, Colour colour, Square sq) {
     get_bb(colour) &= mask;
 }
 
-const std::vector<Move> Board::get_move_history() const { return moves; }
+const std::vector<Move> &Board::get_move_history() const { return moves; }
 const std::array<bool, 4> Board::get_castling_rights() const {
     return can_castle;
 }
